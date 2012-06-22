@@ -17,6 +17,7 @@ tasks such as grouping or pagination.
 """
 
 from json import JSONEncoder
+from datetime import datetime
 from math import ceil
 import re
 
@@ -26,6 +27,9 @@ from jinja2.utils import soft_unicode
 from jinja2._compat import iteritems
 
 from trac.core import TracError
+from .datefmt import to_utimestamp
+from .html import Fragment
+from .text import javascript_quote
 
 __all__ = ['captioned_button', 'classes', 'first_last', 'group', 'istext',
            'prepared_paginate', 'paginate', 'Paginator']
@@ -550,6 +554,10 @@ class TracJSONEncoder(JSONEncoder):
     def default(self, o):
         if isinstance(o, Undefined):
             return ''
+        elif isinstance(o, datetime):
+            return to_utimestamp(o)
+        elif isinstance(o, Fragment):
+            return '"%s"' % javascript_quote(unicode(o))
         return JSONEncoder.default(self, o)
 
 def to_json(value):
