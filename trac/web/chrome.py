@@ -33,6 +33,7 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
+import time
 
 from genshi import Markup
 from genshi.builder import tag, Element
@@ -1109,22 +1110,32 @@ class Chrome(Component):
                 except KeyError:
                     pass
 
+        def show_times(load, generate, filter, render, kind):
+            print(('Genshi %s: %.3f total ' +
+                   '(load=%.3f, generate=%.3f, filter=%.3f, render=%.3f)') %
+                   (kind, load + generate + filter + render,
+                    load, generate, filter, render))
+
+        t1 = time.time()
         template = self.load_template(filename, method=method)
+        t2 = time.time()
         data = self.populate_data(req, data)
         data['chrome']['content_type'] = content_type
-
+        t3 = time.time()
         stream = template.generate(**data)
-
+        t4 = time.time()
         # Filter through ITemplateStreamFilter plugins
         if self.stream_filters:
             stream |= self._filter_stream(req, method, filename, stream, data)
-
+        t5 = time.time()
         if fragment:
             return stream
 
         if method == 'text':
             buffer = StringIO()
             stream.render('text', out=buffer, encoding='utf-8')
+            t6 = time.time()
+            show_times(t2 - t1, t4 - t3, t5 - t4, t6 - t5, 'text')
             return buffer.getvalue()
 
         doctype = None
@@ -1147,13 +1158,15 @@ class Chrome(Component):
             'late_script_data': req.chrome['script_data'],
         })
 
-        if iterable:
-            return self.iterable_content(stream, method, doctype=doctype)
+        # if iterable:
+        #    return self.iterable_content(stream, method, doctype=doctype)
 
         try:
             buffer = StringIO()
             stream.render(method, doctype=doctype, out=buffer,
                           encoding='utf-8')
+            t6 = time.time()
+            show_times(t2 - t1, t4 - t3, t5 - t4, t6 - t5, method)
             return buffer.getvalue().translate(_translate_nop,
                                                _invalid_control_chars)
         except Exception as e:
