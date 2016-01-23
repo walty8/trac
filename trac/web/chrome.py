@@ -35,12 +35,15 @@ except ImportError:
     from StringIO import StringIO
 import time
 
+# Legacy Genshi
 from genshi import Markup
 from genshi.builder import tag, Element
 from genshi.core import Attrs, START
 from genshi.filters import Translator
 from genshi.output import DocType
 from genshi.template import TemplateLoader, MarkupTemplate, NewTextTemplate
+
+from kajiki import FileLoader, TextTemplate, XMLTemplate
 
 from trac.config import *
 from trac.core import *
@@ -639,6 +642,9 @@ class Chrome(Component):
         'utc': utc,
     }
 
+    def __init__(self):
+        self.ktemplates = {}
+
     # ISystemInfoProvider methods
 
     def get_system_info(self):
@@ -1067,10 +1073,40 @@ class Chrome(Component):
 
         if method == 'text':
             cls = NewTextTemplate
+            kcls = XMLTemplate
         else:
             cls = MarkupTemplate
-
+            kcls = TextTemplate
         return self.templates.load(filename, cls=cls)
+
+
+    def load_ktemplate(self, filename, method=None):
+        """Retrieve a Template and optionally preset the template data.
+
+        Also, if the optional `method` argument is set to `'text'`, a
+        `TextTemplate` instance will be created instead of a
+        `XMLTemplate`. `'xml'`, `'html'` and `'html5'` could also be
+        specified to force the use of a particular kind of
+        `XMLTemplate`, if the `filename` extension can't be used for
+        that.
+        """
+        try:
+            loader = self.ktemplates[method]
+        except KeyError:
+            loader = self.ktemplates[method] = FileLoader(
+                path=self.get_all_templates_dirs(), reload=self.auto_reload,
+                force_mode=method, autoescape_text=True)
+            # e.g. http://turbogears.readthedocs.org/en/development/turbogears/genshi-xml-templates.html#converting-genshi-templates-to-kajiki
+            # on autoblocks.
+            # Also, what about using the PackageLoader?
+        try:
+            return loader.load(filename)
+        except TypeError:
+            # well, if filename is not found, we get a:
+            #   TypeError: coercing to Unicode: need string or buffer,
+            #   NoneType found
+            # A bit crude...
+            pass
 
     def render_template(self, req, filename, data, content_type=None,
                         fragment=False, iterable=False, method=None):
@@ -1094,8 +1130,11 @@ class Chrome(Component):
         if content_type is None:
             content_type = 'text/html'
 
+        kmethod = method
         if method is None:
             method = {'text/html': 'xhtml',
+                      'text/plain': 'text'}.get(content_type, 'xml')
+            kmethod = {'text/html': 'html', # TODO: 'html5'
                       'text/plain': 'text'}.get(content_type, 'xml')
 
         if method == "xhtml":
@@ -1110,37 +1149,50 @@ class Chrome(Component):
                 except KeyError:
                     pass
 
-        def show_times(load, generate, filter, render, kind):
-            print(('Genshi %s: %.3f total ' +
+        def show_times(engine, load, generate, filter, render, kind):
+            print(('%s %s: %.3f total ' +
                    '(load=%.3f, generate=%.3f, filter=%.3f, render=%.3f)') %
-                   (kind, load + generate + filter + render,
+                   (engine, kind, load + generate + filter + render,
                     load, generate, filter, render))
 
         t1 = time.time()
         template = self.load_template(filename, method=method)
         t2 = time.time()
+        ktemplate = self.load_ktemplate('k' + filename, method=method)
+        k2 = time.time()
         data = self.populate_data(req, data)
         data['chrome']['content_type'] = content_type
         t3 = time.time()
         stream = template.generate(**data)
+        kstream = None
+        if ktemplate:
+            k3 = time.time()
+            kstream = ktemplate(data)
         t4 = time.time()
         # Filter through ITemplateStreamFilter plugins
         if self.stream_filters:
             stream |= self._filter_stream(req, method, filename, stream, data)
         t5 = time.time()
         if fragment:
+            # Note: for Kajiki is_fragment must be passed to load_ktemplate
             return stream
 
         if method == 'text':
             buffer = StringIO()
             stream.render('text', out=buffer, encoding='utf-8')
             t6 = time.time()
-            show_times(t2 - t1, t4 - t3, t5 - t4, t6 - t5, 'text')
-            return buffer.getvalue()
+            show_times('Genshi', t2 - t1, t4 - t3, t5 - t4, t6 - t5, 'text')
+            s = buffer.getvalue()
+            if kstream:
+                s = kstream.render().encode('utf-8')
+                k6 = time.time()
+                show_times('Kajiki', k2 - t2, t4 - k3, 0, k6 - t6, 'text')
+            return s
 
         doctype = None
         if content_type == 'text/html':
             doctype = self.html_doctype
+            # XXX
             if req.form_token:
                 stream |= self._add_form_token(req.form_token)
             if not int(req.session.get('accesskeys', 0)):
@@ -1166,9 +1218,15 @@ class Chrome(Component):
             stream.render(method, doctype=doctype, out=buffer,
                           encoding='utf-8')
             t6 = time.time()
-            show_times(t2 - t1, t4 - t3, t5 - t4, t6 - t5, method)
-            return buffer.getvalue().translate(_translate_nop,
-                                               _invalid_control_chars)
+            show_times('Genshi', t2 - t1, t4 - t3, t5 - t4, t6 - t5, method)
+            s = buffer.getvalue().translate(_translate_nop,
+                                            _invalid_control_chars)
+            if kstream:
+                s = kstream.render().encode('utf-8')
+                k6 = time.time()
+                show_times('Kajiki',  k2 - t2, t4 - k3, 0, k6 - t6, kmethod)
+            return s
+
         except Exception as e:
             # restore what may be needed by the error template
             req.chrome.update({'early_links': None, 'early_scripts': None,

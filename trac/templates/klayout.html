@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+  <head py:block="head">
+    <py:if test="chrome['content_type'] == 'text/html'">
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+      <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    </py:if>
+    <meta py:for="meta in chrome['metas']" py:attrs="meta"/>
+    <!--[if IE]><script type="text/javascript">
+      if (/^#__msie303:/.test(window.location.hash))
+        window.location.replace(window.location.hash.replace(/^#__msie303:/, '#'));
+    </script><![endif]-->
+    <py:if test="'links' in chrome">
+      <py:for each="rel, links in chrome['links'].items()">
+        <py:for each="link in links">
+          <link rel="${rel}" py:attrs="link" />
+        </py:for>
+      </py:for>
+    </py:if>
+
+    <style id="trac-noscript" type="text/css">.trac-noscript { display: none !important }</style>
+    <py:if test="not defined('trac_error_rendering') and 'SEARCH_VIEW' in perm" id="search">
+      <link type="application/opensearchdescription+xml" rel="search"
+            href="${href.search('opensearch')}"
+            title="${_('Search %(project)s', project=project['name'])}"/>
+    </py:if>
+    <py:for each="key, value in chrome['script_data'].iteritems()">
+      <script py:if="chrome['script_data']" type="text/javascript">
+        var ${key}=${to_json(value)};
+      </script>
+    </py:for>
+
+    <script type="text/javascript">
+      jQuery("#trac-noscript").remove();
+      jQuery(document).ready(function($) {
+        $(".trac-close-msg").show().click(function () {
+          $(this).closest(".system-message").hide();
+          return false;
+        });
+        $(".trac-autofocus").focus();
+        $(".trac-target-new").attr("target", "_blank");
+        if ($.ui) { /* is jquery-ui added? */
+          $(".trac-datepicker:not([readonly])").prop("autocomplete", "off").datepicker();
+          $(".trac-datetimepicker:not([readonly])").prop("autocomplete", "off").datetimepicker();
+          $("#main").addClass("trac-nodatetimehint");
+        }
+        $(".trac-disable").disableSubmit(".trac-disable-determinant");
+        setTimeout(function() { $(".trac-scroll").scrollToTop() }, 1);
+        $(".trac-disable-on-submit").disableOnSubmit();
+      });
+    </script>
+  </head>
+
+  <body py:block="body">
+
+    <!-- ktheme.html -->
+    <div py:def="navigation(category)" id="${category}" class="nav">
+      <ul py:if="chrome['nav'][category]">
+        <li py:for="idx, item in enumerate(chrome['nav'][category])"
+            class="${classes(first_last(idx, chrome['nav'][category]), active=item['active'])}">${item['label']}</li>
+      </ul>
+    </div>
+
+    <div id="banner">
+      <div id="header" py:choose="">
+        <a py:when="chrome['logo']['src']" id="logo" href="${chrome['logo']['link'] or href.wiki('TracIni')+'#header_logo-section'}"><img
+                                                                                                                                  src="${chrome['logo']['src']}" alt="${chrome['logo']['alt']}"
+                                                                                                                                  height="${chrome['logo']['height'] or None}" width="${chrome['logo']['width'] or None}" /></a>
+        <h1 py:otherwise=""><a href="${chrome['logo']['link']}">${project['name']}</a></h1>
+      </div>
+      <form id="search" action="${href.search()}" method="get">
+        <div py:if="not defined('trac_error_rendering') and 'SEARCH_VIEW' in perm">
+          <label for="proj-search">Search:</label>
+          <input type="text" id="proj-search" name="q" size="18" accesskey="f" value="" />
+          <input type="submit" value="${_('Search')}" />
+        </div>
+      </form>
+      ${navigation('metanav')}
+    </div>
+    ${navigation('mainnav')}
+
+    <div id="main" class="${classes(uisymbols=req.session.get('ui.use_symbols'),
+                          uinohelp=req.session.get('ui.hide_help'))}">
+      <py:include py:if="value_of('resourcepath_template')" href="${resourcepath_template}" />
+
+      <div id="ctxtnav" class="nav">
+        <h2>Context Navigation</h2>
+        <ul py:if="chrome['ctxtnav']">
+          <li py:for="i, elm in enumerate(chrome['ctxtnav'])"
+              class="${classes(first_last(i, chrome['ctxtnav']))}">$elm</li>
+        </ul>
+        <hr />
+      </div>
+
+      <div id="warning" py:if="chrome['warnings']" class="system-message">
+        <a class="trac-close-msg" href="#" title="Hide this warning"><span>close</span></a>
+        <py:choose test="len(chrome['warnings'])">
+          <strong>Warning:</strong>
+          <py:when test="1">${chrome['warnings'][0]}</py:when>
+          <py:otherwise><ul><li py:for="warning in chrome['warnings']">$warning</li></ul></py:otherwise>
+        </py:choose>
+      </div>
+      <div id="notice" py:if="chrome['notices']" class="system-message">
+        <a class="trac-close-msg" href="#" title="Hide this notice"><span>close</span></a>
+        <py:choose test="len(chrome['notices'])">
+          <py:when test="1">${chrome['notices'][0]}</py:when>
+          <py:otherwise><ul><li py:for="notice in chrome['notices']">$notice</li></ul></py:otherwise>
+        </py:choose>
+      </div>
+
+      <py:block name="content">
+      </py:block>
+
+    </div>
+
+
+  <!-- /ktheme.html -->
+
+    <div id="altlinks" py:if="'alternate' in chrome['links']">
+      <h3>Download in other formats:</h3>
+      <ul>
+        <li py:for="idx, link in enumerate(chrome['links']['alternate'])"
+            class="${first_last(idx, chrome['links']['alternate'])}">
+          <a rel="nofollow" href="${link['href']}" class="${link['class']}"
+             py:content="link['title']" />
+        </li>
+      </ul>
+    </div>
+  </body>
+
+</html>
