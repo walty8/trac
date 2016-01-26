@@ -44,6 +44,7 @@ from genshi.output import DocType
 from genshi.template import TemplateLoader, MarkupTemplate, NewTextTemplate
 
 from kajiki import FileLoader, TextTemplate, XMLTemplate
+import jinja2
 
 from trac.config import *
 from trac.core import *
@@ -596,6 +597,7 @@ class Chrome(Component):
         the contents are rendered. (''since 1.0.6'')""")
 
     templates = None
+    jenv = None
 
     # DocType for 'text/html' output
     html_doctype = DocType.XHTML_STRICT
@@ -1081,7 +1083,7 @@ class Chrome(Component):
 
 
     def load_ktemplate(self, filename, method=None):
-        """Retrieve a Template and optionally preset the template data.
+        """Retrieve a Kajiki Template.
 
         Also, if the optional `method` argument is set to `'text'`, a
         `TextTemplate` instance will be created instead of a
@@ -1106,6 +1108,40 @@ class Chrome(Component):
             #   TypeError: coercing to Unicode: need string or buffer,
             #   NoneType found
             # A bit crude...
+            pass
+
+
+    def load_jtemplate(self, filename, method='ignored'):
+        """Retrieve a Jinja2 Template.
+
+        Also responsible for initializing the Jinja2 main
+        `Environment` on first use.
+        """
+        if not self.jenv:
+            self.jenv = jinja2.Environment(
+                block_start_string='{{',
+                block_end_string='}}',
+                variable_start_string='${',
+                variable_end_string='}',
+                line_statement_prefix='#',
+                line_comment_prefix='##',
+                trim_blocks=True,
+                lstrip_blocks=True,
+                extensions=['jinja2.ext.i18n', 'jinja2.ext.with_'],
+                autoescape=lambda t: (t and
+                                      t.rsplit('.', 1)[1] in ('xml', 'html')),
+                loader=jinja2.FileSystemLoader(self.get_all_templates_dirs()),
+                auto_reload=self.auto_reload
+            )
+            self.jenv.install_gettext_translations(
+                translation.get_translations())
+            self.jenv.globals.update(
+                enumerate=enumerate,
+                len=len,
+            )
+        try:
+            return self.jenv.get_template(filename)
+        except jinja2.TemplateNotFound:
             pass
 
     def render_template(self, req, filename, data, content_type=None,
@@ -1155,20 +1191,26 @@ class Chrome(Component):
                    (engine, kind, load + generate + filter + render,
                     load, generate, filter, render))
 
+        # Try loading template (Jinja2 j+name > Kajiki k+name > Genshi name)
         t1 = time.time()
         template = self.load_template(filename, method=method)
-        t2 = time.time()
+        k1 = t2 = time.time()
         ktemplate = self.load_ktemplate('k' + filename, method=method)
-        k2 = time.time()
+        j1 = k2 = time.time()
+        jtemplate = self.load_jtemplate('j' + filename)
+        j2 = time.time()
+
+        # Populate data (Jinja2 should get part of that in jenv.globals)
         data = self.populate_data(req, data)
         data['chrome']['content_type'] = content_type
         t3 = time.time()
         stream = template.generate(**data)
+        t4 = time.time()
         kstream = None
         if ktemplate:
             k3 = time.time()
             kstream = ktemplate(data)
-        t4 = time.time()
+            k4 = time.time()
         # Filter through ITemplateStreamFilter plugins
         if self.stream_filters:
             stream |= self._filter_stream(req, method, filename, stream, data)
@@ -1184,9 +1226,15 @@ class Chrome(Component):
             show_times('Genshi', t2 - t1, t4 - t3, t5 - t4, t6 - t5, 'text')
             s = buffer.getvalue()
             if kstream:
+                k5 = time.time()
                 s = kstream.render().encode('utf-8')
                 k6 = time.time()
-                show_times('Kajiki', k2 - t2, t4 - k3, 0, k6 - t6, 'text')
+                show_times('Kajiki', k2 - k1, k4 - k3, 0, k6 - k5, 'text')
+            if jtemplate:
+                j5 = time.time()
+                s = jtemplate.render(data).encode('utf-8')
+                j6 = time.time()
+                show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'text')
             return s
 
         doctype = None
@@ -1222,9 +1270,15 @@ class Chrome(Component):
             s = buffer.getvalue().translate(_translate_nop,
                                             _invalid_control_chars)
             if kstream:
+                k5 = time.time()
                 s = kstream.render().encode('utf-8')
                 k6 = time.time()
-                show_times('Kajiki',  k2 - t2, t4 - k3, 0, k6 - t6, kmethod)
+                show_times('Kajiki',  k2 - t1, k4 - k3, 0, k6 - k5, kmethod)
+            if jtemplate:
+                j5 = time.time()
+                s = jtemplate.render(data).encode('utf-8')
+                j6 = time.time()
+                show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'text')
             return s
 
         except Exception as e:

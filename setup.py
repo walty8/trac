@@ -107,6 +107,7 @@ facilities.
         'setuptools>=0.6',
         'Genshi>=0.6',
         'Kajiki>=0.5.2',
+        'jinja2>=2.8',
     ],
     extras_require = {
         'babel': ['Babel>=0.9.5'],
