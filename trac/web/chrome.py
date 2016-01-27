@@ -1227,9 +1227,12 @@ class Chrome(Component):
             s = buffer.getvalue()
             if kstream:
                 k5 = time.time()
-                s = kstream.render().encode('utf-8')
-                k6 = time.time()
-                show_times('Kajiki', k2 - k1, k4 - k3, 0, k6 - k5, 'text')
+                try:
+                    s = kstream.render().encode('utf-8')
+                    k6 = time.time()
+                    show_times('Kajiki', k2 - k1, k4 - k3, 0, k6 - k5, 'text')
+                except Exception:
+                    pass # well, we don't really care..
             if jtemplate:
                 j5 = time.time()
                 s = jtemplate.render(data).encode('utf-8')
@@ -1271,9 +1274,12 @@ class Chrome(Component):
                                             _invalid_control_chars)
             if kstream:
                 k5 = time.time()
-                s = kstream.render().encode('utf-8')
-                k6 = time.time()
-                show_times('Kajiki',  k2 - t1, k4 - k3, 0, k6 - k5, kmethod)
+                try:
+                    s = kstream.render().encode('utf-8')
+                    k6 = time.time()
+                    show_times('Kajiki',  k2 - t1, k4 - k3, 0, k6 - k5, kmethod)
+                except Exception:
+                    pass # well, we don't really care..
             if jtemplate:
                 j5 = time.time()
                 s = jtemplate.render(data).encode('utf-8')
