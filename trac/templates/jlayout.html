@@ -1,8 +1,19 @@
+{# Copyright (C) 2006-2014 Edgewall Software
+
+  This software is licensed as described in the file COPYING, which
+  you should have received as part of this distribution. The terms
+  are also available at http://trac.edgewall.com/license.html.
+
+  This software consists of voluntary contributions made by many
+  individuals. For the exact contribution history, see the revision
+  history and logs, available at http://trac.edgewall.org/.
+#}
+
 # extends ('j' + chrome.theme)
 <html>
   <head>
     # block head
-    #   if chrome.content_type == 'text/html'
+    #   if chrome.content_type == 'text/html':
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     #   endif
@@ -16,7 +27,7 @@
         window.location.replace(window.location.hash.replace(/^#__msie303:/, '#'));
         </script><![endif]-->
 
-    #   if 'links' in chrome:
+    #   if chrome.links:
     #     for rel, links in chrome.links.items():
     #       for link in links:
     <link rel="${rel}" ${link|xmlattr} />
@@ -24,19 +35,27 @@
     #     endfor
     #   endif
 
-    <style id="trac-noscript" type="text/css">.trac-noscript { display: none !important }</style>
+    <style id="trac-noscript" type="text/css">
+      .trac-noscript { display: none !important }
+    </style>
     #   if trac_error_rendering is undefined and 'SEARCH_VIEW' in perm:
     <link type="application/opensearchdescription+xml" rel="search"
           href="${href.search('opensearch')}"
           title="${_('Search %(project)s', project=project.name)}"/>
     #   endif
 
-    #   for key, value in chrome.script_data.iteritems():
-    #     if chrome.script_data:
+    #   if chrome.script_data:
     <script type="text/javascript">
+      #   for key, value in chrome.script_data.iteritems():
       var ${key}=${to_json(value)};
+      #   endfor
     </script>
-    #     endif
+    #   endif
+
+    #   for script in chrome.scripts:
+    ${script.prefix|d('', true)
+    }<script type="${script.type}" charset="${script.charset}"
+             src="${script.href}"></script>${script.suffix|d('', true)}
     #   endfor
 
     <script type="text/javascript">
@@ -63,9 +82,30 @@
   </head>
 
   <body>
-    # block body
+    # block bottom
 
-    ${ super() }
+    #   block content
+    #   endblock content
+
+    #   if chrome.late_links:
+    <script type="text/javascript">
+      #   for link in chrome.late_links.get('stylesheet', []):
+      jQuery.loadStyleSheet("${link.href}", "${link.type}");
+      #   endfor
+    </script>
+    #   endif
+    #   if chrome.late_script_data:
+    <script type="text/javascript">
+      #   for key, value in chrome.late_script_data.iteritems():
+      var ${key}=${to_json(value)};
+      #   endfor
+    </script>
+    #   endif
+    #   for script in chrome.late_scripts:
+    ${script.prefix}<script type="text/javascript">
+      jQuery.loadScript("${script.href}", "${script.type}", "${script.charset}");
+    </script>${script.suffix}
+    #   endfor
 
     #   if 'alternate' in chrome.links:
     <div id="altlinks">
@@ -81,6 +121,7 @@
     </div>
     #   endif
     #   include 'site_body.html' ignore missing
-    # endblock body
+
+    # endblock bottom
   </body>
 </html>

@@ -1,3 +1,14 @@
+{# Copyright (C) 2006-2016 Edgewall Software
+
+  This software is licensed as described in the file COPYING, which
+  you should have received as part of this distribution. The terms
+  are also available at http://trac.edgewall.com/license.html.
+
+  This software consists of voluntary contributions made by many
+  individuals. For the exact contribution history, see the revision
+  history and logs, available at http://trac.edgewall.org/.
+#}
+## This is Trac's default theme
 <!DOCTYPE html>
 <html>
   <head>
@@ -59,7 +70,7 @@ ${ ''  }<li ${{'class': classes(first_last(idx, chrome.nav[category]),
         # if chrome.ctxtnav:
         <ul>
           # for i, elm in enumerate(chrome.ctxtnav):
-          <li${{'class': classes(first_last(i, chrome.ctxtnav))}|xmlattr}>${
+          <li ${{'class': classes(first_last(i, chrome.ctxtnav))}|xmlattr}>${
             elm}</li>
           # endfor
         </ul>
@@ -97,13 +108,26 @@ ${ ''  }<li ${{'class': classes(first_last(idx, chrome.nav[category]),
           # endfor
         </ul>
         # endif
+
       </div>
       # endif
 
-      # block content
-      # endblock content
-
+      # block bottom
+      # endblock bottom
     </div>
+
+    <div id="footer" xml:lang="en"><hr/>
+      <a id="tracpowered" href="http://trac.edgewall.org/"
+         ><img src="${chrome.htdocs_location}trac_logo_mini.png" height="30"
+               width="107" alt="Trac Powered"/></a>
+      <p class="left" i18n:msg="version">
+        Powered by <a href="${href.about()}"
+                      ><strong>Trac ${trac.version}</strong></a><br />
+        By <a href="http://www.edgewall.org/">Edgewall Software</a>.
+      </p>
+      <p class="right">${chrome.footer}</p>
+    </div>
+
     # endblock body
   </body>
 </html>
