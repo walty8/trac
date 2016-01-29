@@ -1,0 +1,298 @@
+{# Copyright (C) 2006-2014 Edgewall Software
+
+  This software is licensed as described in the file COPYING, which
+  you should have received as part of this distribution. The terms
+  are also available at http://trac.edgewall.com/license.html.
+
+  This software consists of voluntary contributions made by many
+  individuals. For the exact contribution history, see the revision
+  history and logs, available at http://trac.edgewall.org/.
+#}
+
+# extends 'jlayout.html'
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>${title}</title>
+    <script type="text/javascript">
+      jQuery(document).ready(function($) {
+        $(".trac-toggledeleted").show().click(function() {
+                  $(this).siblings().find(".trac-deleted").toggle();
+                  return false;
+        }).click();
+        $("#content").find("li.entry h2 a").parent()
+          .addAnchor(_("Link to this diff"));
+      });
+    </script>
+  </head>
+
+  <body>
+    # block content
+    <div id="content" class="changeset">
+      # with
+      <div id="title">
+        # set cset_href = href.changeset(new_rev, reponame)
+        # set old_cset_href = href.changeset(old_rev, reponame)
+        # set log_href = href.log(reponame, new_path, rev=new_rev,
+                                  stop_rev=old_rev)
+        # set new_href = href.browser(reponame, new_path, rev=new_rev)
+        # set old_href = href.browser(reponame, old_path, rev=old_rev)
+        # set old_drev = display_rev(old_rev)
+        # set new_drev = display_rev(new_rev)
+        # if reponame:
+        #   if changeset and restricted:
+        <h1 i18n:msg="new_rev, reponame, new_path">
+          Changeset <a title="Show full changeset"
+                       href="${cset_href}">${new_drev}</a> in ${reponame}
+          for <a title="Show entry in browser"
+                 href="${new_href}">${new_path}</a>
+        </h1>
+        #   elif not changeset and restricted:
+        <h1 i18n:msg="new_path, old_rev, new_rev, reponame">
+          Changes in <a title="Show entry in browser"
+                        href="${new_href}">${new_path}</a>
+          <a title="Show revision log"
+             href="${log_href}">[${old_drev}:${new_drev}]</a> in ${reponame}
+        </h1>
+        #   elif not changeset and not restricted:
+        <h1 i18n:msg="reponame, old_path, old_rev, new_path, new_rev">
+          Changes in ${reponame}
+          from <a title="Show entry in browser"
+                  href="${old_href}">${old_path}</a>
+          at <a title="Show full changeset"
+                href="${old_cset_href}">r${old_drev}</a>
+          to <a title="Show entry in browser"
+                href="${new_href}">${new_path}</a>
+          at <a title="Show full changeset"
+                href="${cset_href}">r${new_drev}</a>
+        </h1>
+        #   else:
+        <h1 i18n:msg="new_rev, reponame">
+          #   if annotated:
+          Changeset <a href="${cset_href}">${new_drev}</a> in ${reponame}
+          #   else:
+          Changeset ${new_drev} in ${reponame}
+          #   endif
+        </h1>
+        #   endif
+        # else:
+        #   if changeset and restricted:
+        <h1 i18n:msg="new_rev, new_path">
+          Changeset <a title="Show full changeset"
+                       href="${cset_href}">${new_drev}</a>
+          for <a title="Show entry in browser"
+                 href="${new_href}">${new_path}</a>
+        </h1>
+        #     elif not changeset and restricted:
+        <h1 i18n:msg="new_path, old_rev, new_rev">
+          Changes in <a title="Show entry in browser"
+                        href="${new_href}">${new_path}</a>
+          <a title="Show revision log"
+             href="${log_href}">[${old_drev}:${new_drev}]</a>
+        </h1>
+        #   elif not changeset and not restricted:
+        <h1 i18n:msg="old_path, old_rev, new_path, new_rev">
+          Changes
+          from <a title="Show entry in browser" href="${old_href}">${old_path}</a>
+          at <a title="Show full changeset" href="${old_cset_href}">r${old_drev}</a>
+          to <a title="Show entry in browser" href="${new_href}">${new_path}</a>
+          at <a title="Show full changeset" href="${cset_href}">r${new_drev}</a>
+        </h1>
+        #   else:
+        <h1 i18n:msg="new_rev">
+          Changeset <a py:strip="not annotated" href="${cset_href}">${new_drev}</a>
+        </h1>
+        #   endif
+        # endif
+      </div>
+      # endwith
+
+      # if not req.is_xhr and (has_diffs or
+                               diff.options.ignoreblanklines or
+                               diff.options.ignorecase or
+                               diff.options.ignorewhitespace):
+      <form id="prefs" action="">
+        <div>
+          # if not changeset:
+          <input type="hidden" name="old_path"
+                 value="${'/' + pathjoin(reponame, old_path)}" />
+          <input type="hidden" name="new_path"
+                 value="${'/' + pathjoin(reponame, new_path)}" />
+          <input type="hidden" name="old" value="${old_rev}" />
+          <input type="hidden" name="new" value="${new_rev}" />
+          # endif
+          # include 'jdiff_options.html'
+        </div>
+      </form>
+      # endif
+
+      # macro node_change(idx, item, cl, kind)
+      #   set ndiffs = len(item.diffs) if item.diffs is not none else 0
+      #   set nprops = len(item.props)
+      #   set is_removal = cl == 'rem'
+      #   set path = item.old.get('path') if is_removal else item.new.get('path')
+      #   set path = path and path[len(location):].strip('/')
+      ## FIXME check path...
+      <div class="${cl}"> </div>
+      #   if is_removal:
+      <a href="${item.old.href}"
+         title="${_('Show what was removed (content at revision %(old_rev)s)',
+                old_rev=display_rev(item.old.rev))}">
+        ${path}
+      </a>
+      #   else:
+      <a title="Show entry in browser" href="${item.new.href}">
+        ${path or (location and '.') or _('(root)')}
+      </a>
+      #   endif
+      <span class="comment">(${kind})</span>
+      #   if item.old and item.old.get('path') and item.change == 'copy' or item.change == 'move':
+      <small><em i18n:msg="kind, old_path">
+          (${kind} from <a href="${item.old.href}"
+                         title="${_('Show original file (revision %(old_rev)s)', old_rev=display_rev(item.old.rev))}">
+            ${item.old.path}</a>)
+      </em></small>
+      #   endif
+      #   if 'hide_diff' in item:
+      (<a title="Show differences" href="${item.href}">view diffs</a>)
+      #   elif ndiffs + nprops > 0:
+      (<a title="Show differences" href="#file${idx}">${
+        ngettext('%(num)d diff', '%(num)d diffs', ndiffs) if ndiffs else None}${
+        ', ' if ndiffs and nprops else None
+        }${ngettext('%(num)d prop', '%(num)d props', nprops) if nprops else None}</a>)
+      #   endif
+      #   if cl == 'mod' and item.diffs is none:
+      (<a title="Show previous version in browser" href="${item.old.href}">
+        previous</a>)
+      #   endif
+      # endmacro
+
+      <dl id="overview">
+        # if changeset:
+        <dt class="property time">Timestamp:</dt>
+        <dd class="time">
+          # with delta = datetime.now(utc) - changeset.date
+          ${format_datetime(changeset.date)}
+          #   if delta < timedelta(0, 3600):
+                       ## FIXME rewrite as: if delta is lessthan(...)
+                       ##       in order to not break indent in html mode
+          (less than one hour ago)
+          #   else:
+          <i18n:msg params="age">(${dateinfo(changeset.date)} ago)</i18n:msg>
+          #   endif
+          # endwith
+        </dd>
+        <dt class="property author">Author:</dt>
+        <dd class="author">${authorinfo(changeset.author)}</dd>
+        # for prop in properties:
+        #   if prop.rendered:
+        <dt ${prop.rendered.name_attributes|xmlattr}>
+          prop.rendered.name</dt>
+        <dd ${prop.rendered.content_attributes|xmlattr}>
+          prop.rendered.content</dd>
+        #   else:
+        <dt class="property">${prop.name}:</dt>
+        <dd>${prop.value}</dd>
+        #   endif
+        # endfor
+        <dt class="property message">Message:</dt>
+        <dd class="message searchable" xml:space="preserve">
+          # if not len(changeset.message.strip()):
+          &nbsp;
+          # elif wiki_format_messages:
+            ${wiki_to_html(context, changeset.message, escape_newlines=True)}
+          # else:
+          <pre>${changeset.message}</pre>
+          # endif
+        </dd>
+        # endif
+
+        # if location:
+        <dt class="property location">Location:</dt>
+        <dd class="searchable"><a href="${href.browser(reponame, location, rev=new_rev)}">${location}</a></dd>
+        # endif
+        <dt class="property files">
+          ${ngettext('File:', 'Files:', num=len(files)) if files else _('(No files)')}
+        </dt>
+        <dd class="files">
+          # if filestats:
+          <div class="legend" id="file-legend">
+            # with added, deleted, edited, copied, moved = (
+                filestats.add, filestats.delete, filestats.edit, filestats['copy'], filestats.move)
+            <dl>
+              # if added:
+              <dt class="add"></dt><dd>
+                ${ngettext('%(num)d added', '%(num)d added', num=added)}</dd>
+              # endif
+              # if deleted:
+              <dt class="rem"></dt><dd>
+                ${ngettext('%(num)d deleted', '%(num)d deleted', num=deleted)}</dd>
+              # endif
+              # if edited:
+              <dt class="mod"></dt><dd>
+                ${ngettext('%(num)d edited', '%(num)d edited', num=edited)}</dd>
+              # endif
+              # if copied:
+              <dt class="cp"></dt><dd>
+                ${ngettext('%(num)d copied', '%(num)d copied', num=copied)}</dd>
+              # endif
+              # if moved:
+              <dt class="mv"></dt><dd>${ngettext('%(num)d moved', '%(num)d moved', num=moved)}</dd>
+              # endif
+            </dl>
+            # endwith
+          </div>
+          # endif
+          <br />
+          <ul>
+            # for idx, item in enumerate(changes):
+            <li>
+              # if item.change == 'add':
+              ${node_change(idx, item, 'add', _('added'))}
+              # elif item.change == 'delete':
+              ${node_change(idx, item, 'rem', _('deleted'))}
+              # elif item.change == 'copy':
+              ${node_change(idx, item, 'cp', _('copied'))}
+              # elif item.change == 'move':
+              ${node_change(idx, item, 'mv', _('moved'))}
+              # elif item.change == 'edit':
+              ${node_change(idx, item, 'mod', _('modified'))}
+              # else:
+              ## ignored change (maybe because of diff options or ignored prop.)
+              # endif
+            </li>
+            # endfor
+          </ul>
+        </dd>
+      </dl>
+
+      <div class="diff">
+        # if has_diffs:
+        <div class="legend" id="diff-legend">
+          <h3>Legend:</h3>
+          <dl>
+            <dt class="unmod"></dt><dd>Unmodified</dd>
+            <dt class="add"></dt><dd>Added</dd>
+            <dt class="rem"></dt><dd>Removed</dd>
+            # if diff.style != 'inline':
+            <dt class="mod"></dt><dd>Modified</dd>
+            # endif
+          </dl>
+        </div>
+        # endif
+
+        # with no_id = false
+        #   include 'jdiff_div.html'
+        # endwith
+
+        <div id="help" i18n:msg="">
+          <strong>Note:</strong>
+          See <a href="${href.wiki('TracChangeset')}">TracChangeset</a>
+          for help on using the changeset viewer.
+        </div>
+
+      </div>
+    </div>
+    # endblock
+  </body>
+</html>
