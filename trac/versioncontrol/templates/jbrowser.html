@@ -75,7 +75,9 @@
     <div id="content" class="browser">
 
       # if dir or file:
-      #   with repo_index = repo and repo.repositories, path_links = None if repo_index else path_links
+      #   with
+      #     set repo_index = repo and repo.repositories
+      #     set path_links = None if repo_index else path_links
       <h1>
         #   if repo_index:
         <span class="pathentry">Default Repository</span>
@@ -137,8 +139,7 @@
 
       #     if changeset:
       <div class="trac-tags">
-        #     for branch, head in changeset.get_branches() if branch not in (
-        'default', 'master')
+        #     for branch, head in changeset.get_branches() if branch not in ('default', 'master'):
         <span ${{'class': classes('branch', head=head)}|xmlattr}
               title="${_('Branch head') if head else _('Branch')}">${
           branch}</span>
