@@ -39,6 +39,7 @@ define HELP
  ---------------- Code checking tasks
 
   pylint              check code with pylint
+  jinja               check Jinja2 templates
 
  ---------------- Standalone test server
 
@@ -369,6 +370,11 @@ pylint:
 	    --disable=W0401,W0511,W0603,W0613,W0614,W0621,W0622,W0703 \
 	    --disable=C0103,C0111 \
 	    trac tracopt
+
+jinja:
+	python contrib/jinjachecker.py \
+	    $(shell find trac -name j*.html) \
+	    $(shell find tracopt -name j*.html)
 
 # ----------------------------------------------------------------------------
 #
