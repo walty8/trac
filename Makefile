@@ -359,7 +359,7 @@ test-wiki:
 #
 # ----------------------------------------------------------------------------
 
-.PHONY: pylint
+.PHONY: pylint jinja
 
 pylint:
 	pylint \
@@ -371,10 +371,12 @@ pylint:
 	    --disable=C0103,C0111 \
 	    trac tracopt
 
+templates ?= \
+    $(shell find trac -name j*.html) \
+    $(shell find tracopt -name j*.html)
+
 jinja:
-	python contrib/jinjachecker.py \
-	    $(shell find trac -name j*.html) \
-	    $(shell find tracopt -name j*.html)
+	python contrib/jinjachecker.py $(jinjaopts) $(wildcard $(templates))
 
 # ----------------------------------------------------------------------------
 #

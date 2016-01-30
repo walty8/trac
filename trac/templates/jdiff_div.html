@@ -69,22 +69,23 @@ Arguments:
       #   if comments:
       <pre>$comments</pre>
       #   endif
+
+      #   macro prop_name(name, attrs)
+      <strong ${attrs|xmlattr}>$name</strong>
+      #   endmacro
+
+      #   macro render_property(prop)
+      #     if prop.rendered:
+      $prop.rendered.content
+      #     elif istext(prop.value):
+      <em><code>$prop.value</code></em>
+      #     else:
+      $prop.value
+      #     endif
+      #   endmacro
+
       #   if item.props:
       <ul class="props">
-        #   macro prop_name(name, attrs)
-        <strong ${attrs|xmlattr}>$name</strong>
-        #   endmacro
-
-        #   macro render_property(prop)
-        #     if prop.rendered:
-        $prop.rendered.content
-        #     elif istext(prop.value):
-        <em><code>$prop.value</code></em>
-        #     else:
-        $prop.value
-        #     endif
-        #   endmacro
-
         #   for prop in item.props:
         #     if prop.diff:
         $prop.diff
@@ -115,6 +116,7 @@ Arguments:
         #     endif
         #   endfor
       </ul>
+      {# jinjacheck: "CDATA li" OK #}
       #   endif
       #   if item.diffs:
       <table class="trac-diff $diff.style" summary="Differences"
@@ -132,12 +134,20 @@ Arguments:
         <thead>
           <tr>
             <th colspan="2">
-              <a title="${old.get('title')}" href="${old.get('href')}#L$fromline"
-                 py:strip="'href' not in old">$longcol $old.rev</a>
+              # if 'href' in old:
+              <a title="${old.get('title')}"
+                 href="${old.get('href')}#L$fromline">$longcol $old.rev</a>
+              # else:
+              $longcol $old.rev
+              # endif
             </th>
             <th colspan="2">
-              <a title="${new.get('title')}" href="${new.get('href')}#L$toline"
-                 py:strip="'href' not in new">$longcol $new.rev</a>
+              # if 'href' in new:
+              <a title="${new.get('title')}"
+                 href="${new.get('href')}#L$toline">$longcol $new.rev</a>
+              # else:
+              $longcol $new.rev
+              # endif
             </th>
           </tr>
         </thead>
@@ -148,16 +158,24 @@ Arguments:
         <thead>
           <tr>
             <th title="$longcol $old.rev">
-              <a title="${old.get('title')}" href="${old.get('href')}#L$fromline"
-                 py:strip="'href' not in old">
-                $shortcol$old.shortrev</a>
+              # if 'href' in old:
+              <a title="${old.get('title')}"
+                 href="${old.get('href')}#L$fromline">$shortcol$old.shortrev</a>
+              # else:
+              $shortcol$old.shortrev
+              # endif
             </th>
             <th title="$longcol $new.rev">
-              <a title="${new.get('title')}" href="${new.get('href')}#L$toline"
-                 py:strip="'href' not in new">
-                $shortcol$new.shortrev</a>
+              # if 'href' not in new:
+              <a title="${new.get('title')}"
+                 href="${new.get('href')}#L$toline">$shortcol$new.shortrev</a>
             </th>
-            <td><em py:if="'diffs_title' in item">${item.diffs_title[0]}</em>&nbsp;</td>
+            <td>
+              # if 'diffs_title' in item:
+              <em>${item.diffs_title[0]}</em>
+              # endif
+              &nbsp;
+            </td>
           </tr>
         </thead>
         #     endif
@@ -271,7 +289,12 @@ Arguments:
           <tr>
             <th><a href="$old.href#L$fromline">&hellip;</a></th>
             <th><a href="$new.href#L$toline">&hellip;</a></th>
-            <td><em py:if="'diffs_title' in item">${item.diffs_title[idx+1]}</em>&nbsp;</td>
+            <td>
+              # if 'diffs_title' in item:
+              <em>${item.diffs_title[idx+1]}</em>
+              # endif
+              &nbsp;
+            </td>
           </tr>
           #       endif
           #     endwith
@@ -279,6 +302,7 @@ Arguments:
         #     endif
         #   endfor
       </table>
+      ## jinjacheck: "thead colgroup thead" OK
       #   endif
     </li>
     #   endif

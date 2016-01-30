@@ -81,15 +81,16 @@ def main(args):
     if args:
         # FIXME
         only = quiet = None
-        if args[0] in ('-j', '--only-jinja'):
+        if args[0] in ('-j', '--jinja-only'):
             only = 'jinja'
-        elif args[0] in ('-h', '--only-html'):
+        elif args[0] in ('-h', '--html-only'):
             only = 'html'
         if only:
             del args[0]
         if args[0] in ('-q', '--quiet'):
             quiet = True
         from glob import glob
+        setup_html()
         for arg in args:
             for template in glob(arg):
                 status += analyze(template, only, quiet)
@@ -107,13 +108,13 @@ def analyze(jinja_template, only=None, quiet=False):
     """
     with open(jinja_template, 'r') as f:
         lines = f.readlines()
-    line_statements, html = scan(lines)
+    line_statements, html, html_hints = scan(lines)
     issues_j = issues_h = 0
     if only != 'html':
         issues_j = check_jinja(jinja_template, line_statements, quiet)
         report_errors('Jinja2', issues_j)
-    if only != 'jinja' and setup_html():
-        issues_h = check_html(jinja_template, html, quiet)
+    if only != 'jinja' and etree:
+        issues_h = check_html(jinja_template, html, html_hints, quiet)
         report_errors('XHTML', issues_h)
     return issues_j + issues_h
 
@@ -150,12 +151,20 @@ Statement = namedtuple('Statement',
 LINE_STATEMENT_RE = re.compile(r'^(\s*)%s-?(\s*)(end)?(\w+)(.*?)?(:)?$' %
                                LINE_STATEMENT_PREFIX)
 
+JINJACHECK_RE = re.compile(r'jinjacheck: "([^"]+)" OK')
+
+
 def scan(lines):
     """Scans template lines and separate Jinja2 structure from HTML structure.
     """
     lines = iter(enumerate(lines))
     line_statements = []
     html = []
+    html_hints = []
+    def add_hint(linenum, comment_line):
+        m = JINJACHECK_RE.search(sline)
+        if m:
+            html_hints.append((linenum, m.group(1)))
     try:
         while True:
             # pick a line
@@ -168,13 +177,16 @@ def scan(lines):
             # skip comment blocks
             if sline.startswith(COMMENT_START_STRING):
                 html.append((linenum, '\n'))
+                add_hint(linenum, sline)
                 while not sline.endswith(COMMENT_END_STRING):
                     html.append((linenum, '\n'))
+                    add_hint(linenum, sline)
                     sline = lines.next()[1].strip()
                 continue
             # skip line comments
             if sline.startswith(LINE_COMMENT_PREFIX):
                 html.append((linenum, '\n'))
+                add_hint(linenum, sline)
                 continue
             # check for a line statement
             m = LINE_STATEMENT_RE.match(line)
@@ -187,7 +199,7 @@ def scan(lines):
             else:
                 html.append((linenum, line))
     except StopIteration:
-        return line_statements, html
+        return line_statements, html, html_hints
 
 
 def check_jinja(filename, line_statements, quiet):
@@ -259,7 +271,7 @@ XHTML_DOCTYPE = '''<!DOCTYPE html \
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">'''
 
 
-def check_html(filename, html_lines, quiet):
+def check_html(filename, html_lines, html_hints, quiet):
     """Validates the given HTML (as XHTML actually)
     """
     global etree
@@ -296,6 +308,18 @@ def check_html(filename, html_lines, quiet):
         etree.parse(StringIO(page), base_url='.') #  base_url ??
         return 0
     except etree.XMLSyntaxError as e:
+        ignored = 0
+        def get_hint(linenum):
+            if html_hints:
+                while True:
+                    hint_linenum, hint = html_hints[0]
+                    if hint_linenum >= linenum:
+                        break
+                    del html_hints[0]
+                if hint_linenum == linenum:
+                    if hint in msg:
+                        del html_hints[0]
+                        return hint
         errors = []
         for entry in e.error_log:
             errors.append((entry.line, entry.column, entry.message))
@@ -305,11 +329,16 @@ def check_html(filename, html_lines, quiet):
             while errors and errors[0][0] == linenum:
                 _, col, msg = errors[0]
                 del errors[0]
-                print('%s:%s:%s: %s' % (filename, linenum, col, msg))
+                hint = get_hint(linenum)
+                if hint:
+                    ignored += 1
+                print('%s:%s:%s: %s%s' %
+                      (filename, linenum, col, msg,
+                       ' (IGNORED "%s")' % hint if hint else ''))
         # in case some errors haven't been flushed at this point...
         for line, col, msg in errors:
             print('%s:%s:%s: %s' % (filename, line, col, msg))
-        return len(e.error_log)
+        return len(e.error_log) - ignored
 
 
 BRACES_RE = re.compile(r'(?:\b(id|for|selected|checked)=")?\$?([{}])')

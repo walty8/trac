@@ -107,10 +107,9 @@
       </div>
       # endwith
 
-      # if not req.is_xhr and (has_diffs or
-                               diff.options.ignoreblanklines or
-                               diff.options.ignorecase or
-                               diff.options.ignorewhitespace):
+      # set o = diff.options
+      # set optionset = o.ignoreblanklines or o.ignorecase or o.ignorewhitespace
+      # if not req.is_xhr and (has_diffs or optionset):
       <form id="prefs" action="">
         <div>
           # if not changeset:
