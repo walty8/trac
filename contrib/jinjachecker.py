@@ -301,6 +301,7 @@ def check_html(filename, html_lines, html_hints, quiet):
     normalized_lines[0] = XHTML_DOCTYPE + normalized_lines[0]
     page = '\n'.join(normalized_lines)
     ## print(page) # DEBUG
+    ## print(repr(html_hints)) # DEBUG
     etree.clear_error_log()
     try:
         # lxml will try to convert the URL to unicode by itself,
@@ -308,37 +309,39 @@ def check_html(filename, html_lines, html_hints, quiet):
         etree.parse(StringIO(page), base_url='.') #  base_url ??
         return 0
     except etree.XMLSyntaxError as e:
-        ignored = 0
-        def get_hint(linenum):
-            if html_hints:
-                while True:
-                    hint_linenum, hint = html_hints[0]
-                    if hint_linenum >= linenum:
-                        break
-                    del html_hints[0]
-                if hint_linenum == linenum:
-                    if hint in msg:
-                        del html_hints[0]
-                        return hint
         errors = []
         for entry in e.error_log:
             errors.append((entry.line, entry.column, entry.message))
+        ignored_errors = []
+        def process_error(line, col, msg):
+            hint = get_hint(line, msg)
+            if hint:
+                ignored_errors.append(line)
+            print('%s:%s:%s: %s%s' %
+                  (filename, line, col, msg,
+                   ' (IGNORED "%s")' % hint if hint else ''))
+        def get_hint(linenum, msg):
+            hint_linenum = hint = None
+            while html_hints:
+                hint_linenum = html_hints[0][0]
+                if hint_linenum >= linenum or len(html_hints) == 1:
+                    hint = html_hints[0][1]
+                    break
+                del html_hints[0]
+            if hint and hint in msg:
+                del html_hints[0]
+                return hint
         for linenum, line in html_lines:
             if not quiet:
                 print('%5d %s' % (linenum, line)),
             while errors and errors[0][0] == linenum:
-                _, col, msg = errors[0]
+                err = errors[0]
                 del errors[0]
-                hint = get_hint(linenum)
-                if hint:
-                    ignored += 1
-                print('%s:%s:%s: %s%s' %
-                      (filename, linenum, col, msg,
-                       ' (IGNORED "%s")' % hint if hint else ''))
+                process_error(*err)
         # in case some errors haven't been flushed at this point...
-        for line, col, msg in errors:
-            print('%s:%s:%s: %s' % (filename, line, col, msg))
-        return len(e.error_log) - ignored
+        for err in errors:
+            process_error(*err)
+        return len(errors) - len(ignored_errors)
 
 
 BRACES_RE = re.compile(r'(?:\b(id|for|selected|checked)=")?\$?([{}])')
