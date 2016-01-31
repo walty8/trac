@@ -190,20 +190,19 @@
             age = pretty_dateinfo(file.changeset.date)
             }}
             #     if stickyrev:
-            ##    FIXME
-            <i18n:msg params="stickyrev, rev, author, age">
-              <a href="${rcset}" title="View differences">Last change</a>
-              on this file since ${display_rev(stickyrev)} was
-              <a href="${cset}" title="${_('View changeset %(rev)s', rev=drev)}">${drev}</a>,
-              checked in by ${author}, ${age}
-            </i18n:msg>
+            #       trans stickyrev = display_rev(stickyrev), rev = drev, author, age
+            <a href="${rcset}" title="View differences">Last change</a>
+            on this file since ${stickyrev} was
+            <a href="${cset}" title="${_('View changeset %(rev)s', rev=drev)}">${rev}</a>,
+            checked in by ${author}, ${age}
+            #       endtrans
             #     else:
-            <i18n:msg params="rev, author, age">
-              <a href="${rcset}" title="View differences">Last change</a>
-              on this file was
-              <a href="${cset}" title="${_('View changeset %(rev)s', rev=drev)}">${drev}</a>,
-              checked in by ${author}, ${age}
-            </i18n:msg>
+            #       trans rev = drev, author, age
+            <a href="${rcset}" title="View differences">Last change</a>
+            on this file was
+            <a href="${cset}" title="${_('View changeset %(rev)s', rev=drev)}">${rev}</a>,
+            checked in by ${author}, ${age}
+            #       endtrans
             #     endif
             {{ endwith }}
           </th>
@@ -224,19 +223,17 @@
         <tr>
           <td colspan="2">
             <ul class="props">
-              #   macro prop_value(prop)
-              #     if istext(prop.value):
-              ##       TODO `prop.value is text` (test)
-              <em><code>${prop.value}</code></em>
-              #     else:
-              ${prop.value}
-              #     endif
-              #   endmacro
-
-              ##   TODO "Show Case"
-
               #   for prop in properties:
               <li>
+                #   macro prop_value(prop)
+                #     if istext(prop.value):
+                ##    if prop.value is text: # TODO text test
+                <em><code>${prop.value}</code></em>
+                #     else:
+                ${prop.value}
+                #     endif
+                #   endmacro
+
                 #   if prop.rendered:
                 #     if prop.rendered.name:
                 <span ${prop.rendered.name_attributes|xmlattr}>${
@@ -245,8 +242,9 @@
                 <div ${prop.rendered.content_attributes|xmlattr}>${
                   prop.rendered.content}</div>
                 #   else:
-                ##   FIXME
-                <i18n:msg params="name, value">Property <strong>${prop.name}</strong> set to ${prop_value(prop)}</i18n:msg>
+                #     trans name = prop.name, value = prop_value(prop)
+                Property <strong>${name}</strong> set to ${value}
+                #     endtrans
                 #   endif
               </li>
               #   endfor
@@ -255,11 +253,12 @@
         </tr>
         #     endif
         #     if file:
-        <tr i18n:msg="size">
+        <tr>
           <td colspan="2">
+            # trans size = pretty_size(file.size)
             <strong>File size:</strong>
-            <span title="${_('%(size)s bytes', size=file.size)}">${
-              pretty_size(file.size)}</span>
+            <span title="${_('%(size)s bytes', size=file.size)}">${size}</span>
+            # endtrans
           </td>
         </tr>
         #     endif
@@ -309,10 +308,12 @@
         </form>
       </div>
 
-      <div id="help" i18n:msg="">
+      <div id="help">
+        # trans
         <strong>Note:</strong>
         See <a href="${href.wiki('TracBrowser')}">TracBrowser</a>
         for help on using the repository browser.
+        # endtrans
       </div>
 
     </div>

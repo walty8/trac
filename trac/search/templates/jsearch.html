@@ -64,8 +64,9 @@ history and logs, available at http://trac.edgewall.org/.
         <dl id="results">
           # if quickjump:
           <dt id="quickjump">
-            <a href="${quickjump.href}"
-               i18n:msg="name">Quickjump to ${quickjump.name}</a>
+            # trans name = quickjump.name
+            <a href="${quickjump.href}">Quickjump to ${name}</a>
+            # endtrans
           </dt>
           <dd>${quickjump.description}</dd>
           # endif
@@ -74,9 +75,10 @@ history and logs, available at http://trac.edgewall.org/.
                  class="searchable">${result.title}</a></dt>
           <dd class="searchable">${result.excerpt}</dd>
           #   if result.author:
-          <dd i18n:msg="author,date">
-            By ${authorinfo(result.author)} &mdash;
-            <span class="date">${result.date}</span>
+          <dd>
+            #     trans author = authorinfo(result.author), date = result.date
+            By ${author} &mdash; <span class="date">${date}</span>
+            #     endtrans
           </dd>
           #   else:
           <dd><span class="date">${result.date}</span></dd>
@@ -94,10 +96,12 @@ history and logs, available at http://trac.edgewall.org/.
       </div>
       # endif
 
-      <div id="help" i18n:msg="">
+      <div id="help">
+        # trans
         <strong>Note:</strong>
         See <a href="${href.wiki('TracSearch')}">TracSearch</a>
         for help on searching.
+        # endtrans
       </div>
 
     </div>

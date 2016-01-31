@@ -15,8 +15,7 @@
 
 # for idx, entry in enumerate(dir.entries):
 #   set change = dir.changes[entry.created_rev]
-#   set chgset_context = change and context.child('changeset', change.rev,
-                                                  parent=repos.resource)
+#   set chgset_context = change and context.child('changeset', change.rev, parent=repos.resource)
 #   set chgset_view = change and change.is_viewable(perm)
 #   set isdir = entry.kind == 'dir'
 <tr class="${'odd' if idx % 2 else 'even'}">
@@ -66,3 +65,4 @@
   </td>
 </tr>
 # endfor
+## jinjacheck: "(tr )" OK

@@ -76,7 +76,7 @@ history and logs, available at http://trac.edgewall.org/.
       </form>
 
       # if description:
-      <div id="description" xml:space="preserve">
+      <div id="description">
         ${wiki_to_html(context, description)}
       </div>
       # endif
@@ -115,24 +115,6 @@ history and logs, available at http://trac.edgewall.org/.
       #   include 'jpage_index.html'
       # endif
 
-      # set column_headers
-      #   for header_group in header_groups:
-      <tr class="trac-columns">
-        #   for header in header_group if not header.hidden:
-        <th ${{
-            'colspan': '100' if loop.last,
-            'class': classes('asc' if header.asc else
-            'desc' if header.asc is not none)
-            }|xmlattr}>
-          <a href="${report_href(sort=header.col, asc=not header.asc)}">
-            ${header.title}
-          </a>
-        </th>
-        #   endfor
-      </tr>
-      #   endfor
-      # endset
-
       # macro group_heading(value_for_group, row_group)
       #   if value_for_group:
       <h2 class="report-result">
@@ -153,10 +135,30 @@ history and logs, available at http://trac.edgewall.org/.
       ${group_heading(*row_groups[0]) if row_groups else None}
       # if row_groups:
       <table class="listing tickets">
+
         # for groupindex, (value_for_group, row_group) in enumerate(row_groups):
         #   if not groupindex:
         <thead>
+          # set column_headers
+          #   for header_group in header_groups:
+          <tr class="trac-columns">
+            #   for header in header_group if not header.hidden:
+            <th ${{
+                'colspan': '100' if loop.last,
+                'class': classes('asc' if header.asc else
+                'desc' if header.asc is not none)
+                }|xmlattr}>
+              <a href="${report_href(sort=header.col, asc=not header.asc)}">
+                ${header.title}
+              </a>
+            </th>
+            #   endfor
+          </tr>
+          #   endfor
+          # endset
+
           ${column_headers | safe} ## Note: see also Jinja2 issue #490
+          ## jinjacheck: "(tr CDATA)" OK
         </thead>
         #   else:
         <tbody>
@@ -166,14 +168,14 @@ history and logs, available at http://trac.edgewall.org/.
             </th>
           </tr>
           ${column_headers | safe} ## Note: see also Jinja2 issue #490
+          ## jinjacheck: "(tr CDATA)" OK
         </tbody>
         #   endif
         <tbody>
           # for row in row_group:
           #   for cell_group in row.cell_groups:
           #     set fullrow = len(cell_group) == 1
-          #     set td_attrs = {'class': 'fullrow',
-          'colspan': 100} if fullrow else {}
+          #     set td_attrs = {'class': 'fullrow', 'colspan': 100} if fullrow else {}
           <tr ${{
               'class': classes(
               ('color' + row.__color__ + '-' if '__color__' in row else '') +
@@ -232,7 +234,7 @@ history and logs, available at http://trac.edgewall.org/.
             </td>
 
             #       elif col == 'description':
-            <td class="${col}" ${td_attrs|xmlattr} xml:space="preserve">
+            <td class="${col}" ${td_attrs|xmlattr}>
               ${wiki_to_html(context.child(row.resource), cell.value)}
               {{ if fullrow }}<hr />{{ endif }}
             </td>
@@ -269,10 +271,12 @@ history and logs, available at http://trac.edgewall.org/.
       <div id="report-notfound">No matches found.</div>
       # endif
 
-      <div id="help" i18n:msg="">
+      <div id="help">
+        # trans
         <strong>Note:</strong>
         See <a href="${href.wiki('TracReports')}">TracReports</a> for help
         on using and creating reports.
+        # endtrans
       </div>
     </div>
     # endblock content

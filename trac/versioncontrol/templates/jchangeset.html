@@ -39,71 +39,76 @@
         # set old_href = href.browser(reponame, old_path, rev=old_rev)
         # set old_drev = display_rev(old_rev)
         # set new_drev = display_rev(new_rev)
+        <h1>
         # if reponame:
         #   if changeset and restricted:
-        <h1 i18n:msg="new_rev, reponame, new_path">
-          Changeset <a title="Show full changeset"
-                       href="${cset_href}">${new_drev}</a> in ${reponame}
-          for <a title="Show entry in browser"
-                 href="${new_href}">${new_path}</a>
-        </h1>
+        #     trans new_drev, reponame, new_path
+        Changeset <a title="Show full changeset"
+                     href="${cset_href}">${new_drev}</a> in ${reponame}
+        for <a title="Show entry in browser" href="${new_href}">${new_path}</a>
+        #     endtrans
         #   elif not changeset and restricted:
-        <h1 i18n:msg="new_path, old_rev, new_rev, reponame">
-          Changes in <a title="Show entry in browser"
-                        href="${new_href}">${new_path}</a>
-          <a title="Show revision log"
-             href="${log_href}">[${old_drev}:${new_drev}]</a> in ${reponame}
-        </h1>
+        #     trans new_path, old_drev, new_ev, reponame
+        Changes in <a title="Show entry in browser"
+                      href="${new_href}">${new_path}</a>
+        <a title="Show revision log"
+           href="${log_href}">[${old_drev}:${new_drev}]</a> in ${reponame}
+        #     endtrans
         #   elif not changeset and not restricted:
-        <h1 i18n:msg="reponame, old_path, old_rev, new_path, new_rev">
-          Changes in ${reponame}
-          from <a title="Show entry in browser"
-                  href="${old_href}">${old_path}</a>
-          at <a title="Show full changeset"
-                href="${old_cset_href}">r${old_drev}</a>
-          to <a title="Show entry in browser"
-                href="${new_href}">${new_path}</a>
-          at <a title="Show full changeset"
-                href="${cset_href}">r${new_drev}</a>
-        </h1>
+        #     trans reponame, old_path, old_drev, new_path, new_drev
+        Changes in ${reponame}
+        from <a title="Show entry in browser"
+                href="${old_href}">${old_path}</a>
+        at <a title="Show full changeset"
+              href="${old_cset_href}">r${old_drev}</a>
+        to <a title="Show entry in browser"
+              href="${new_href}">${new_path}</a>
+        at <a title="Show full changeset"
+              href="${cset_href}">r${new_drev}</a>
+        #     endtrans
         #   else:
-        <h1 i18n:msg="new_rev, reponame">
-          #   if annotated:
-          Changeset <a href="${cset_href}">${new_drev}</a> in ${reponame}
-          #   else:
-          Changeset ${new_drev} in ${reponame}
-          #   endif
-        </h1>
+        #     trans new_drev, reponame
+        #       if annotated:
+        Changeset <a href="${cset_href}">${new_drev}</a> in ${reponame}
+        #       else:
+        Changeset ${new_drev} in ${reponame}
+        #       endif
+        #     endtrans
         #   endif
         # else:
         #   if changeset and restricted:
-        <h1 i18n:msg="new_rev, new_path">
-          Changeset <a title="Show full changeset"
-                       href="${cset_href}">${new_drev}</a>
-          for <a title="Show entry in browser"
-                 href="${new_href}">${new_path}</a>
-        </h1>
-        #     elif not changeset and restricted:
-        <h1 i18n:msg="new_path, old_rev, new_rev">
-          Changes in <a title="Show entry in browser"
-                        href="${new_href}">${new_path}</a>
-          <a title="Show revision log"
-             href="${log_href}">[${old_drev}:${new_drev}]</a>
-        </h1>
+        #     trans new_drev, new_path
+        Changeset <a title="Show full changeset"
+                     href="${cset_href}">${new_drev}</a>
+        for <a title="Show entry in browser"
+               href="${new_href}">${new_path}</a>
+        #     endtrans
+        #   elif not changeset and restricted:
+        #     trans new_path, old_drev, new_drev
+        Changes in <a title="Show entry in browser"
+                      href="${new_href}">${new_path}</a>
+        <a title="Show revision log"
+           href="${log_href}">[${old_drev}:${new_drev}]</a>
+        #     endtrans
         #   elif not changeset and not restricted:
-        <h1 i18n:msg="old_path, old_rev, new_path, new_rev">
-          Changes
-          from <a title="Show entry in browser" href="${old_href}">${old_path}</a>
-          at <a title="Show full changeset" href="${old_cset_href}">r${old_drev}</a>
-          to <a title="Show entry in browser" href="${new_href}">${new_path}</a>
-          at <a title="Show full changeset" href="${cset_href}">r${new_drev}</a>
-        </h1>
+        #     trans old_path, old_drev, new_path, new_drev
+        Changes
+        from <a title="Show entry in browser" href="${old_href}">${old_path}</a>
+        at <a title="Show full changeset" href="${old_cset_href}">r${old_drev}</a>
+        to <a title="Show entry in browser" href="${new_href}">${new_path}</a>
+        at <a title="Show full changeset" href="${cset_href}">r${new_drev}</a>
+        #     endtrans
         #   else:
-        <h1 i18n:msg="new_rev">
-          Changeset <a py:strip="not annotated" href="${cset_href}">${new_drev}</a>
-        </h1>
+        #     if annotated:
+        #       trans new_drev
+        Changeset <a href="${cset_href}">${new_drev}</a>
+        #       endtrans
+        #     else:
+        Changeset ${new_drev}
+        #     endif
         #   endif
         # endif
+        </h1>
       </div>
       # endwith
 
@@ -146,10 +151,12 @@
       #   endif
       <span class="comment">(${kind})</span>
       #   if item.old and item.old.get('path') and item.change == 'copy' or item.change == 'move':
-      <small><em i18n:msg="kind, old_path">
+      <small><em>
+          # trans kind, old_path = item.old.path
           (${kind} from <a href="${item.old.href}"
-                         title="${_('Show original file (revision %(old_rev)s)', old_rev=display_rev(item.old.rev))}">
-            ${item.old.path}</a>)
+                           title="${_('Show original file (revision %(old_rev)s)', old_rev=display_rev(item.old.rev))}">
+            ${old_path}</a>)
+          # endtrans
       </em></small>
       #   endif
       #   if 'hide_diff' in item:
@@ -177,7 +184,9 @@
                        ##       in order to not break indent in html mode
           (less than one hour ago)
           #   else:
-          <i18n:msg params="age">(${dateinfo(changeset.date)} ago)</i18n:msg>
+          #     trans age = changeset.date
+          (${dateinfo(changeset.date)} ago)
+          #     endtrans
           #   endif
           # endwith
         </dd>
@@ -195,7 +204,7 @@
         #   endif
         # endfor
         <dt class="property message">Message:</dt>
-        <dd class="message searchable" xml:space="preserve">
+        <dd class="message searchable">
           # if not len(changeset.message.strip()):
           &nbsp;
           # elif wiki_format_messages:
@@ -284,10 +293,12 @@
         #   include 'jdiff_div.html'
         # endwith
 
-        <div id="help" i18n:msg="">
+        <div id="help">
+          # trans
           <strong>Note:</strong>
           See <a href="${href.wiki('TracChangeset')}">TracChangeset</a>
           for help on using the changeset viewer.
+          # endtrans
         </div>
 
       </div>

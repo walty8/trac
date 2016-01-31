@@ -17,8 +17,7 @@
     ## FIXME enumerate
     # for idx, repository in enumerate(repo.repositories):
     #   set reponame, repoinfo, repos, change, err, raw_href = repository
-    #   set chgset_context = change and context.child('changeset', change.rev,
-    parent=repos.resource)
+    #   set chgset_context = change and context.child('changeset', change.rev, parent=repos.resource)
     #   set chgset_view = change and change.is_viewable(perm)
     <tr class="${'odd' if idx % 2 else 'even'}">
       <td class="name">
@@ -44,8 +43,10 @@
         # endif
       </td>
       <td class="size">
-        <a py:if="raw_href" class="trac-ziplink" href="${raw_href}"
+        # if raw_href:
+        <a class="trac-ziplink" href="${raw_href}"
            title="Download as Zip archive">&#8203;</a>
+        # endif
       </td>
       <td class="rev">
         # if change and not err:
