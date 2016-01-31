@@ -61,26 +61,26 @@ Arguments:
       <h2 id="${'file%s' % idx if not no_id else None}">
         # if new.path:
         <a href="${item.get('href', new.get('href'))}"
-           title="${item.get('title', new.get('title'))}">$new.path</a>
+           title="${item.get('title', new.get('title'))}">${new.path}</a>
         # else:
         &nbsp;
         # endif
       </h2>
       #   if comments:
-      <pre>$comments</pre>
+      <pre>${comments}</pre>
       #   endif
 
       #   macro prop_name(name, attrs)
-      <strong ${attrs|xmlattr}>$name</strong>
+      <strong ${attrs|xmlattr}>${name}</strong>
       #   endmacro
 
       #   macro render_property(prop)
       #     if prop.rendered:
-      $prop.rendered.content
+      ${prop.rendered.content}
       #     elif istext(prop.value):
-      <em><code>$prop.value</code></em>
+      <em><code>${prop.value}</code></em>
       #     else:
-      $prop.value
+      ${prop.value}
       #     endif
       #   endmacro
 
@@ -88,7 +88,7 @@ Arguments:
       <ul class="props">
         #   for prop in item.props:
         #     if prop.diff:
-        $prop.diff
+        ${prop.diff}
         #     endif
         #     set one = prop.old or prop.new
         #     set both = prop.old and prop.new
@@ -119,7 +119,7 @@ Arguments:
       {# jinjacheck: "CDATA li" OK #}
       #   endif
       #   if item.diffs:
-      <table class="trac-diff $diff.style" summary="Differences"
+      <table class="trac-diff ${diff.style}" summary="Differences"
              cellspacing="0">
         #   with
         #     set fromline = item.diffs[0][0].base.offset+1
@@ -136,17 +136,17 @@ Arguments:
             <th colspan="2">
               # if 'href' in old:
               <a title="${old.get('title')}"
-                 href="${old.get('href')}#L$fromline">$longcol $old.rev</a>
+                 href="${old.get('href')}#L${fromline}">${longcol} ${old.rev}</a>
               # else:
-              $longcol $old.rev
+              ${longcol} ${old.rev}
               # endif
             </th>
             <th colspan="2">
               # if 'href' in new:
               <a title="${new.get('title')}"
-                 href="${new.get('href')}#L$toline">$longcol $new.rev</a>
+                 href="${new.get('href')}#L${toline}">${longcol} ${new.rev}</a>
               # else:
-              $longcol $new.rev
+              ${longcol} ${new.rev}
               # endif
             </th>
           </tr>
@@ -157,18 +157,18 @@ Arguments:
         </colgroup>
         <thead>
           <tr>
-            <th title="$longcol $old.rev">
+            <th title="${longcol} ${old.rev}">
               # if 'href' in old:
               <a title="${old.get('title')}"
-                 href="${old.get('href')}#L$fromline">$shortcol$old.shortrev</a>
+                 href="${old.get('href')}#L${fromline}">${shortcol}${old.shortrev}</a>
               # else:
-              $shortcol$old.shortrev
+              ${shortcol}${old.shortrev}
               # endif
             </th>
-            <th title="$longcol $new.rev">
+            <th title="${longcol} ${new.rev}">
               # if 'href' not in new:
               <a title="${new.get('title')}"
-                 href="${new.get('href')}#L$toline">$shortcol$new.shortrev</a>
+                 href="${new.get('href')}#L${toline}">${shortcol}${new.shortrev}</a>
             </th>
             <td>
               # if 'diffs_title' in item:
@@ -182,7 +182,7 @@ Arguments:
         #   endwith
         #   for idx, blocks in enumerate(item.diffs):
         #     for block in blocks:
-        <tbody class="$block.type">
+        <tbody class="${block.type}">
           #     if block.type == 'unmod':
           ##     Show identical lines on both "sides"
           #       for idx, line in enumerate(block.base.lines):
@@ -191,10 +191,10 @@ Arguments:
             #       set to_n = block.changed.offset + idx + 1
             #       set clines = block.changed.lines
             #       if diff.style == 'sidebyside':
-            <th>$from_n</th><td class="l"><span>$line</span></td>
-            <th>$to_n</th><td class="r"><span>${clines[idx] if idx < len(clines) else None}</span></td>
+            <th>${from_n}</th><td class="l"><span>${line}</span></td>
+            <th>${to_n}</th><td class="r"><span>${clines[idx] if idx < len(clines) else None}</span></td>
             #       elif diff.style == 'inline':
-            <th>$from_n</th><th>$to_n</th><td class="l"><span>$line</span></td>
+            <th>${from_n}</th><th>${to_n}</th><td class="l"><span>${line}</span></td>
             #       endif
           </tr>
           #       endfor
@@ -205,9 +205,9 @@ Arguments:
             #       set to_n = block.changed.offset + idx + 1
             #       if diff.style == 'sidebyside':
             <th>&nbsp;</th><td class="l"></td>
-            <th>$to_n</th><td class="r"><ins>$line</ins></td>
+            <th>${to_n}</th><td class="r"><ins>${line}</ins></td>
             #       elif diff.style == 'inline':
-            <th>&nbsp;</th><th>$to_n</th><td class="r"><ins>$line</ins></td>
+            <th>&nbsp;</th><th>${to_n}</th><td class="r"><ins>${line}</ins></td>
             #       endif
           </tr>
           #       endfor
@@ -217,10 +217,10 @@ Arguments:
           <tr class="${first_last(idx, block.base.lines) if diff.style == 'inline' else None}">
             #       set from_n = block.base.offset + idx + 1
             #       if diff.style == 'sidebyside':
-            <th>$from_n</th><td class="l"><del>$line</del></td>
+            <th>${from_n}</th><td class="l"><del>${line}</del></td>
             <th>&nbsp;</th><td class="r"></td>
             #       elif diff.style == 'inline':
-            <th>$from_n</th><th>&nbsp;</th><td class="l"><del>$line</del></td>
+            <th>${from_n}</th><th>&nbsp;</th><td class="l"><del>${line}</del></td>
             #       endif
           </tr>
           #       endfor
@@ -232,7 +232,7 @@ Arguments:
           #           for idx, line in enumerate(block.base.lines):
           <tr>
             <th>${block.base.offset+idx+1}</th>
-            <td class="l"><span>$line</span></td>
+            <td class="l"><span>${line}</span></td>
             #           set within_change = idx < len(block.changed.lines)
             <th>${block.changed.offset + idx + 1 if within_change else '&nbsp;'}</th>
             <td class="r">
@@ -254,7 +254,7 @@ Arguments:
               #         endif
             </td>
             <th>${block.changed.offset + idx + 1}</th>
-            <td class="r"><span>$line</span></td>
+            <td class="r"><span>${line}</span></td>
           </tr>
           #           endfor
           #         endif
@@ -262,13 +262,13 @@ Arguments:
           ##       First show the "old" lines
           #         for idx, line in enumerate(block.base.lines):
           <tr class="${'first' if idx == 0 else None}">
-            <th>${block.base.offset + idx + 1}</th><th>&nbsp;</th><td class="l"><span>$line</span></td>
+            <th>${block.base.offset + idx + 1}</th><th>&nbsp;</th><td class="l"><span>${line}</span></td>
           </tr>
           #         endfor
           ##       Then show the "new" lines
           #         for idx, line in enumerate(block.changed.lines):
           <tr class="${'last' if idx + 1 == len(block.changed.lines) else None}">
-            <th>&nbsp;</th><th>${block.changed.offset + idx + 1}</th><td class="r"><span>$line</span></td>
+            <th>&nbsp;</th><th>${block.changed.offset + idx + 1}</th><td class="r"><span>${line}</span></td>
           </tr>
           #         endfor
           #       endif
@@ -282,13 +282,13 @@ Arguments:
           #       set toline = item.diffs[idx+1][0].changed.offset + 1
           #       if diff.style == 'sidebyside':
           <tr>
-            <th><a href="$old.href#L$fromline">&hellip;</a></th><td>&nbsp;</td>
-            <th><a href="$new.href#L$toline">&hellip;</a></th><td>&nbsp;</td>
+            <th><a href="${old.href}#L${fromline}">&hellip;</a></th><td>&nbsp;</td>
+            <th><a href="${new.href}#L${toline}">&hellip;</a></th><td>&nbsp;</td>
           </tr>
           #       elif diff.style == 'inline':
           <tr>
-            <th><a href="$old.href#L$fromline">&hellip;</a></th>
-            <th><a href="$new.href#L$toline">&hellip;</a></th>
+            <th><a href="${old.href}#L${fromline}">&hellip;</a></th>
+            <th><a href="${new.href}#L${toline}">&hellip;</a></th>
             <td>
               # if 'diffs_title' in item:
               <em>${item.diffs_title[idx+1]}</em>
