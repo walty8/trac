@@ -115,15 +115,15 @@ def analyze(jinja_template, only=None, quiet=False):
         report_errors('Jinja2', issues_j)
     if only != 'jinja' and etree:
         issues_h = check_html(jinja_template, html, html_hints, quiet)
-        report_errors('XHTML', issues_h)
+        report_errors('HTML', issues_h)
     return issues_j + issues_h
 
 
 def report_errors(kind, issues):
     if issues:
-        print('%s: %d errors' % (kind, issues))
+        print('# -- %s %d errors' % (kind, issues))
     else:
-        print('%s: OK' % kind)
+        print('# -- %s OK' % kind)
 
 
 
@@ -232,7 +232,7 @@ def scan(lines):
 def check_jinja(filename, line_statements, quiet):
     """Verifies proper nesting of Jinja2 control structures.
     """
-    print("\n---- Jinja2 check on '%s' ------------------------\n" % filename)
+    print("\n# -- Jinja2 check for '%s'" % filename)
     kw_stack = []
     issues = 0
     for s in line_statements:
@@ -305,7 +305,7 @@ def check_html(filename, html_lines, html_hints, quiet):
     """Validates the given HTML (as XHTML actually)
     """
     global etree
-    print("\n---- HTML check for '%s' -------------------------\n" % filename)
+    print("\n# -- HTML check for '%s'" % filename)
     # re-build the page content, replacing the DTD with the XHTML DTD,
     # or adding it if missing. Jinja2 expressions are removed.
     opened_braces = 0
@@ -339,6 +339,9 @@ def check_html(filename, html_lines, html_hints, quiet):
         # lxml will try to convert the URL to unicode by itself,
         # this won't work for non-ascii URLs, so help him
         etree.parse(StringIO(page), base_url='.') #  base_url ??
+        if not quiet:
+            for lineinfo in html_lines:
+                print('%5d %s' % lineinfo),
         return 0
     except etree.XMLSyntaxError as e:
         errors = []
