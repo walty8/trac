@@ -155,49 +155,69 @@ JINJACHECK_RE = re.compile(r'jinjacheck: "([^"]+)" OK')
 
 
 def scan(lines):
-    """Scans template lines and separate Jinja2 structure from HTML structure.
+    """Scans template lines and separates Jinja2 structure from HTML structure.
     """
     lines = iter(enumerate(lines))
     line_statements = []
     html = []
     html_hints = []
-    def add_hint(linenum, comment_line):
-        m = JINJACHECK_RE.search(sline)
+    def check_for_hint(linenum, comment):
+        m = JINJACHECK_RE.search(comment)
         if m:
             html_hints.append((linenum, m.group(1)))
     try:
+        comment_start = -1 # not in a comment
+        html_start = start_idx = end_idx = 0
+        linenum, line = lines.next()
+        html_line = []
         while True:
-            # pick a line
-            linenum, line = lines.next()
-            sline = line.strip()
             # skip empty lines
-            if sline == '':
-                html.append((linenum, '\n'))
-                continue
-            # skip comment blocks
-            if sline.startswith(COMMENT_START_STRING):
-                html.append((linenum, '\n'))
-                add_hint(linenum, sline)
-                while not sline.endswith(COMMENT_END_STRING):
-                    html.append((linenum, '\n'))
-                    add_hint(linenum, sline)
-                    sline = lines.next()[1].strip()
-                continue
-            # skip line comments
-            if sline.startswith(LINE_COMMENT_PREFIX):
-                html.append((linenum, '\n'))
-                add_hint(linenum, sline)
-                continue
-            # check for a line statement
-            m = LINE_STATEMENT_RE.match(line)
-            if m:
-                html.append((linenum, '\n'))
-                line_statements.append(
-                    Statement(linenum, (len(m.group(1)) + len(m.group(2)) + 1),
-                              m.group(3) or '', m.group(4),
-                              m.group(5), m.group(6) or ''))
+            if comment_start > -1:
+                # we're in a comment block, look for the end of block
+                end_idx = line.find(COMMENT_END_STRING, end_idx)
+                check_for_hint(linenum, line[comment_start:end_idx])
+                if end_idx > -1:
+                    # found, we're no longer in a comment
+                    comment_start = -1
+                    # look for another comment block on the *same* line
+                    html_start = start_idx = end_idx + 2
+                    continue
+                else:
+                    # comment block continues on next line
+                    comment_start = end_idx = 0
             else:
-                html.append((linenum, line))
+                # look for start of a comment block
+                start_idx = line.find(COMMENT_START_STRING, start_idx)
+                frag = line[html_start:start_idx]
+                if start_idx > -1:
+                    # found, we're a the start of a comment
+                    html_line.append(frag)
+                    # look for the end of this comment block on *same* line
+                    comment_start = end_idx = start_idx + 2
+                    continue
+                else:
+                    if html_start >= 2:
+                        # we ended a comment without starting a new one
+                        html_line.append(frag)
+                    else:
+                        # look for start of comment line
+                        if line.strip().startswith(LINE_COMMENT_PREFIX):
+                            check_for_hint(linenum, line)
+                        else:
+                            # check for a line statement
+                            m = LINE_STATEMENT_RE.match(line)
+                            if m:
+                                line_statements.append(
+                                    Statement(linenum, (len(m.group(1)) +
+                                                        len(m.group(2)) + 1),
+                                              m.group(3) or '', m.group(4),
+                                              m.group(5), m.group(6) or ''))
+                            else:
+                                html_line = line
+            html.append((linenum, ''.join(html_line).rstrip() + '\n'))
+            linenum, line = lines.next()
+            html_line = []
+            html_start = start_idx = end_idx = 0
     except StopIteration:
         return line_statements, html, html_hints
 
@@ -300,8 +320,10 @@ def check_html(filename, html_lines, html_hints, quiet):
         normalized_lines[-1] = normalized_lines[-1] + '</html>'
     normalized_lines[0] = XHTML_DOCTYPE + normalized_lines[0]
     page = '\n'.join(normalized_lines)
-    ## print(page) # DEBUG
-    ## print(repr(html_hints)) # DEBUG
+    ## print('LINES %s' % ''.join("%5d: %s" % l for l in html_lines)) # DEBUG
+    ## print('PAGE %s' %
+    ##       '\n'.join("%5d: %s" % l for l in enumerate(normalized_lines)))
+    ## print('HINTS', repr(html_hints)) # DEBUG
     etree.clear_error_log()
     try:
         # lxml will try to convert the URL to unicode by itself,
@@ -312,25 +334,21 @@ def check_html(filename, html_lines, html_hints, quiet):
         errors = []
         for entry in e.error_log:
             errors.append((entry.line, entry.column, entry.message))
-        ignored_errors = []
-        def process_error(line, col, msg):
-            hint = get_hint(line, msg)
-            if hint:
-                ignored_errors.append(line)
-            print('%s:%s:%s: %s%s' %
-                  (filename, line, col, msg,
-                   ' (IGNORED "%s")' % hint if hint else ''))
-        def get_hint(linenum, msg):
+        real_errors = []
+        def process_error(linenum, col, msg):
             hint_linenum = hint = None
             while html_hints:
-                hint_linenum = html_hints[0][0]
+                hint_linenum, hint = html_hints[0]
                 if hint_linenum >= linenum or len(html_hints) == 1:
-                    hint = html_hints[0][1]
                     break
                 del html_hints[0]
             if hint and hint in msg:
                 del html_hints[0]
-                return hint
+                ignored = ' (IGNORED "%s")' % hint
+            else:
+                real_errors.append(linenum)
+                ignored = ''
+            print('%s:%s:%s: %s%s' % (filename, linenum + 1, col, msg, ignored))
         for linenum, line in html_lines:
             if not quiet:
                 print('%5d %s' % (linenum, line)),
@@ -341,7 +359,7 @@ def check_html(filename, html_lines, html_hints, quiet):
         # in case some errors haven't been flushed at this point...
         for err in errors:
             process_error(*err)
-        return len(errors) - len(ignored_errors)
+        return len(real_errors)
 
 
 BRACES_RE = re.compile(r'(?:\b(id|for|selected|checked)=")?\$?([{}])')
