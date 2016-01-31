@@ -14,7 +14,7 @@
   <head>
     # block head
     # endblock
-  </head>
+  </head> {# jinjacheck: "()" OK #}
 
   <body>
     # block body
@@ -44,6 +44,8 @@ ${ ''  }<li ${{'class': classes(first_last(idx, chrome.nav[category]),
                                                'height': chrome.logo.height,
                                                'width': chrome.logo.width
                                                }|xmlattr} /></a>
+        ## jinjacheck: "attribute alt" OK
+        ## jinjacheck: "attribute src" OK
         # else:
         <h1><a href="${chrome.logo.link}">${project.name}</a></h1>
         # endif
@@ -120,10 +122,12 @@ ${ ''  }<li ${{'class': classes(first_last(idx, chrome.nav[category]),
       <a id="tracpowered" href="http://trac.edgewall.org/"
          ><img src="${chrome.htdocs_location}trac_logo_mini.png" height="30"
                width="107" alt="Trac Powered"/></a>
-      <p class="left" i18n:msg="version">
+      <p class="left">
+        # trans version = trac.version
         Powered by <a href="${href.about()}"
-                      ><strong>Trac ${trac.version}</strong></a><br />
+                      ><strong>Trac ${version}</strong></a><br />
         By <a href="http://www.edgewall.org/">Edgewall Software</a>.
+        # endtrans
       </p>
       <p class="right">${chrome.footer}</p>
     </div>

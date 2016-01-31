@@ -20,6 +20,7 @@
 
     #   for meta in chrome.metas:
     <meta ${meta|xmlattr} />
+    ## jinjacheck: "attribute content" OK
     #   endfor
 
     <!--[if IE]><script type="text/javascript">
@@ -80,6 +81,7 @@
     #   include 'site_head.html' ignore missing
     # endblock head
   </head>
+  ## jinjacheck: "meta link style link script" OK ... TODO add <title>
 
   <body>
     # block bottom

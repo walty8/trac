@@ -25,15 +25,17 @@ ${preview.rendered}
 <p>
 #   if preview.max_file_size_reached:
 ##    FIXME
-<i18n:msg params="size">
+#     trans prettysize = pretty_size(preview.max_file_size)
   <strong>HTML preview not available</strong>, since the file size exceeds ${
-  pretty_size(preview.max_file_size)}.
-</i18n:msg>
+  prettysize}.
+#     endtrans
 #   else:
-<i18n:msg>
+#     trans
   <strong>HTML preview not available</strong>, since no preview renderer could handle it.
-</i18n:msg>
+#     endtrans
 #   endif
-<i18n:msg>Try <a href="${preview.raw_href}">downloading</a> the file instead.</i18n:msg>
+#   trans
+Try <a href="${preview.raw_href}">downloading</a> the file instead.
+#   endtrans
 # endif
 </p>
