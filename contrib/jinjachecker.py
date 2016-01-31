@@ -142,8 +142,15 @@ COMMENT_END_STRING = '#}'
 LINE_STATEMENT_PREFIX = '#'
 LINE_COMMENT_PREFIX = '##'
 
-JINJA2_BLOCK_KEYWORDS = ('block', 'call', 'for', 'if', 'macro', 'raw', 'with')
+JINJA2_BLOCK_KEYWORDS = (
+    'block', 'call', 'for', 'if', 'macro', 'raw', 'trans', 'with'
+)
 
+JINJA2_NO_COLON_KEYWORDS = (
+    'block', 'extends', 'include', 'macro', 'set', 'trans', 'with'
+)
+
+JINJA2_NO_EXPRESSION_KEYWORDS = ('else', 'trans', 'with')
 
 Statement = namedtuple('Statement',
                        ('linenum', 'indent', 'end', 'kw', 'expr', 'colon'))
@@ -157,7 +164,7 @@ JINJACHECK_RE = re.compile(r'jinjacheck: "([^"]+)" OK')
 def scan(lines):
     """Scans template lines and separates Jinja2 structure from HTML structure.
     """
-    lines = iter(enumerate(lines))
+    lines = iter(enumerate(lines, 1))
     line_statements = []
     html = []
     html_hints = []
@@ -232,8 +239,8 @@ def check_jinja(filename, line_statements, quiet):
         warn = []
         is_block = (s.kw in JINJA2_BLOCK_KEYWORDS or
                     s.kw == 'set' and '=' not in s.expr)
+        top = kw_stack and kw_stack[-1]
         if s.end:
-            top = kw_stack and kw_stack[-1]
             if not is_block:
                 warn.append("'end%s' is not a valid keyword" % s.kw)
             else:
@@ -261,14 +268,17 @@ def check_jinja(filename, line_statements, quiet):
         else:
             if is_block:
                 kw_stack.append(s)
-            if s.expr == '' and s.kw not in ('with', 'else'):
+            if s.expr == '' and s.kw not in JINJA2_NO_EXPRESSION_KEYWORDS:
                 warn.append("expression missing in '%s' statement" % s.kw)
-            if s.kw in ('block', 'extends', 'include', 'macro', 'set', 'with'):
+            if s.kw in JINJA2_NO_COLON_KEYWORDS:
                 if s.colon:
                     warn.append("no ending colon wanted for '%s' statement"
                                 % s.kw)
             elif not s.colon:
                 warn.append("ending colon wanted for '%s' statement" % s.kw)
+            if s.kw in ('elif', 'else'):
+                if not top or not top.kw == 'if':
+                    warn.append("'%s' is not inside an 'if' block" % s.kw)
         issues += len(warn)
         print_statement(filename, s, warn, quiet)
     return issues
@@ -276,12 +286,12 @@ def check_jinja(filename, line_statements, quiet):
 
 def print_statement(filename, s, warn=None, quiet=False):
     if not quiet:
-        print('%5d %s %s%s%s%s' % (s.linenum + 1,
+        print('%5d %s %s%s%s%s' % (s.linenum,
                                    ' ' * s.indent,
                                    '/' if s.end else '', s.kw.upper(),
                                    s.expr, s.colon))
     while warn:
-        print('%s:%s: %s' % (filename, s.linenum + 1, warn.pop()))
+        print('%s:%s: %s' % (filename, s.linenum, warn.pop()))
 
 
 # -- HTML ------------------------------------------------------------------
@@ -348,7 +358,7 @@ def check_html(filename, html_lines, html_hints, quiet):
             else:
                 real_errors.append(linenum)
                 ignored = ''
-            print('%s:%s:%s: %s%s' % (filename, linenum + 1, col, msg, ignored))
+            print('%s:%s:%s: %s%s' % (filename, linenum, col, msg, ignored))
         for linenum, line in html_lines:
             if not quiet:
                 print('%5d %s' % (linenum, line)),
