@@ -83,7 +83,7 @@ history and logs, available at http://trac.edgewall.org/.
           <dd class="searchable">${result.excerpt}</dd>
           #   if result.author:
           <dd>
-            ${_("By %(author)s", author=authorinfo(result.author))} &mdash;
+            ${tag_("By %(author)s", author=authorinfo(result.author))} &mdash;
             <span class="date">${result.date}</span>
           </dd>
           #   else:

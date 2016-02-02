@@ -637,6 +637,7 @@ class Chrome(Component):
         'separated': presentation.separated,
         'shorten_line': shorten_line,
         'sorted': sorted,
+        'tag_': translation.tag_,
         'time': datetime.time,
         'timedelta': datetime.timedelta,
         'to_json': presentation.to_json,
@@ -927,8 +928,8 @@ class Chrome(Component):
             logo = {'link': self.logo_link, 'alt': self.logo_alt}
         return logo
 
-    def populate_data(self, req, data):
-        d = self._default_context_data.copy()
+    def populate_data(self, req, data, base=None):
+        d = self._default_context_data.copy() if base is None else base
         d['trac'] = {
             'version': self.env.trac_version,
             'homepage': 'http://trac.edgewall.org/',  # FIXME: use setup data
@@ -1131,10 +1132,9 @@ class Chrome(Component):
                 autoescape=lambda t: (t and
                                       t.rsplit('.', 1)[1] in ('xml', 'html')),
                 loader=jinja2.FileSystemLoader(self.get_all_templates_dirs()),
-                auto_reload=self.auto_reload
+                auto_reload=self.auto_reload,
             )
-            self.jenv.install_gettext_translations(
-                translation.get_translations())
+            self.jenv.globals.update(self._default_context_data.copy())
             self.jenv.globals.update(
                 enumerate=enumerate,
                 len=len,
@@ -1200,9 +1200,11 @@ class Chrome(Component):
         jtemplate = self.load_jtemplate('j' + filename)
         j2 = time.time()
 
-        # Populate data (Jinja2 should get part of that in jenv.globals)
+        # Populate data with request dependent data
         data = self.populate_data(req, data)
+        jdata = self.populate_data(req, data, {})
         data['chrome']['content_type'] = content_type
+        jdata['chrome']['content_type'] = content_type
         t3 = time.time()
         stream = template.generate(**data)
         t4 = time.time()
@@ -1212,8 +1214,9 @@ class Chrome(Component):
             kstream = ktemplate(data)
             k4 = time.time()
         # Filter through ITemplateStreamFilter plugins
-        if self.stream_filters:
-            stream |= self._filter_stream(req, method, filename, stream, data)
+        # -- disable them to be fair...
+        #if self.stream_filters:
+        #    stream |= self._filter_stream(req, method, filename, stream, data)
         t5 = time.time()
         if fragment:
             # Note: for Kajiki is_fragment must be passed to load_ktemplate
@@ -1235,7 +1238,7 @@ class Chrome(Component):
                     pass # well, we don't really care..
             if jtemplate:
                 j5 = time.time()
-                s = jtemplate.render(data).encode('utf-8')
+                s = jtemplate.render(jdata).encode('utf-8')
                 j6 = time.time()
                 show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'text')
             return s
@@ -1260,7 +1263,16 @@ class Chrome(Component):
             'late_scripts': req.chrome['scripts'],
             'late_script_data': req.chrome['script_data'],
         })
+        # TODO: I get the feeling the late links logic will have to be
+        #       revisited... <head> should use the early_, <body> the
+        #       late_
+        jdata.setdefault('chrome', {}).update({
+            'late_links': req.chrome['links'],
+            'late_scripts': req.chrome['scripts'],
+            'late_script_data': req.chrome['script_data'],
+        })
 
+        # TODO: try with Jinja2, will work as well
         # if iterable:
         #    return self.iterable_content(stream, method, doctype=doctype)
 
@@ -1282,7 +1294,7 @@ class Chrome(Component):
                     pass # well, we don't really care..
             if jtemplate:
                 j5 = time.time()
-                s = jtemplate.render(data).encode('utf-8')
+                s = jtemplate.render(jdata).encode('utf-8')
                 j6 = time.time()
                 show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'text')
             return s
