@@ -29,17 +29,6 @@ extra = {}
 try:
     import babel
 
-    # extractors = [
-    #     ('**.py',                'trac.dist:extract_python', None),
-    #     ('**/templates/j*.html', 'jinja2', None),
-    #     #('**/templates/**.txt',  'genshi',
-    #     # {'template_class': 'genshi.template:NewTextTemplate'}),
-    # ]
-    # extra['message_extractors'] = {
-    #     'trac': extractors,
-    #     'tracopt': extractors,
-    # }
-
     from trac.dist import get_l10n_trac_cmdclass
     extra['cmdclass'] = get_l10n_trac_cmdclass()
 

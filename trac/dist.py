@@ -25,6 +25,9 @@ import os
 import re
 from tokenize import generate_tokens, COMMENT, NAME, OP, STRING
 
+from jinja2.ext import babel_extract as extract_html_jinja2
+from genshi.filters.i18n import extract as extract_html_genshi
+
 from distutils import log
 from distutils.cmd import Command
 from distutils.command.build import build as _build
@@ -220,7 +223,6 @@ try:
         # Hack: only do this for Genshi templates
         if fileobj.name:
             filepath = fileobj.name.replace('\\', '/').rsplit('/', 1)
-            print filepath
             if filepath[-1].startswith(('j', 'k')):
                 return []
 
@@ -233,6 +235,29 @@ try:
         stream.render(out=out, encoding='utf-8')
         out.seek(0)
         return extract_javascript(out, keywords, comment_tags, options)
+
+
+    def extract_html(fileobj, keywords, comment_tags, options):
+        """Extract messages from Genshi or Jinja2 templates.
+
+        This is only needed as an interim measure, as long as we have both.
+        """
+        extractor = None
+        if fileobj.name:
+            filepath = fileobj.name.replace('\\', '/').rsplit('/', 1)
+            filename = filepath[-1]
+            key = filename[0]
+            if key == 'j':
+                extractor = extract_html_jinja2 # Jinja2 template
+            elif key == 'k':
+                pass # we don't care about Kajiki templates
+            else:
+                extractor = extract_html_genshi # Genshi template only
+            #elif os.path.exists(os.path.join(filepath[0], 'j' + filename)):
+            #    pass # we only consider the already converted Jinja2 template
+        if extractor:
+            for m in extractor(fileobj, keywords, comment_tags, options):
+                yield m
 
 
     class generate_messages_js(Command):
