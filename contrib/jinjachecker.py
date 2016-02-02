@@ -281,6 +281,13 @@ def check_jinja(filename, line_statements, quiet):
                     warn.append("'%s' is not inside an 'if' block" % s.kw)
         issues += len(warn)
         print_statement(filename, s, warn, quiet)
+    while kw_stack:
+        issues += 1
+        s = kw_stack.pop()
+        fake = Statement(line_statements[-1].linenum + 1, *[None] * 5)
+        print_statement(filename, fake,
+                        ["'end%s' statement missing for '%s' at line %d)" %
+                         (s.kw, s.kw, s.linenum)], quiet=True)
     return issues
 
 
