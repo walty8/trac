@@ -50,7 +50,7 @@ Arguments:
 #}
 <div class="diff">
 
-  # if any(item.diffs or item.props for item in changes):
+  # if changes|selectattr('diffs') or changes|selectattr('props'):
   <ul class="entries">
     # for idx, item in enumerate(changes):
     #   set old = item.old
@@ -97,29 +97,26 @@ Arguments:
         #     if one:
         <li>
           #     if both:
-          i18n:msg params="name, old, new"
-          Property ${prop_name(name, name_attrs)}
-          changed from ${render_property(prop.old)}
-          to ${render_property(prop.new)}
-          /i18n:msg
+          #       trans name = prop_name(name, name_attrs), old = render_property(prop.old), new = render_property(prop.new)
+          Property ${name} changed from ${old} to ${new}
+          #       endtrans
           #     elif not prop.old:
-          i18n:msg params="name, value"
-          Property ${prop_name(name, name_attrs)} set
-          to ${render_property(prop.new)}
-          /i18n:msg
+          #       trans name = prop_name(name, name_attrs), value = render_property(prop.new)
+          Property ${name} set to ${value}
+          #       endtrans
           #     else:
-          i18n:msg params="name"
-          Property ${prop_name(name, name_attrs)} deleted
-          /i18n:msg
+          #       trans name = prop_name(name, name_attrs)
+          Property ${name} deleted
+          #       endtrans
           #     endif
         </li>
         #     endif
         #   endfor
       </ul>
-      {# jinjacheck: "CDATA li" OK #}
+      ##   jinjacheck: "CDATA li" OK
       #   endif
       #   if item.diffs:
-      <table class="trac-diff ${diff.style}" summary="Differences"
+      <table class="trac-diff ${diff.style}" summary="${_("Differences")}"
              cellspacing="0">
         #   with
         #     set fromline = item.diffs[0][0].base.offset+1
@@ -309,4 +306,5 @@ Arguments:
     #   endif
     # endfor
   </ul>
+  # endif
 </div>
