@@ -217,6 +217,13 @@ try:
         Select <script type="javascript/text"> tags and delegate to
         `extract_javascript`.
         """
+        # Hack: only do this for Genshi templates
+        if fileobj.name:
+            filepath = fileobj.name.replace('\\', '/').rsplit('/', 1)
+            print filepath
+            if filepath[-1].startswith(('j', 'k')):
+                return []
+
         from genshi.core import Stream
         from genshi.input import XMLParser
 
