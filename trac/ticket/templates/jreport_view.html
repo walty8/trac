@@ -42,13 +42,13 @@ history and logs, available at http://trac.edgewall.org/.
         <div id="prefs">
           <div>
             <label>
-              Max items per page
+              ${_("Max items per page")}
               <input type="text" name="max" size="10" value="${max}" />
             </label>
             # if show_args_form:
             <fieldset id="reportfilters">
-              <legend class="foldable">Arguments</legend>
-              <table summary="Report arguments">
+              <legend class="foldable">${_("Arguments")}</legend>
+              <table summary="${_("Report arguments")}">
                 <tbody>
                   <tr style="height: 1px"><td colspan="2"></td></tr>
                 </tbody>
@@ -70,7 +70,7 @@ history and logs, available at http://trac.edgewall.org/.
             # endif
           </div>
           <div class="buttons">
-            <input type="submit" value="${_('Update')}" />
+            <input type="submit" value="${_("Update")}" />
           </div>
         </div>
       </form>
@@ -86,7 +86,7 @@ history and logs, available at http://trac.edgewall.org/.
         <form action="" method="get">
           <div>
             <input type="hidden" name="action" value="edit" />
-            <input type="submit" value="${_('Edit report')}" accesskey="e" />
+            <input type="submit" value="${_("Edit report")}" accesskey="e" />
           </div>
         </form>
         # endif
@@ -94,7 +94,7 @@ history and logs, available at http://trac.edgewall.org/.
         <form action="" method="get">
           <div>
             <input type="hidden" name="action" value="copy" />
-            <input type="submit" value="${_('Copy report')}" />
+            <input type="submit" value="${_("Copy report")}" />
           </div>
         </form>
         # endif
@@ -102,7 +102,7 @@ history and logs, available at http://trac.edgewall.org/.
         <form action="" method="get">
           <div>
             <input type="hidden" name="action" value="delete" />
-            <input type="submit" value="${_('Delete report')}" />
+            <input type="submit" value="${_("Delete report")}" />
           </div>
         </form>
         # endif
@@ -110,7 +110,8 @@ history and logs, available at http://trac.edgewall.org/.
 
       # if paginator.has_more_pages:
       <h2 class="report-result">
-        Results <span class="numresults">(${paginator.displayed_items()})</span>
+        ${_("Results")}
+        <span class="numresults">(${paginator.displayed_items()})</span>
       </h2>
       #   include 'jpage_index.html'
       # endif
@@ -126,10 +127,10 @@ history and logs, available at http://trac.edgewall.org/.
         #   set cnt = row_group|length
         <span class="numrows">
           (${ngettext('%(num)s match', '%(num)s matches', cnt) if cnt
-          else _('No matches found.')})
+          else _("No matches found.")})
         </span>
-        # endif
       </h2>
+      #   endif
       # endmacro
 
       ${group_heading(*row_groups[0]) if row_groups else None}
@@ -164,7 +165,7 @@ history and logs, available at http://trac.edgewall.org/.
         <tbody>
           <tr class="trac-group">
             <th colspan="100">
-              ${group_heading(value_for_group or _('(empty)'), row_group)}
+              ${group_heading(value_for_group or _("(empty)"), row_group)}
             </th>
           </tr>
           ${column_headers | safe} ## Note: see also Jinja2 issue #490
@@ -194,19 +195,19 @@ history and logs, available at http://trac.edgewall.org/.
             #       set col = cell.header.col.strip('_')
             #       if col == 'report':
             <td class="${col}" ${td_attrs|xmlattr}>
-              <a title="View report" href="${href.report(cell.value)}">{${
-                cell.value}}</a>
+              <a title="${_("View report")}"
+                 href="${href.report(cell.value)}">{${cell.value}}</a>
               {{ if fullrow }}<hr />{{ endif }}
             </td>
             #       elif col in ('ticket', 'id'):
             <td class="ticket" ${td_attrs|xmlattr}>
-              <a title="${_('View %(realm)s', realm=row.resource.realm)}"
+              <a title="${_("View %(realm)s", realm=row.resource.realm)}"
                  href="${url_of(row.resource)}">${shortname_of(row.resource)}</a>
               {{ if fullrow }}<hr />{{ endif }}
             </td>
             #       elif col == 'summary' and row.id:
             <td class="${col}" ${td_attrs|xmlattr}>
-              <a title="${_('View %(realm)s', realm=row.resource.realm)}"
+              <a title="${_("View %(realm)s", realm=row.resource.realm)}"
                  href="${url_of(row.resource)}">${cell.value}</a>
               {{ if fullrow }}<hr />{{ endif }}
             </td>
@@ -268,13 +269,12 @@ history and logs, available at http://trac.edgewall.org/.
       <div class="system-message">${message}</div>
       # endif
       # if numrows == 0:
-      <div id="report-notfound">No matches found.</div>
+      <div id="report-notfound">${_("No matches found.")}</div>
       # endif
 
       <div id="help">
-        # trans
-        <strong>Note:</strong>
-        See <a href="${href.wiki('TracReports')}">TracReports</a> for help
+        # trans href = href.wiki('TracReports')
+        <strong>Note:</strong> See <a href="${href}">TracReports</a> for help
         on using and creating reports.
         # endtrans
       </div>

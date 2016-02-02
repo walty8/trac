@@ -90,8 +90,9 @@
           <div>
             #   with full_path = (reponame, path)|reject('none')|map('trim')|join('/')
             ##    FIXME: s/trim/trimslash/ and implement the filter...
-            <label title="Show the diff against a specific revision">
-              View diff against: <input type="text" name="old" size="6"/>
+            <label title="${_("Show the diff against a specific revision")}">
+              ${_("View diff against:")}
+              <input type="text" name="old" size="6"/>
               <input type="hidden" name="old_path" value="${full_path}"/>
               <input type="hidden" name="new" value="${stickyrev}"/>
               <input type="hidden" name="new_path" value="${full_path}"/>
@@ -105,9 +106,9 @@
         <form action="" method="get">
           <div>
             <label for="rev"
-                   title="${_('Hint: clear the field to view latest revision'
+                   title="${_("Hint: clear the field to view latest revision"
                           ) if stickyrev else None}">
-              View revision:</label>
+              ${_("View revision:")}</label>
             <input type="text" id="rev" name="rev" value="${stickyrev}"
                    size="6" />
           </div>
@@ -118,7 +119,7 @@
       <div id="jumploc">
         <form action="" method="get">
           <div class="buttons">
-            <label for="preselected">Visit:</label>
+            <label for="preselected">${_("Visit:")}</label>
             <select id="preselected" name="preselected">
               <option selected="selected" />
               #   for category, locations in quickjump_entries|groupby('0'):
@@ -130,8 +131,8 @@
               </optgroup>
               #   endfor
             </select>
-            <input type="submit" value="${_('Go!')}"
-                   title="Jump to the chosen preselected path" />
+            <input type="submit" value="${_("Go!")}"
+                   title="${_("Jump to the chosen preselected path")}" />
           </div>
         </form>
       </div>
@@ -141,14 +142,14 @@
       <div class="trac-tags">
         #     for branch, head in changeset.get_branches() if branch not in ('default', 'master'):
         <span ${{'class': classes('branch', head=head)}|xmlattr}
-              title="${_('Branch head') if head else _('Branch')}">${
+              title="${_("Branch head") if head else _("Branch")}">${
           branch}</span>
         #     endfor
         #     for tag in changeset.get_tags():
-        <span class="tag" title="Tag">${tag}</span>
+        <span class="tag" title="${_("Tag")}">${tag}</span>
         #     endfor
         #     for bookmark in changeset.get_bookmarks():
-        <span class="trac-bookmark" title="Bookmark">${bookmark}</span>
+        <span class="trac-bookmark" title="${_("Bookmark")}">${bookmark}</span>
         #     endfor
       </div>
       #     endif
@@ -160,7 +161,7 @@
           #     if 'up' in chrome.links:
           <tr class="even">
             <td class="name" colspan="6">
-              <a class="parent" title="Parent Directory"
+              <a class="parent" title="${_("Parent Directory")}"
                  href="${chrome.links.up[0].href}">../</a>
             </td>
           </tr>
@@ -169,7 +170,7 @@
           #     if 'up' not in chrome.links and not dir.entries:
           <tr class="even">
             <td class="name" colspan="6">
-              No files found
+              ${_("No files found")}
             </td>
           </tr>
           #     endif
@@ -189,19 +190,26 @@
             author = authorinfo(file.changeset.author),
             age = pretty_dateinfo(file.changeset.date)
             }}
-            #     if stickyrev:
-            #       trans stickyrev = display_rev(stickyrev), rev = drev, author, age
+            #     set last_change_link
             <a href="${rcset}" title="View differences">Last change</a>
-            on this file since ${stickyrev} was
-            <a href="${cset}" title="${_('View changeset %(rev)s', rev=drev)}">${rev}</a>,
+            #     endset
+            #     set rev_link
+            <a href="${cset}"
+               title="${_("View changeset %(rev)s", rev=drev)}">${drev}</a>
+            #     endset
+            #     if stickyrev:
+            #       trans last_change = last_change_link|safe, stickyrev = display_rev(stickyrev), rev = rev_link|safe, author, age
+
+            ${last_change} on this file since ${stickyrev} was ${rev},
             checked in by ${author}, ${age}
+
             #       endtrans
             #     else:
-            #       trans rev = drev, author, age
-            <a href="${rcset}" title="View differences">Last change</a>
-            on this file was
-            <a href="${cset}" title="${_('View changeset %(rev)s', rev=drev)}">${rev}</a>,
+            #       trans last_change = last_change_link|safe, rev = rev_link|safe, author, age
+
+            ${last_change} on this file was ${rev},
             checked in by ${author}, ${age}
+
             #       endtrans
             #     endif
             {{ endwith }}
@@ -210,9 +218,9 @@
         <tr>
           <td class="message searchable">
             #   if wiki_format_messages:
-            ##    FIXME xml:space="preserve"
-            ${wiki_to_html(context.child('changeset', file.changeset.rev, parent=repos.resource),
-            file.changeset.message, escape_newlines=True)}
+            ${wiki_to_html(context.child('changeset', file.changeset.rev,
+                                         parent=repos.resource),
+                           file.changeset.message, escape_newlines=True)}
             #   else:
             ${file.changeset.message}
             #   endif
@@ -255,10 +263,9 @@
         #     if file:
         <tr>
           <td colspan="2">
-            # trans size = pretty_size(file.size)
-            <strong>File size:</strong>
-            <span title="${_('%(size)s bytes', size=file.size)}">${size}</span>
-            # endtrans
+            <strong>${_("File size:")}</strong>
+            <span title="${_("%(size)s bytes", size=file.size)}">${
+              pretty_size(file.size)}</span>
           </td>
         </tr>
         #     endif
@@ -270,12 +277,12 @@
       # if dir and path == '/':
       <div class="description">
         ${wiki_to_html(context.child('source', '/', parent=repos.resource),
-        repoinfo.description)}
+                       repoinfo.description)}
       </div>
       # endif
 
       # if repo and repo.repositories:
-      <h1>Repository Index</h1>
+      <h1>${_("Repository Index")}</h1>
       #   with repoindex = 'repoindex'
       #     include 'jrepository_index.html'
       #   endwith
@@ -302,17 +309,16 @@
                    value="${stickyrev|d('', true)}" />
             <input type="hidden" name="old_rev"
                    value="${stickyrev|d('', true)}" />
-            <input type="submit" value="${_('View changes...')}"
-                   title="Select paths and revs for Diff" />
+            <input type="submit" value="${_("View changes...")}"
+                   title="${_("Select paths and revs for Diff")}" />
           </div>
         </form>
       </div>
 
       <div id="help">
-        # trans
-        <strong>Note:</strong>
-        See <a href="${href.wiki('TracBrowser')}">TracBrowser</a>
-        for help on using the repository browser.
+        # trans href = href.wiki('TracBrowser')
+        <strong>Note:</strong> See <a href="${href}">TracBrowser</a> for help
+        on using the repository browser.
         # endtrans
       </div>
 

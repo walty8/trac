@@ -18,7 +18,14 @@ history and logs, available at http://trac.edgewall.org/.
 
     ${ super() }
 
-    <title>{{ if query }}Search Results{{ else }}Search{{ endif }}</title>
+    <title>
+      # if query:
+      ${_("Search Results")}
+      # else:
+      ${_("Search")}
+      # endif
+    </title>
+
     #   if results:
     <meta name="startIndex" content="${results.span[0] + 1}"/>
     <meta name="totalResults" content="${results.num_items}"/>
@@ -32,13 +39,13 @@ history and logs, available at http://trac.edgewall.org/.
     # block content
     <div id="content" class="search">
 
-      <h1><label for="q">Search</label></h1>
+      <h1><label for="q">${_("Search")}</label></h1>
       <form id="fullsearch" action="${href.search()}" method="get">
         <p>
           <input type="text" id="q" name="q" class="trac-autofocus" size="40"
                  ${{'value': query}|xmlattr} />
           <input type="hidden" name="noquickjump" value="1" />
-          <input type="submit" value="${_('Search')}" />
+          <input type="submit" value="${_("Search")}" />
         </p>
         <p class="filters">
           # for filter in filters:
@@ -53,7 +60,8 @@ history and logs, available at http://trac.edgewall.org/.
       <hr />
       #   if results:
       <h2>
-        Results <span class="numresults">(${results.displayed_items()})</span>
+        ${_("Results")}
+        <span class="numresults">(${results.displayed_items()})</span>
       </h2>
       #   endif
 
@@ -64,9 +72,8 @@ history and logs, available at http://trac.edgewall.org/.
         <dl id="results">
           # if quickjump:
           <dt id="quickjump">
-            # trans name = quickjump.name
-            <a href="${quickjump.href}">Quickjump to ${name}</a>
-            # endtrans
+            <a href="${quickjump.href}">${
+              _('Quickjump to %(name)s', name=quickjump.name)|safe}</a>
           </dt>
           <dd>${quickjump.description}</dd>
           # endif
@@ -76,9 +83,8 @@ history and logs, available at http://trac.edgewall.org/.
           <dd class="searchable">${result.excerpt}</dd>
           #   if result.author:
           <dd>
-            #     trans author = authorinfo(result.author), date = result.date
-            By ${author} &mdash; <span class="date">${date}</span>
-            #     endtrans
+            ${_("By %(author)s", author=authorinfo(result.author))} &mdash;
+            <span class="date">${result.date}</span>
           </dd>
           #   else:
           <dd><span class="date">${result.date}</span></dd>
@@ -92,15 +98,14 @@ history and logs, available at http://trac.edgewall.org/.
 
       # elif query:
       <div id="notfound">
-        No matches found.
+        ${_("No matches found")}.
       </div>
       # endif
 
       <div id="help">
-        # trans
+        # trans href = href.wiki('TracSearch')
         <strong>Note:</strong>
-        See <a href="${href.wiki('TracSearch')}">TracSearch</a>
-        for help on searching.
+        See <a href="${href}">TracSearch</a> for help on searching.
         # endtrans
       </div>
 

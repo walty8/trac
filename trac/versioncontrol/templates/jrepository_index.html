@@ -22,7 +22,7 @@
     <tr class="${'odd' if idx % 2 else 'even'}">
       <td class="name">
         # set root_dir_link
-        <a class="dir" title="View Root Directory"
+        <a class="dir" title="${_("View Root Directory")}"
            href="${href.browser(repos.reponame if repos else reponame,
                  order=order if order != 'name' else None, desc=desc)}">${
           reponame}</a>
@@ -45,16 +45,16 @@
       <td class="size">
         # if raw_href:
         <a class="trac-ziplink" href="${raw_href}"
-           title="Download as Zip archive">&#8203;</a>
+           title="${_("Download as Zip archive")}">&#8203;</a>
         # endif
       </td>
       <td class="rev">
         # if change and not err:
-        <a title="View Revision Log"
+        <a title="${_("View Revision Log")}"
            href="${href.log(repos.reponame)}">${
           repos.display_rev(change.rev)}</a>
 
-        <a title="View Changeset" class="chgset"
+        <a title="${_("View Changeset")}" class="chgset"
            href="${href.changeset(change.rev, repos.reponame)}">&nbsp;</a>
         # endif
       </td>

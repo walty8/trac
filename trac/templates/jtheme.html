@@ -8,6 +8,7 @@
   individuals. For the exact contribution history, see the revision
   history and logs, available at http://trac.edgewall.org/.
 #}
+
 ## This is Trac's default theme
 <!DOCTYPE html>
 <html>
@@ -53,9 +54,10 @@ ${ ''  }<li ${{'class': classes(first_last(idx, chrome.nav[category]),
       <form id="search" action="${href.search()}" method="get">
         # if trac_error_rendering is undefined and 'SEARCH_VIEW' in perm:
         <div>
-          <label for="proj-search">Search:</label>
-          <input type="text" id="proj-search" name="q" size="18" accesskey="f" value="" />
-          <input type="submit" value="${_('Search')}" />
+          <label for="proj-search">${_("Search:")}</label>
+          <input type="text" id="proj-search" name="q" size="18" accesskey="f"
+                 value="" />
+          <input type="submit" value="${_("Search")}" />
         </div>
         # endif
       </form>
@@ -68,7 +70,7 @@ ${ ''  }<li ${{'class': classes(first_last(idx, chrome.nav[category]),
          uinohelp=req.session.get('ui.hide_help'))}|xmlattr}>
       ## include resourcepath_template if resourcepath_template ## FIXME
       <div id="ctxtnav" class="nav">
-        <h2>Context Navigation</h2>
+        <h2>${_("Context Navigation")}</h2>
         # if chrome.ctxtnav:
         <ul>
           # for i, elm in enumerate(chrome.ctxtnav):
@@ -83,8 +85,8 @@ ${ ''  }<li ${{'class': classes(first_last(idx, chrome.nav[category]),
       # if chrome.warnings:
       <div id="warning" class="system-message">
         <a class="trac-close-msg" href="#"
-           title="Hide this warning"><span>close</span></a>
-        <strong>Warning:</strong>
+           title="${_("Hide this warning")}"><span>${_("close")}</span></a>
+        <strong>${_("Warning:")}</strong>
         # if len(chrome.warnings) == 1:
         ${chrome.warnings[0]}
         # else:
@@ -100,7 +102,7 @@ ${ ''  }<li ${{'class': classes(first_last(idx, chrome.nav[category]),
       # if chrome.notices:
       <div id="notice" class="system-message">
         <a class="trac-close-msg" href="#"
-           title="Hide this notice"><span>close</span></a>
+           title="${_("Hide this notice")}"><span>${_("close")}</span></a>
         # if len(chrome.notices) == 1:
         ${chrome.notices[0]}
         # else:
@@ -118,14 +120,13 @@ ${ ''  }<li ${{'class': classes(first_last(idx, chrome.nav[category]),
       # endblock bottom
     </div>
 
-    <div id="footer" xml:lang="en"><hr/>
+    <div id="footer"><hr/>
       <a id="tracpowered" href="http://trac.edgewall.org/"
          ><img src="${chrome.htdocs_location}trac_logo_mini.png" height="30"
-               width="107" alt="Trac Powered"/></a>
+               width="107" alt="${_("Trac Powered")}"/></a>
       <p class="left">
-        # trans version = trac.version
-        Powered by <a href="${href.about()}"
-                      ><strong>Trac ${version}</strong></a><br />
+        # trans href = href.about(), version = trac.version
+        Powered by <a href="${href}"><strong>Trac ${version}</strong></a><br />
         By <a href="http://www.edgewall.org/">Edgewall Software</a>.
         # endtrans
       </p>
