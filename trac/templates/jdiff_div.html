@@ -236,9 +236,9 @@ Arguments:
             #           set within_change = idx is lessthan(len(block.changed.lines))
             <th>${block.changed.offset + idx + 1 if within_change else '&nbsp;'|safe}</th>
             <td class="r">
-              #         if within_change:
-              <span>${block.changed.lines[idx]}</span>
-              #         endif
+              #-        if within_change:
+${    ''     }<span>${block.changed.lines[idx]}</span>
+              #-        endif
             </td>
           </tr>
           #           endfor
@@ -249,9 +249,9 @@ Arguments:
             #           set within_change = idx is lessthan(len(block.base.lines))
             <th>${block.base.offset + idx + 1 if within_change else '&nbsp;'|safe}</th>
             <td class="l">
-              #         if within_change:
-              <span>${block.base.lines[idx]}</span>
-              #         endif
+              #-        if within_change:
+${    ''     }<span>${block.base.lines[idx]}</span>
+              #-        endif
             </td>
             <th>${block.changed.offset + idx + 1}</th>
             <td class="r"><span>${line}</span></td>
