@@ -190,7 +190,9 @@ Arguments:
             #       set clines = block.changed.lines
             #       if diff.style == 'sidebyside':
             <th>${from_n}</th><td class="l"><span>${line}</span></td>
-            <th>${to_n}</th><td class="r"><span>${clines[idx] if idx < len(clines)}</span></td>
+            <th>${to_n}</th><td class="r"><span>${
+                clines[idx] if idx is lessthan(len(clines))
+                }</span></td>
             #       elif diff.style == 'inline':
             <th>${from_n}</th><th>${to_n}</th><td class="l"><span>${line}</span></td>
             #       endif
@@ -231,7 +233,7 @@ Arguments:
           <tr>
             <th>${block.base.offset+idx+1}</th>
             <td class="l"><span>${line}</span></td>
-            #           set within_change = idx < len(block.changed.lines)
+            #           set within_change = idx is lessthan(len(block.changed.lines))
             <th>${block.changed.offset + idx + 1 if within_change else '&nbsp;'|safe}</th>
             <td class="r">
               #         if within_change:
@@ -244,7 +246,7 @@ Arguments:
           ##         ##   there are more changed lines than original lines
           #           for idx, line in enumerate(block.changed.lines):
           <tr>
-            #           set within_change = idx < len(block.base.lines)
+            #           set within_change = idx is lessthan(len(block.base.lines))
             <th>${block.base.offset + idx + 1 if within_change else '&nbsp;'|safe}</th>
             <td class="l">
               #         if within_change:
@@ -273,7 +275,7 @@ Arguments:
           #     endif
         </tbody>
         #     endfor
-        #     if idx < len(item.diffs) - 1:
+        #     if idx is lessthan(len(item.diffs) - 1):
         <tbody class="skipped">
           #     with
           #       set fromline = item.diffs[idx+1][0].base.offset + 1

@@ -200,7 +200,7 @@
       #   if 'hide_diff' in item:
       (<a title="${_("Show differences")}" href="${item.href}">${
         _("view diffs")}</a>)
-      #   elif ndiffs + nprops > 0:
+      #   elif ndiffs + nprops is greaterthan(0):
       (<a title="${_("Show differences")}" href="#file${idx}">${
         ngettext('%(num)d diff', '%(num)d diffs', ndiffs) if ndiffs
         }${
@@ -221,9 +221,7 @@
         <dd class="time">
           # with delta = datetime.now(utc) - changeset.date
           ${format_datetime(changeset.date)}
-          #   if delta < timedelta(0, 3600):
-                       ## FIXME rewrite as: if delta is lessthan(...)
-                       ##       in order to not break indent in html mode
+          #   if delta is lessthan(timedelta(0, 3600)):
           ${_("(less than one hour ago)")}
           #   else:
           #     trans age = dateinfo(changeset.date)

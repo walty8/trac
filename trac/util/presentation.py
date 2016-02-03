@@ -45,7 +45,7 @@ HTML_ATTRS = dict(
 )
 
 
-# Jinja2 custom filters
+# -- Jinja2 custom filters
 
 @evalcontextfilter
 def htmlattr_filter(_eval_ctx, d, autospace=True):
@@ -112,6 +112,21 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
     if _eval_ctx.autoescape:
         rv = Markup(rv)
     return rv
+
+
+# -- Jinja2 custom tests
+
+def is_greaterthan(a, b):
+    return a > b
+
+def is_greaterthanorequal(a, b):
+    return a >= b
+
+def is_lessthan(a, b):
+    return a < b
+
+def is_lessthanorequal(a, b):
+    return a <= b
 
 
 # Note: see which of the following should become Jinja2 filters

@@ -28,8 +28,9 @@ Arguments:
   # endset
   # set text_contextlines
   <input type="text" name="contextlines" id="contextlines" size="2"
-         maxlength="3" value="${diff.options.contextlines < 0 and
-                              'all' or diff.options.contextlines}"/>
+         maxlength="3"
+         value="${'all' if diff.options.contextlines is lessthan(0) else
+                diff.options.contextlines}"/>
   # endset
   # trans radio = radio_contextall_0|safe, text = text_contextlines|safe
   <label>${radio} Show</label>

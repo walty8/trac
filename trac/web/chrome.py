@@ -1141,6 +1141,12 @@ class Chrome(Component):
                 len=len,
             )
             jenv.filters.update(htmlattr=presentation.htmlattr_filter)
+            jenv.tests.update(
+                greaterthan=presentation.is_greaterthan,
+                greaterthanorequal=presentation.is_greaterthanorequal,
+                lessthan=presentation.is_lessthan,
+                lessthanorequal=presentation.is_lessthanorequal,
+            )
         try:
             return self.jenv.get_template(filename)
         except jinja2.TemplateNotFound:
