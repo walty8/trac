@@ -33,14 +33,11 @@
         any space character, so that one can easily copy the path to
         the clipboard.
 #}
-## FIXME simplify using loop.last
-#- for idx, part in enumerate(path_links[1:]):
-#-   with last = idx == len(path_links) - 1
+#-   for part in path_links[1:]:
 <a class="pathentry" href="${part.href}"
-   title="${_('View %(name)s', name=part.name)}">${part.name}</a>{% if not last
-%}<span class="pathentry sep">/</span>{% endif %}
-#-   endwith
-#- endfor
+   title="${_('View %(name)s', name=part.name)}">${part.name}</a>{%
+if not loop.last %}<span class="pathentry sep">/</span>{% endif %}
+#-   endfor
 #- endif
 
 # if stickyrev:
