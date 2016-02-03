@@ -24,8 +24,8 @@
     <div id="${category}" class="nav">
       #   if chrome.nav[category]:
       <ul>
-        #-  for idx, item in enumerate(chrome.nav[category]):
-${ ''  }<li ${{'class': classes(first_last(idx, chrome.nav[category]),
+        #-  for item in chrome.nav[category]:
+${ ''  }<li ${{'class': classes(first_last(loop.index0, chrome.nav[category]),
             active=item.active)
             }|xmlattr}>${item.label}</li>
         #-  endfor
@@ -73,8 +73,8 @@ ${ ''  }<li ${{'class': classes(first_last(idx, chrome.nav[category]),
         <h2>${_("Context Navigation")}</h2>
         # if chrome.ctxtnav:
         <ul>
-          # for i, elm in enumerate(chrome.ctxtnav):
-          <li ${{'class': classes(first_last(i, chrome.ctxtnav))}|xmlattr}>${
+          # for elm in chrome.ctxtnav:
+          <li ${{'class': classes(first_last(loop.index0, chrome.ctxtnav))}|xmlattr}>${
             elm}</li>
           # endfor
         </ul>

@@ -1135,7 +1135,6 @@ class Chrome(Component):
             )
             jenv.globals.update(self._default_context_data.copy())
             jenv.globals.update(
-                enumerate=enumerate, # TODO: remove
                 len=len,
             )
             jenv.filters.update(htmlattr=presentation.htmlattr_filter)

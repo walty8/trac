@@ -14,12 +14,11 @@
 <table class="listing dirlist" ${{'id': repoindex}|xmlattr}>
   # include 'jdirlist_thead.html'
   <tbody>
-    ## FIXME enumerate
-    # for idx, repository in enumerate(repo.repositories):
+    # for repository in repo.repositories:
     #   set reponame, repoinfo, repos, change, err, raw_href = repository
     #   set chgset_context = change and context.child('changeset', change.rev, parent=repos.resource)
     #   set chgset_view = change and change.is_viewable(perm)
-    <tr class="${'odd' if idx % 2 else 'even'}">
+    <tr class="${loop.cycle('odd', 'even')}">
       <td class="name">
         # set root_dir_link
         <a class="dir" title="${_("View Root Directory")}"
@@ -82,7 +81,7 @@
     </tr>
 
     #   if repoinfo.description:
-    <tr class="${'odd' if idx % 2 else 'even'}" >
+    <tr class="${loop.cycle('odd', 'even')}" >
       <td class="description" colspan="6">${
         wiki_to_html(context.child('source', '/', parent=repos.resource),
         repoinfo.description)}</td>

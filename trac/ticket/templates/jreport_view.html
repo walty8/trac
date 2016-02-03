@@ -137,26 +137,26 @@ history and logs, available at http://trac.edgewall.org/.
       # if row_groups:
       <table class="listing tickets">
 
-        # for groupindex, (value_for_group, row_group) in enumerate(row_groups):
-        #   if not groupindex:
+        # for value_for_group, row_group in row_groups:
+        #   if loop.first:
         <thead>
-          # set column_headers
-          #   for header_group in header_groups:
+          #   set column_headers
+          #     for header_group in header_groups:
           <tr class="trac-columns">
-            #   for header in header_group if not header.hidden:
+            #     for header in header_group if not header.hidden:
             <th ${{
                 'colspan': '100' if loop.last,
-                'class': classes('asc' if header.asc else
-                'desc' if header.asc is not none)
+                'class': 'asc' if header.asc else 'desc' if
+                header.asc is not none
                 }|xmlattr}>
               <a href="${report_href(sort=header.col, asc=not header.asc)}">
                 ${header.title}
               </a>
             </th>
-            #   endfor
+            #     endfor
           </tr>
-          #   endfor
-          # endset
+          #     endfor
+          #   endset
 
           ${column_headers | safe} ## Note: see also Jinja2 issue #490
           ## jinjacheck: "(tr CDATA)" OK

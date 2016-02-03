@@ -296,18 +296,18 @@
           # endif
           <br />
           <ul>
-            # for idx, item in enumerate(changes):
+            # for item in changes:
             <li>
               # if item.change == 'add':
-              ${node_change(idx, item, 'add', _("added"))}
+              ${node_change(loop.index0, item, 'add', _("added"))}
               # elif item.change == 'delete':
-              ${node_change(idx, item, 'rem', _("deleted"))}
+              ${node_change(loop.index0, item, 'rem', _("deleted"))}
               # elif item.change == 'copy':
-              ${node_change(idx, item, 'cp', _("copied"))}
+              ${node_change(loop.index0, item, 'cp', _("copied"))}
               # elif item.change == 'move':
-              ${node_change(idx, item, 'mv', _("moved"))}
+              ${node_change(loop.index0, item, 'mv', _("moved"))}
               # elif item.change == 'edit':
-              ${node_change(idx, item, 'mod', _("modified"))}
+              ${node_change(loop.index0, item, 'mod', _("modified"))}
               # else:
               ## ignored change (maybe because of diff options or ignored prop.)
               # endif

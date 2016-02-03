@@ -113,8 +113,8 @@
     <div id="altlinks">
       <h3>${_("Download in other formats:")}</h3>
       <ul>
-        # for idx, link in enumerate(chrome.links.alternate):
-        <li class="${first_last(idx, chrome.links.alternate)}">
+        # for link in chrome.links.alternate:
+        <li class="${first_last(loop.index0, chrome.links.alternate)}">
           <a rel="nofollow" href="${link.href}" class="${link.class}">
             ${link.title}</a>
         </li>
