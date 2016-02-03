@@ -220,21 +220,46 @@ try:
         Select <script type="javascript/text"> tags and delegate to
         `extract_javascript`.
         """
-        # Hack: only do this for Genshi templates
+        out = None
         if fileobj.name:
             filepath = fileobj.name.replace('\\', '/').rsplit('/', 1)
-            if filepath[-1].startswith(('j', 'k')):
+            key = filepath[-1][0]
+            if key == 'k':
+                # Kajiki templates
                 return []
+            elif key == 'j':
+                # Jinja2 templates
 
-        from genshi.core import Stream
-        from genshi.input import XMLParser
+                # import xml.etree.ElementTree as ET
+                # tree = ET.parse(fileobj)
+                # r = tree.getroot()
+                # out = StringIO()
+                # for e in r.findall(".//{http://www.w3.org/1999/xhtml}script"):
+                #     out.write(''.join(e.itertext()))
+                # out.seek(0)
+                # ... also doesn't work for our Jinja2 templates
 
-        out = StringIO()
-        stream = Stream(XMLParser(fileobj))
-        stream = stream.select('//script[@type="text/javascript"]')
-        stream.render(out=out, encoding='utf-8')
-        out.seek(0)
-        return extract_javascript(out, keywords, comment_tags, options)
+                from genshi.core import Stream
+                from genshi.input import HTML # HTMLParser under the hood
+
+                out = StringIO()
+                stream = HTML(fileobj.read(), encoding='utf-8')
+                stream = stream.select('//script[@type="text/javascript"]')
+                stream.render(out=out, encoding='utf-8')
+                out.seek(0)
+            else:
+                # Genshi templates
+                from genshi.core import Stream
+                from genshi.input import XMLParser
+
+                out = StringIO()
+                stream = Stream(XMLParser(fileobj))
+                stream = stream.select('//script[@type="text/javascript"]')
+                stream.render(out=out, encoding='utf-8')
+                out.seek(0)
+
+        if out:
+            return extract_javascript(out, keywords, comment_tags, options)
 
 
     def extract_html(fileobj, keywords, comment_tags, options):

@@ -14,6 +14,10 @@
 <html>
   <head>
     <title>${title}</title>
+    # block head
+
+    ${ super() }
+
     <script type="text/javascript">
       jQuery(document).ready(function($) {
         $(".trac-toggledeleted").show().click(function() {
@@ -21,9 +25,10 @@
                   return false;
         }).click();
         $("#content").find("li.entry h2 a").parent()
-          .addAnchor(_("Link to this diff"));
+          .addAnchor(j_("Link to this diff"));
       });
     </script>
+    # endblock head
   </head>
 
   <body>

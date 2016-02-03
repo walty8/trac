@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Trac 1.2\n"
 "Report-Msgid-Bugs-To: trac-dev@googlegroups.com\n"
-"POT-Creation-Date: 2016-02-02 23:36+0100\n"
+"POT-Creation-Date: 2016-02-03 01:26+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -250,6 +250,7 @@ msgid "Drag rule to reorder"
 msgstr ""
 
 #: trac/versioncontrol/templates/changeset.html:7
+#: trac/versioncontrol/templates/jchangeset.html:8
 msgid "Link to this diff"
 msgstr ""
 
