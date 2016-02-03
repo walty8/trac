@@ -197,19 +197,19 @@ history and logs, available at http://trac.edgewall.org/.
             <td class="${col}" ${td_attrs|xmlattr}>
               <a title="${_("View report")}"
                  href="${href.report(cell.value)}">{${cell.value}}</a>
-              {{ if fullrow }}<hr />{{ endif }}
+              {% if fullrow %}<hr />{% endif %}
             </td>
             #       elif col in ('ticket', 'id'):
             <td class="ticket" ${td_attrs|xmlattr}>
               <a title="${_("View %(realm)s", realm=row.resource.realm)}"
                  href="${url_of(row.resource)}">${shortname_of(row.resource)}</a>
-              {{ if fullrow }}<hr />{{ endif }}
+              {% if fullrow %}<hr />{% endif %}
             </td>
             #       elif col == 'summary' and row.id:
             <td class="${col}" ${td_attrs|xmlattr}>
               <a title="${_("View %(realm)s", realm=row.resource.realm)}"
                  href="${url_of(row.resource)}">${cell.value}</a>
-              {{ if fullrow }}<hr />{{ endif }}
+              {% if fullrow %}<hr />{% endif %}
             </td>
 
             <!--! generic fields -->
@@ -217,27 +217,27 @@ history and logs, available at http://trac.edgewall.org/.
             <td class="date" ${td_attrs|xmlattr}>${
               format_time(from_utimestamp(long(cell.value))) if cell.value != ''
               else '--'}
-              {{ if fullrow }}<hr />{{ endif }}
+              {% if fullrow %}<hr />{% endif %}
             </td>
 
             #       elif col in ('date', 'created', 'modified'):
             <td class="date" ${td_attrs|xmlattr}>${
               format_date(from_utimestamp(cell.value|int)) if cell.value != ''
               else '--'}
-              {{ if fullrow }}<hr />{{ endif }}
+              {% if fullrow %}<hr />{% endif %}
             </td>
 
             #       elif col == 'datetime':
             <td class="date" ${td_attrs|xmlattr}>${
               format_datetime(from_utimestamp(long(cell.value))) if cell.value != ''
               else '--'}
-              {{ if fullrow }}<hr />{{ endif }}
+              {% if fullrow %}<hr />{% endif %}
             </td>
 
             #       elif col == 'description':
             <td class="${col}" ${td_attrs|xmlattr}>
               ${wiki_to_html(context.child(row.resource), cell.value)}
-              {{ if fullrow }}<hr />{{ endif }}
+              {% if fullrow %}<hr />{% endif %}
             </td>
 
             #       elif col == 'milestone':
@@ -246,12 +246,12 @@ history and logs, available at http://trac.edgewall.org/.
               <a title="View milestone" href="${href.milestone(cell.value)}">${
                 cell.value}</a>
               #       endif
-              {{ if fullrow }}<hr />{{ endif }}
+              {% if fullrow %}<hr />{% endif %}
             </td>
 
             #       else:
             <td class="${col}" ${td_attrs|xmlattr}>${cell.value}
-              {{ if fullrow }}<hr />{{ endif }}
+              {% if fullrow %}<hr />{% endif %}
             </td>
             #       endif
             #     endif

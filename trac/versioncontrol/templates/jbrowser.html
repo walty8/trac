@@ -182,13 +182,12 @@
         #     if file:
         <tr>
           <th>
-            {{ with
-            cset = href.changeset(created_rev, reponame),
-            rcset = href.changeset(created_rev, reponame, created_path),
-            drev = display_rev(created_rev),
-            author = authorinfo(file.changeset.author),
-            age = pretty_dateinfo(file.changeset.date)
-            }}
+            # with cset, rcset, drev, author, age = (
+            href.changeset(created_rev, reponame),
+            href.changeset(created_rev, reponame, created_path),
+            display_rev(created_rev),
+            authorinfo(file.changeset.author),
+            pretty_dateinfo(file.changeset.date))
             #     set last_change_link
             <a href="${rcset}" title="View differences">Last change</a>
             #     endset
@@ -211,7 +210,7 @@
 
             #       endtrans
             #     endif
-            {{ endwith }}
+            # endwith
           </th>
         </tr>
         <tr>

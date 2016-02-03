@@ -35,10 +35,10 @@
 #}
 ## FIXME simplify using loop.last
 #- for idx, part in enumerate(path_links[1:]):
-#-   with last = idx == len(path_links) - 2
+#-   with last = idx == len(path_links) - 1
 <a class="pathentry" href="${part.href}"
-   title="${_('View %(name)s', name=part.name)}">${part.name}</a>{{ if not last
-}}<span class="pathentry sep">/</span>{{ endif }}
+   title="${_('View %(name)s', name=part.name)}">${part.name}</a>{% if not last
+%}<span class="pathentry sep">/</span>{% endif %}
 #-   endwith
 #- endfor
 #- endif

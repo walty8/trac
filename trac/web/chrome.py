@@ -1122,8 +1122,6 @@ class Chrome(Component):
             def autoescape_extensions(exts, template):
                 return template and template.rsplit('.', 1)[1] in exts
             self.jenv = jenv = jinja2.Environment(
-                block_start_string='{{',
-                block_end_string='}}',
                 variable_start_string='${',
                 variable_end_string='}',
                 line_statement_prefix='#',
