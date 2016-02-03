@@ -20,11 +20,101 @@ from json import dumps
 from math import ceil
 import re
 
+from jinja2 import Markup, Undefined, evalcontextfilter, escape
+from jinja2._compat import iteritems
+
 from trac.core import TracError
 
 __all__ = ['captioned_button', 'classes', 'first_last', 'group', 'istext',
-           'prepared_paginate', 'paginate', 'Paginator']
+           'prepared_paginate', 'paginate', 'Paginator', 'htmlattr_filter']
 __no_apidoc__ = 'prepared_paginate'
+
+NO_YES = ('no', 'yes')
+OFF_ON = ('off', 'on')
+FALSE_TRUE = ('false', 'true')
+
+HTML_ATTRS = dict(
+    async=None, autofocus=None, autoplay=None, checked=None, controls=None,
+    default=None, defer=None, disabled=None, formnovalidate=None, hidden=None,
+    ismap=None, loop=None, multiple=None, muted=None, novalidate=None,
+    open=None, readonly=None, required=None, reversed=None, scoped=None,
+    seamless=None, selected=None,
+    contenteditable=FALSE_TRUE, draggable=FALSE_TRUE, spellcheck=FALSE_TRUE,
+    translate=NO_YES,
+    autocomplete=OFF_ON,
+)
+
+
+# Jinja2 custom filters
+
+@evalcontextfilter
+def htmlattr_filter(_eval_ctx, d, autospace=True):
+    """Create an SGML/XML attribute string based on the items in a dict.
+
+    If the dict itself is `none` or `undefined`, it returns the empty
+    string.
+
+    All values that are neither `none` nor `undefined` are
+    automatically escaped.
+
+    For HTML attributes like `'checked'` and `'selected'`, a truth
+    value will be converted to the key value itself. For others it
+    will be `'true'` or `'on'`. For `'class'`, the `classes`
+    processing will be applied.
+
+    Example:
+
+    .. sourcecode:: html+jinja
+
+        <ul{{ {'class': {'my': 1, 'list': True, 'empty': False},
+               'missing': none, 'checked': 1, 'selected': False,
+               'autocomplete': True, 'id': 'list-%d'|format(variable)
+              }|htmlattr }}>
+        ...
+        </ul>
+
+    Results in something like this:
+
+    .. sourcecode:: html
+
+        <ul class="my list" id="list-42" checked="checked" selected=""
+            autocomplete="on">
+        ...
+        </ul>
+
+    As you can see it automatically prepends a space in front of the item
+    if the filter returned something unless the second parameter is false.
+
+    Adapted from Jinja2's builtin ``do_xmlattr`` filter.
+
+    """
+    if not d:
+        return ''
+    # Note: at some point, switch to
+    #       https://www.w3.org/TR/html-markup/syntax.html#syntax-attr-empty
+    attrs = []
+    for key, val in iteritems(d):
+        if key == 'class':
+            val = classes(val)
+        elif key in HTML_ATTRS:
+            values = HTML_ATTRS[key]
+            if values is None:
+                val = key if val else None
+            else:
+                return values[bool(val)]
+        else:
+            val = escape(val)
+        if val is not None and not isinstance(val, Undefined):
+            attrs.append(u'%s="%s"' % (escape(key), val))
+    rv = u' '.join(attrs)
+    if autospace and rv:
+        rv = u' ' + rv
+    if _eval_ctx.autoescape:
+        rv = Markup(rv)
+    return rv
+
+
+# Note: see which of the following should become Jinja2 filters
 
 def captioned_button(req, symbol, text):
     """Return symbol and text or only symbol, according to user preferences."""

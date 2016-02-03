@@ -16,15 +16,15 @@ Arguments:
 #}
 <label for="style">${_("View differences")}</label>
 <select id="style" name="style">
-  <option selected="${diff.style == 'inline' or None}"
+  <option ${{"selected": diff.style == 'inline'}|htmlattr}
           value="inline">inline</option>
-  <option selected="${diff.style == 'sidebyside' or None}"
+  <option ${{'selected': diff.style == 'sidebyside'}|htmlattr}
           value="sidebyside">side by side</option>
 </select>
 <div class="field">
   # set radio_contextall_0
   <input type="radio" name="contextall" value="0"
-         checked="${not diff.options.contextall or None}"/>
+         ${{"checked": not diff.options.contextall}|htmlattr}/>
   # endset
   # set text_contextlines
   <input type="text" name="contextlines" id="contextlines" size="2"
@@ -37,7 +37,7 @@ Arguments:
   # endtrans
   <br/>
   <label><input type="radio" name="contextall" value="1"
-                checked="${diff.options.contextall or None}"/>
+                ${{"checked": diff.options.contextall}|htmlattr}/>
     ${_("Show the changes in full context")}</label>
 </div>
 <fieldset id="ignore">
@@ -45,17 +45,17 @@ Arguments:
   <legend>${_("Ignore:")}</legend>
   <div class="field">
     <input type="checkbox" id="ignoreblanklines" name="ignoreblanklines"
-           checked="${options.ignoreblanklines or None}" />
+           ${{"checked": options.ignoreblanklines}|htmlattr} />
     <label for="ignoreblanklines">${_("Blank lines")}</label>
   </div>
   <div class="field">
     <input type="checkbox" id="ignorecase" name="ignorecase"
-           checked="${options.ignorecase or None}" />
+           ${{"checked": options.ignorecase}|htmlattr} />
     <label for="ignorecase">${_("Case changes")}</label>
   </div>
   <div class="field">
     <input type="checkbox" id="ignorewhitespace" name="ignorewhitespace"
-           checked="${options.ignorewhitespace or None}" />
+           ${{"checked": options.ignorewhitespace}|htmlattr} />
     <label for="ignorewhitespace">${_("White space changes")}</label>
   </div>
   # endwith

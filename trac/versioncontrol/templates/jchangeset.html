@@ -202,9 +202,12 @@
         _("view diffs")}</a>)
       #   elif ndiffs + nprops > 0:
       (<a title="${_("Show differences")}" href="#file${idx}">${
-        ngettext('%(num)d diff', '%(num)d diffs', ndiffs) if ndiffs else None}${
-        ', ' if ndiffs and nprops else None
-        }${ngettext('%(num)d prop', '%(num)d props', nprops) if nprops else None}</a>)
+        ngettext('%(num)d diff', '%(num)d diffs', ndiffs) if ndiffs
+        }${
+        ', ' if ndiffs and nprops
+        }${
+        ngettext('%(num)d prop', '%(num)d props', nprops) if nprops
+        }</a>)
       #   endif
       #   if cl == 'mod' and item.diffs is none:
       (<a title="${_("Show previous version in browser")}" href="${item.old.href}">
@@ -233,9 +236,9 @@
         <dd class="author">${authorinfo(changeset.author)}</dd>
         # for prop in properties:
         #   if prop.rendered:
-        <dt ${prop.rendered.name_attributes|xmlattr}>
+        <dt ${prop.rendered.name_attributes|htmlattr}>
           prop.rendered.name</dt>
-        <dd ${prop.rendered.content_attributes|xmlattr}>
+        <dd ${prop.rendered.content_attributes|htmlattr}>
           prop.rendered.content</dd>
         #   else:
         <dt class="property">${prop.name}:</dt>
@@ -261,13 +264,14 @@
             location}</a></dd>
         # endif
         <dt class="property files">
-          ${ngettext("File:", "Files:", num=len(files)) if files else _("(No files)")}
+          ${ngettext("File:", "Files:", num=len(files)) if files else
+          _("(No files)")}
         </dt>
         <dd class="files">
           # if filestats:
           <div class="legend" id="file-legend">
-            # with added, deleted, edited, copied, moved = (
-                filestats.add, filestats.delete, filestats.edit, filestats['copy'], filestats.move)
+            # with f = filestats, added, deleted, edited, copied, moved = (
+                f.add, f.delete, f.edit, f['copy'], f.move)
             <dl>
               # if added:
               <dt class="add"></dt><dd>

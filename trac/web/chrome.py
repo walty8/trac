@@ -1119,7 +1119,9 @@ class Chrome(Component):
         `Environment` on first use.
         """
         if not self.jenv:
-            self.jenv = jinja2.Environment(
+            def autoescape_extensions(exts, template):
+                return template and template.rsplit('.', 1)[1] in exts
+            self.jenv = jenv = jinja2.Environment(
                 block_start_string='{{',
                 block_end_string='}}',
                 variable_start_string='${',
@@ -1129,16 +1131,16 @@ class Chrome(Component):
                 trim_blocks=True,
                 lstrip_blocks=True,
                 extensions=['jinja2.ext.i18n', 'jinja2.ext.with_'],
-                autoescape=lambda t: (t and
-                                      t.rsplit('.', 1)[1] in ('xml', 'html')),
+                autoescape=partial(autoescape_extensions, ('xml', 'html')),
                 loader=jinja2.FileSystemLoader(self.get_all_templates_dirs()),
                 auto_reload=self.auto_reload,
             )
-            self.jenv.globals.update(self._default_context_data.copy())
-            self.jenv.globals.update(
-                enumerate=enumerate,
+            jenv.globals.update(self._default_context_data.copy())
+            jenv.globals.update(
+                enumerate=enumerate, # TODO: remove
                 len=len,
             )
+            jenv.filters.update(htmlattr=presentation.htmlattr_filter)
         try:
             return self.jenv.get_template(filename)
         except jinja2.TemplateNotFound:

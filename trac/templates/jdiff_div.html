@@ -58,7 +58,7 @@ Arguments:
     #   if item and (item.diffs or item.props or 'comments' in item):
     <li class="entry">
       #   set comments = item.get('comments')
-      <h2 id="${'file%s' % idx if not no_id else None}">
+      <h2 id="${'file%s' % idx if not no_id}">
         # if new.path:
         <a href="${item.get('href', new.get('href'))}"
            title="${item.get('title', new.get('title'))}">${new.path}</a>
@@ -71,7 +71,7 @@ Arguments:
       #   endif
 
       #   macro prop_name(name, attrs)
-      <strong ${attrs|xmlattr}>${name}</strong>
+      <strong ${attrs|htmlattr}>${name}</strong>
       #   endmacro
 
       #   macro render_property(prop)
@@ -163,7 +163,7 @@ Arguments:
               # endif
             </th>
             <th title="${longcol} ${new.rev}">
-              # if 'href' not in new:
+              # if 'href' in new:
               <a title="${new.get('title')}"
                  href="${new.get('href')}#L${toline}">${shortcol}${new.shortrev}</a>
               # endif
@@ -190,7 +190,7 @@ Arguments:
             #       set clines = block.changed.lines
             #       if diff.style == 'sidebyside':
             <th>${from_n}</th><td class="l"><span>${line}</span></td>
-            <th>${to_n}</th><td class="r"><span>${clines[idx] if idx < len(clines) else None}</span></td>
+            <th>${to_n}</th><td class="r"><span>${clines[idx] if idx < len(clines)}</span></td>
             #       elif diff.style == 'inline':
             <th>${from_n}</th><th>${to_n}</th><td class="l"><span>${line}</span></td>
             #       endif
@@ -199,7 +199,7 @@ Arguments:
           #     elif block.type == 'add':
           ##     Show only added lines, on the "right side"
           #       for idx, line in enumerate(block.changed.lines):
-          <tr class="${first_last(idx, block.changed.lines) if diff.style == 'inline' else None}">
+          <tr class="${first_last(idx, block.changed.lines) if diff.style == 'inline'}">
             #       set to_n = block.changed.offset + idx + 1
             #       if diff.style == 'sidebyside':
             <th>&nbsp;</th><td class="l"></td>
@@ -212,7 +212,7 @@ Arguments:
           #     elif block.type == 'rem':
           ##     Show only deleted lines, on the "left side"
           #       for idx, line in enumerate(block.base.lines):
-          <tr class="${first_last(idx, block.base.lines) if diff.style == 'inline' else None}">
+          <tr class="${first_last(idx, block.base.lines) if diff.style == 'inline'}">
             #       set from_n = block.base.offset + idx + 1
             #       if diff.style == 'sidebyside':
             <th>${from_n}</th><td class="l"><del>${line}</del></td>
@@ -232,7 +232,7 @@ Arguments:
             <th>${block.base.offset+idx+1}</th>
             <td class="l"><span>${line}</span></td>
             #           set within_change = idx < len(block.changed.lines)
-            <th>${block.changed.offset + idx + 1 if within_change else '&nbsp;'}</th>
+            <th>${block.changed.offset + idx + 1 if within_change else '&nbsp;'|safe}</th>
             <td class="r">
               #         if within_change:
               <span>${block.changed.lines[idx]}</span>
@@ -245,7 +245,7 @@ Arguments:
           #           for idx, line in enumerate(block.changed.lines):
           <tr>
             #           set within_change = idx < len(block.base.lines)
-            <th>${block.base.offset + idx + 1 if within_change else '&nbsp;'}</th>
+            <th>${block.base.offset + idx + 1 if within_change else '&nbsp;'|safe}</th>
             <td class="l">
               #         if within_change:
               <span>${block.base.lines[idx]}</span>
@@ -259,13 +259,13 @@ Arguments:
           #       elif diff.style == 'inline':
           ##       First show the "old" lines
           #         for idx, line in enumerate(block.base.lines):
-          <tr class="${'first' if idx == 0 else None}">
+          <tr class="${'first' if idx == 0}">
             <th>${block.base.offset + idx + 1}</th><th>&nbsp;</th><td class="l"><span>${line}</span></td>
           </tr>
           #         endfor
           ##       Then show the "new" lines
           #         for idx, line in enumerate(block.changed.lines):
-          <tr class="${'last' if idx + 1 == len(block.changed.lines) else None}">
+          <tr class="${'last' if idx + 1 == len(block.changed.lines)}">
             <th>&nbsp;</th><th>${block.changed.offset + idx + 1}</th><td class="r"><span>${line}</span></td>
           </tr>
           #         endfor
