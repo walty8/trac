@@ -157,7 +157,8 @@ Arguments:
             <th title="${longcol} ${old.rev}">
               # if 'href' in old:
               <a title="${old.get('title')}"
-                 href="${old.get('href')}#L${fromline}">${shortcol}${old.shortrev}</a>
+                 href="${old.get('href')}#L${fromline}"
+                 >${shortcol}${old.shortrev}</a>
               # else:
               ${shortcol}${old.shortrev}
               # endif
@@ -165,7 +166,8 @@ Arguments:
             <th title="${longcol} ${new.rev}">
               # if 'href' in new:
               <a title="${new.get('title')}"
-                 href="${new.get('href')}#L${toline}">${shortcol}${new.shortrev}</a>
+                 href="${new.get('href')}#L${toline}"
+                 >${shortcol}${new.shortrev}</a>
               # endif
             </th>
             <td>
@@ -220,7 +222,8 @@ Arguments:
             <th>${from_n}</th><td class="l"><del>${line}</del></td>
             <th>&nbsp;</th><td class="r"></td>
             #       elif diff.style == 'inline':
-            <th>${from_n}</th><th>&nbsp;</th><td class="l"><del>${line}</del></td>
+            <th>${from_n}</th><th>&nbsp;</th>{#
+            #}<td class="l"><del>${line}</del></td>
             #       endif
           </tr>
           #       endfor
@@ -234,12 +237,11 @@ Arguments:
             <th>${block.base.offset+idx+1}</th>
             <td class="l"><span>${line}</span></td>
             #           set within_change = idx is lessthan(len(block.changed.lines))
-            <th>${block.changed.offset + idx + 1 if within_change else '&nbsp;'|safe}</th>
-            <td class="r">
-              #-        if within_change:
-${    ''     }<span>${block.changed.lines[idx]}</span>
-              #-        endif
-            </td>
+            <th>${block.changed.offset + idx + 1 if within_change else
+              '&nbsp;'|safe}</th>
+            <td class="r">{%
+              if within_change %}<span>${block.changed.lines[idx]}</span>{%
+              endif %}</td>
           </tr>
           #           endfor
           #         else:
@@ -247,12 +249,11 @@ ${    ''     }<span>${block.changed.lines[idx]}</span>
           #           for idx, line in enumerate(block.changed.lines):
           <tr>
             #           set within_change = idx is lessthan(len(block.base.lines))
-            <th>${block.base.offset + idx + 1 if within_change else '&nbsp;'|safe}</th>
-            <td class="l">
-              #-        if within_change:
-${    ''     }<span>${block.base.lines[idx]}</span>
-              #-        endif
-            </td>
+            <th>${block.base.offset + idx + 1 if within_change else
+              '&nbsp;'|safe}</th>
+            <td class="l">{%
+              if within_change %}<span>${block.base.lines[idx]}</span>{%
+              endif %}</td>
             <th>${block.changed.offset + idx + 1}</th>
             <td class="r"><span>${line}</span></td>
           </tr>
@@ -262,13 +263,15 @@ ${    ''     }<span>${block.base.lines[idx]}</span>
           ##       First show the "old" lines
           #         for idx, line in enumerate(block.base.lines):
           <tr class="${'first' if idx == 0}">
-            <th>${block.base.offset + idx + 1}</th><th>&nbsp;</th><td class="l"><span>${line}</span></td>
+            <th>${block.base.offset + idx + 1}</th><th>&nbsp;</th>{#
+            #}<td class="l"><span>${line}</span></td>
           </tr>
           #         endfor
           ##       Then show the "new" lines
           #         for idx, line in enumerate(block.changed.lines):
           <tr class="${'last' if idx + 1 == len(block.changed.lines)}">
-            <th>&nbsp;</th><th>${block.changed.offset + idx + 1}</th><td class="r"><span>${line}</span></td>
+            <th>&nbsp;</th><th>${block.changed.offset + idx + 1}</th>{#
+            #}<td class="r"><span>${line}</span></td>
           </tr>
           #         endfor
           #       endif
@@ -282,8 +285,10 @@ ${    ''     }<span>${block.base.lines[idx]}</span>
           #       set toline = item.diffs[idx+1][0].changed.offset + 1
           #       if diff.style == 'sidebyside':
           <tr>
-            <th><a href="${old.href}#L${fromline}">&hellip;</a></th><td>&nbsp;</td>
-            <th><a href="${new.href}#L${toline}">&hellip;</a></th><td>&nbsp;</td>
+            <th><a href="${old.href}#L${fromline}">&hellip;</a></th>{#
+            #}<td>&nbsp;</td>
+            <th><a href="${new.href}#L${toline}">&hellip;</a></th>{#
+            #}<td>&nbsp;</td>
           </tr>
           #       elif diff.style == 'inline':
           <tr>
