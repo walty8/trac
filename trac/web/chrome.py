@@ -1144,6 +1144,7 @@ class Chrome(Component):
                 greaterthanorequal=presentation.is_greaterthanorequal,
                 lessthan=presentation.is_lessthan,
                 lessthanorequal=presentation.is_lessthanorequal,
+                text=presentation.istext,
             )
         try:
             return self.jenv.get_template(filename)
