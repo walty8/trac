@@ -95,17 +95,30 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
     attrs = []
     for key, val in iteritems(d):
         if key == 'class':
-            val = classes(val)
+            if isinstance(val, dict):
+                val = classes(**val)
+            elif isinstance(val, list):
+                val = classes(*val)
+            else:
+                val = escape(val)
+        elif key == 'style':
+            if isinstance(val, dict):
+                val = styles(**val)
+            elif isinstance(val, list):
+                val = styles(*val)
+            else:
+                val = escape(val)
         elif key in HTML_ATTRS:
             values = HTML_ATTRS[key]
             if values is None:
                 val = key if val else None
             else:
-                return values[bool(val)]
-        else:
+                val = values[bool(val)]
+        elif val is not None and not isinstance(val, Undefined):
             val = escape(val)
-        if val is not None and not isinstance(val, Undefined):
-            attrs.append(u'%s="%s"' % (escape(key), val))
+        else:
+            continue
+        attrs.append(u'%s="%s"' % (escape(key), val))
     rv = u' '.join(attrs)
     if autospace and rv:
         rv = u' ' + rv
@@ -164,9 +177,50 @@ def classes(*args, **kwargs):
         return None
     return u' '.join(classes)
 
+def styles(*args, **kwargs):
+    """Helper function for dynamically assembling a list of CSS style name
+    and values in templates.
+
+    Any positional arguments are added to the list of class names. All
+    positional arguments must be strings:
+
+    >>> classes('foo: bar', 'fu: baz')
+    u'foo: bar; fu: baz'
+
+    In addition, the names of any supplied keyword arguments are added
+    if they have a string value:
+
+    >>> styles(foo='bar', fu='baz')
+    u'foo: bar; fu: baz'
+    >>> styles(bar=False)
+    u''
+
+    If none of the arguments are added to the list, this function returns
+    `None`:
+
+    >>> classes(bar=False)
+
+    """
+    styles = (list(filter(None, args)) +
+              ['%s: %s' % (k, v) for k, v in kwargs.items() if v])
+    if not styles:
+        return None
+    return u'; '.join(styles)
+
+
 def first_last(idx, seq):
     """Generate ``first`` or ``last`` or both, according to the
     position `idx` in sequence `seq`.
+
+    In Jinja2 templates, rather use:
+
+    .. sourcecode:: html+jinja
+
+       <li ${{'class': {'first': loop.first, 'last': loop.last}}|htmlattr}>
+
+    This is less error prone, as the sequence remains implicit and
+    therefore can't be wrong.
+
     """
     return classes(first=idx == 0, last=idx == len(seq) - 1)
 

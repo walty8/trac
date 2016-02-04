@@ -11,7 +11,7 @@
 
 ## Template snippet for a table of repositories
 
-<table class="listing dirlist" ${{'id': repoindex}|xmlattr}>
+<table class="listing dirlist" ${{'id': repoindex}|htmlattr}>
   # include 'jdirlist_thead.html'
   <tbody>
     # for repository in repo.repositories:
@@ -58,8 +58,10 @@
         # endif
       </td>
       <td class="age"
-          ${{'style':
-          'border-color: rgb(%s,%s,%s)' % repo.colorize_age(repo.timerange.relative(change.date)) if chgset_view and change and repo.timerange else None}|xmlattr}>
+          ${{'style': {
+          'border-color': ('rgb(%s,%s,%s)' % repo.colorize_age(repo.timerange.relative(change.date))) if
+          chgset_view and change and repo.timerange
+          }}|htmlattr}>
         ${pretty_dateinfo(change.date, dateonly=True) if chgset_view else
         '&ndash;'|safe}
       </td>

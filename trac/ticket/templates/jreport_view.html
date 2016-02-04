@@ -148,7 +148,7 @@ history and logs, available at http://trac.edgewall.org/.
                 'colspan': '100' if loop.last,
                 'class': 'asc' if header.asc else 'desc' if
                 header.asc is not none
-                }|xmlattr}>
+                }|htmlattr}>
               <a href="${report_href(sort=header.col, asc=not header.asc)}">
                 ${header.title}
               </a>
@@ -178,35 +178,35 @@ history and logs, available at http://trac.edgewall.org/.
           #     set fullrow = len(cell_group) == 1
           #     set td_attrs = {'class': 'fullrow', 'colspan': 100} if fullrow else {}
           <tr ${{
-              'class': classes(
+              'class': [
               ('color' + row.__color__ + '-' if '__color__' in row else '') +
               ('odd' if row.__idx__ % 2 else 'even'),
-              row.__class__ if '__class__' in row),
-              'style': [
-              'background: ' + row.__bgcolor__ if '__bgcolor__' in row,
-              'color: ' + row.__fgcolor__ if '__fgcolor__' in row,
+              row.__class__ if '__class__' in row
+              ],
+              'style': styles(
               row.__style__ if '__style__' in row,
-              'border: none; padding: 0' if fullrow
-              ]|reject('undefined')|join('; ')
-              }|xmlattr}>
+              'border: none; padding: 0' if fullrow,
+              background=row.__bgcolor__ if '__bgcolor__' in row,
+              color=row.__fgcolor__ if '__fgcolor__' in row
+              )}|htmlattr}>
 
             #   for cell in cell_group:
             #     if not cell.header.hidden:
             #       set col = cell.header.col.strip('_')
             #       if col == 'report':
-            <td class="${col}" ${td_attrs|xmlattr}>
+            <td class="${col}" ${td_attrs|htmlattr}>
               <a title="${_("View report")}"
                  href="${href.report(cell.value)}">{${cell.value}}</a>
               {% if fullrow %}<hr />{% endif %}
             </td>
             #       elif col in ('ticket', 'id'):
-            <td class="ticket" ${td_attrs|xmlattr}>
+            <td class="ticket" ${td_attrs|htmlattr}>
               <a title="${_("View %(realm)s", realm=row.resource.realm)}"
                  href="${url_of(row.resource)}">${shortname_of(row.resource)}</a>
               {% if fullrow %}<hr />{% endif %}
             </td>
             #       elif col == 'summary' and row.id:
-            <td class="${col}" ${td_attrs|xmlattr}>
+            <td class="${col}" ${td_attrs|htmlattr}>
               <a title="${_("View %(realm)s", realm=row.resource.realm)}"
                  href="${url_of(row.resource)}">${cell.value}</a>
               {% if fullrow %}<hr />{% endif %}
@@ -214,34 +214,34 @@ history and logs, available at http://trac.edgewall.org/.
 
             <!--! generic fields -->
             #       elif col == 'time':
-            <td class="date" ${td_attrs|xmlattr}>${
+            <td class="date" ${td_attrs|htmlattr}>${
               format_time(from_utimestamp(long(cell.value))) if cell.value != ''
               else '--'}
               {% if fullrow %}<hr />{% endif %}
             </td>
 
             #       elif col in ('date', 'created', 'modified'):
-            <td class="date" ${td_attrs|xmlattr}>${
+            <td class="date" ${td_attrs|htmlattr}>${
               format_date(from_utimestamp(cell.value|int)) if cell.value != ''
               else '--'}
               {% if fullrow %}<hr />{% endif %}
             </td>
 
             #       elif col == 'datetime':
-            <td class="date" ${td_attrs|xmlattr}>${
+            <td class="date" ${td_attrs|htmlattr}>${
               format_datetime(from_utimestamp(long(cell.value))) if cell.value != ''
               else '--'}
               {% if fullrow %}<hr />{% endif %}
             </td>
 
             #       elif col == 'description':
-            <td class="${col}" ${td_attrs|xmlattr}>
+            <td class="${col}" ${td_attrs|htmlattr}>
               ${wiki_to_html(context.child(row.resource), cell.value)}
               {% if fullrow %}<hr />{% endif %}
             </td>
 
             #       elif col == 'milestone':
-            <td class="${col}" ${td_attrs|xmlattr}>
+            <td class="${col}" ${td_attrs|htmlattr}>
               #       if cell.value:
               <a title="View milestone" href="${href.milestone(cell.value)}">${
                 cell.value}</a>
@@ -250,7 +250,7 @@ history and logs, available at http://trac.edgewall.org/.
             </td>
 
             #       else:
-            <td class="${col}" ${td_attrs|xmlattr}>${cell.value}
+            <td class="${col}" ${td_attrs|htmlattr}>${cell.value}
               {% if fullrow %}<hr />{% endif %}
             </td>
             #       endif

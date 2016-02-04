@@ -637,6 +637,7 @@ class Chrome(Component):
         'separated': presentation.separated,
         'shorten_line': shorten_line,
         'sorted': sorted,
+        'styles': presentation.styles,
         'tag_': translation.tag_,
         'time': datetime.time,
         'timedelta': datetime.timedelta,

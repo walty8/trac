@@ -19,7 +19,7 @@
     #   endif
 
     #   for meta in chrome.metas:
-    <meta ${meta|xmlattr} />
+    <meta ${meta|htmlattr} />
     ## jinjacheck: "attribute content" OK
     #   endfor
 
@@ -31,7 +31,7 @@
     #   if chrome.links:
     #     for rel, links in chrome.links.items():
     #       for link in links:
-    <link rel="${rel}" ${link|xmlattr} />
+    <link rel="${rel}" ${link|htmlattr} />
     #       endfor
     #     endfor
     #   endif

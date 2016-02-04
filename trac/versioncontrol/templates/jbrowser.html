@@ -140,7 +140,7 @@
       #     if changeset:
       <div class="trac-tags">
         #     for branch, head in changeset.get_branches() if branch not in ('default', 'master'):
-        <span ${{'class': classes('branch', head=head)}|xmlattr}
+        <span ${{'class': classes('branch', head=head)}|htmlattr}
               title="${_("Branch head") if head else _("Branch")}">${
           branch}</span>
         #     endfor
@@ -242,10 +242,10 @@
 
                 #   if prop.rendered:
                 #     if prop.rendered.name:
-                <span ${prop.rendered.name_attributes|xmlattr}>${
+                <span ${prop.rendered.name_attributes|htmlattr}>${
                   prop.rendered.name}</span>
                 #     endif
-                <div ${prop.rendered.content_attributes|xmlattr}>${
+                <div ${prop.rendered.content_attributes|htmlattr}>${
                   prop.rendered.content}</div>
                 #   else:
                 #     trans name = prop.name, value = prop_value(prop)

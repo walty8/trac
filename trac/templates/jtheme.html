@@ -23,13 +23,13 @@
     #   macro navigation(category)
     <div id="${category}" class="nav">
       #   if chrome.nav[category]:
-      <ul>
-        #-  for item in chrome.nav[category]:
-${ ''  }<li ${{'class': classes(first_last(loop.index0, chrome.nav[category]),
-            active=item.active)
-            }|xmlattr}>${item.label}</li>
-        #-  endfor
-      </ul>
+      <ul>{%
+        for item in chrome.nav[category]
+        %}<li ${{'class': {
+              'first': loop.first, 'last': loop.last, 'active': item.active
+              }}|htmlattr}>${item.label}</li>{%
+        endfor
+      %}</ul>
       #   endif
     </div>
     #   endmacro
@@ -38,13 +38,14 @@ ${ ''  }<li ${{'class': classes(first_last(loop.index0, chrome.nav[category]),
       <div id="header">
         # if chrome.logo.src:
         <a id="logo"
-           href="${chrome.logo.link or href.wiki('TracIni') +
-                 '#header_logo-section'}"><img ${{
-                                               'src': chrome.logo.src,
-                                               'alt': chrome.logo.alt,
-                                               'height': chrome.logo.height,
-                                               'width': chrome.logo.width
-                                               }|xmlattr} /></a>
+           href="${chrome.logo.link or
+                 href.wiki('TracIni') + '#header_logo-section'}">
+          <img ${{
+               'src': chrome.logo.src,
+               'alt': chrome.logo.alt,
+               'height': chrome.logo.height,
+               'width': chrome.logo.width,
+               }|htmlattr} /></a>
         ## jinjacheck: "attribute alt" OK
         ## jinjacheck: "attribute src" OK
         # else:
@@ -66,15 +67,17 @@ ${ ''  }<li ${{'class': classes(first_last(loop.index0, chrome.nav[category]),
     ${navigation('mainnav')}
 
     <div id="main"
-         ${{'class': classes(uisymbols=req.session.get('ui.use_symbols'),
-         uinohelp=req.session.get('ui.hide_help'))}|xmlattr}>
+         ${{'class': {
+         'uisymbols': req.session.get('ui.use_symbols'),
+         'uinohelp': req.session.get('ui.hide_help'),
+         }}|htmlattr}>
       ## include resourcepath_template if resourcepath_template ## FIXME
       <div id="ctxtnav" class="nav">
         <h2>${_("Context Navigation")}</h2>
         # if chrome.ctxtnav:
         <ul>
           # for elm in chrome.ctxtnav:
-          <li ${{'class': classes(first_last(loop.index0, chrome.ctxtnav))}|xmlattr}>${
+          <li ${{'class': {'first': loop.first, 'last': loop.last}}|htmlattr}>${
             elm}</li>
           # endfor
         </ul>

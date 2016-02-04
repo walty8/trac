@@ -26,8 +26,7 @@
 
   order, desc, href, reponame, path, stickyrev
 #}
-<th ${{'class': (' desc' if desc else ' asc') if order == class_ else None
-    }|xmlattr}>
+<th ${{'class': ('desc' if desc else 'asc') if order == class_}|htmlattr}>
   <a title="${_('Sort by %(col)s %(direction)s',
             col=class_,
             direction=_("(descending)") if order == class_ and not desc else
