@@ -1285,33 +1285,69 @@ class Chrome(Component):
         t5a = time.time()
 
         # TODO: try with Jinja2, will work as well
-        # if iterable:
-        #    return self.iterable_content(stream, method, doctype=doctype)
+        if iterable:
+            print 'iterable... why is it not?'
+        #return self.iterable_content(stream, method, doctype=doctype)
 
         try:
-            js = ks = None
-            if jtemplate:
-                j5 = time.time()
-                js = jtemplate.render(jdata).encode('utf-8')
-                j6 = time.time()
-                show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'text')
-            if kstream:
-                k5 = time.time()
-                try:
-                    ks = kstream.render().encode('utf-8')
-                    k6 = time.time()
-                    show_times('Kajiki',  k2 - t1, k4 - k3, 0, k6 - k5, kmethod)
-                except Exception:
-                    pass # well, we don't really care..
+            def jinja(mode='render'):
+                if jtemplate:
+                    j5 = time.time()
+                    if mode == 'render':
+                        js = jtemplate.render(jdata)
+                        print len(js)
+                        j5a = time.time()
+                        js = js.encode('utf-8') \
+                               .translate(_translate_nop,
+                                          _invalid_control_chars)
+                        print len(js)
+                        j6 = time.time()
+                        show_times('Jinja2', j2 - j1, 0, j5a - j5, j6 - j5a,
+                                   'html')
+                        return js
+                    else:
+                        def iterable_content():
+                            if mode == 'generate':
+                                stream = jtemplate.generate(jdata)
+                            else:
+                                stream = jtemplate.stream(jdata)
+                                stream.enable_buffering(mode) # buffer_size
+                            for chunk in stream:
+                                yield chunk.encode('utf-8') \
+                                           .translate(_translate_nop,
+                                                      _invalid_control_chars)
+                            j6 = time.time()
+                            show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'html')
+                        return iterable_content()
+            def kajiki():
+                if kstream:
+                    k5 = time.time()
+                    try:
+                        ks = kstream.render().encode('utf-8') \
+                               .translate(_translate_nop,
+                                          _invalid_control_chars)
+                        k6 = time.time()
+                        show_times('Kajiki',  k2 - t1, k4 - k3, 0, k6 - k5,
+                                   kmethod)
+                        return ks
+                    except Exception:
+                        pass # well, we don't really care..
 
-            buffer = StringIO()
-            t5 = time.time()
-            stream.render(method, doctype=doctype, out=buffer,
-                          encoding='utf-8')
-            t6 = time.time()
-            show_times('Genshi', t2 - t1, t4 - t3, t5a - t4a, t6 - t5, method)
-            gs = buffer.getvalue().translate(_translate_nop,
-                                             _invalid_control_chars)
+            def genshi():
+                buffer = StringIO()
+                t5 = time.time()
+                stream.render(method, doctype=doctype, out=buffer,
+                              encoding='utf-8')
+                gs = buffer.getvalue().translate(_translate_nop,
+                                                 _invalid_control_chars)
+                t6 = time.time()
+                show_times('Genshi', t2 - t1, t4 - t3, t5a - t4a, t6 - t5,
+                           method)
+                return gs
+
+            # Now it's easier to control things from here:
+            # 'render', 'generate' or buffer_size for stream (100 seems best)
+            js, ks, gs = jinja(100), None, None # kajiki(), genshi()
             return js or ks or gs
 
         except Exception as e:
