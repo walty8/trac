@@ -1138,7 +1138,10 @@ class Chrome(Component):
             jenv.globals.update(
                 len=len,
             )
-            jenv.filters.update(htmlattr=presentation.htmlattr_filter)
+            jenv.filters.update(
+                htmlattr=presentation.htmlattr_filter,
+                trim=presentation.trim_filter,
+            )
             jenv.tests.update(
                 greaterthan=presentation.is_greaterthan,
                 greaterthanorequal=presentation.is_greaterthanorequal,

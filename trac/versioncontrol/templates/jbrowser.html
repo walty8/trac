@@ -87,8 +87,7 @@
       <div id="diffrev">
         <form action="${href.changeset()}" method="get">
           <div>
-            #   with full_path = (reponame, path)|reject('none')|map('trim')|join('/')
-            ##    FIXME: s/trim/trimslash/ and implement the filter...
+            #   with full_path = (reponame, path)|reject('none')|map('trim', '/')|join('/')
             <label title="${_("Show the diff against a specific revision")}">
               ${_("View diff against:")}
               <input type="text" name="old" size="6"/>
@@ -194,7 +193,7 @@
             #     set rev_link
             <a href="${cset}"
                title="${_("View changeset %(rev)s", rev=drev)}">${drev}</a>
-            #     endset
+            #-    endset
             #     if stickyrev:
             #       trans last_change = last_change_link|safe, stickyrev = display_rev(stickyrev), rev = rev_link|safe, author, age
 

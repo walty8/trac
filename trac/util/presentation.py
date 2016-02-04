@@ -21,12 +21,13 @@ from math import ceil
 import re
 
 from jinja2 import Markup, Undefined, evalcontextfilter, escape
+from jinja2.utils import soft_unicode
 from jinja2._compat import iteritems
 
 from trac.core import TracError
 
 __all__ = ['captioned_button', 'classes', 'first_last', 'group', 'istext',
-           'prepared_paginate', 'paginate', 'Paginator', 'htmlattr_filter']
+           'prepared_paginate', 'paginate', 'Paginator']
 __no_apidoc__ = 'prepared_paginate'
 
 NO_YES = ('no', 'yes')
@@ -125,6 +126,14 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
     if _eval_ctx.autoescape:
         rv = Markup(rv)
     return rv
+
+
+def trim_filter(value, what=None):
+    """Strip leading and trailing whitespace or other specified character.
+
+    Adapted from Jinja2's builtin ``trim`` filter.
+    """
+    return soft_unicode(value).strip(what)
 
 
 # -- Jinja2 custom tests
