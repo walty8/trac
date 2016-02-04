@@ -1227,13 +1227,13 @@ class Chrome(Component):
         # -- disable them to be fair...
         #if self.stream_filters:
         #    stream |= self._filter_stream(req, method, filename, stream, data)
-        t5 = time.time()
         if fragment:
             # Note: for Kajiki is_fragment must be passed to load_ktemplate
             return stream
 
         if method == 'text':
             buffer = StringIO()
+            t5 = time.time()
             stream.render('text', out=buffer, encoding='utf-8')
             t6 = time.time()
             show_times('Genshi', t2 - t1, t4 - t3, t5 - t4, t6 - t5, 'text')
@@ -1253,6 +1253,7 @@ class Chrome(Component):
                 show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'text')
             return s
 
+        t4a = time.time()
         doctype = None
         if content_type == 'text/html':
             doctype = self.html_doctype
@@ -1281,33 +1282,37 @@ class Chrome(Component):
             'late_scripts': req.chrome['scripts'],
             'late_script_data': req.chrome['script_data'],
         })
+        t5a = time.time()
 
         # TODO: try with Jinja2, will work as well
         # if iterable:
         #    return self.iterable_content(stream, method, doctype=doctype)
 
         try:
-            buffer = StringIO()
-            stream.render(method, doctype=doctype, out=buffer,
-                          encoding='utf-8')
-            t6 = time.time()
-            show_times('Genshi', t2 - t1, t4 - t3, t5 - t4, t6 - t5, method)
-            s = buffer.getvalue().translate(_translate_nop,
-                                            _invalid_control_chars)
+            js = ks = None
+            if jtemplate:
+                j5 = time.time()
+                js = jtemplate.render(jdata).encode('utf-8')
+                j6 = time.time()
+                show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'text')
             if kstream:
                 k5 = time.time()
                 try:
-                    s = kstream.render().encode('utf-8')
+                    ks = kstream.render().encode('utf-8')
                     k6 = time.time()
                     show_times('Kajiki',  k2 - t1, k4 - k3, 0, k6 - k5, kmethod)
                 except Exception:
                     pass # well, we don't really care..
-            if jtemplate:
-                j5 = time.time()
-                s = jtemplate.render(jdata).encode('utf-8')
-                j6 = time.time()
-                show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'text')
-            return s
+
+            buffer = StringIO()
+            t5 = time.time()
+            stream.render(method, doctype=doctype, out=buffer,
+                          encoding='utf-8')
+            t6 = time.time()
+            show_times('Genshi', t2 - t1, t4 - t3, t5a - t4a, t6 - t5, method)
+            gs = buffer.getvalue().translate(_translate_nop,
+                                             _invalid_control_chars)
+            return js or ks or gs
 
         except Exception as e:
             # restore what may be needed by the error template
