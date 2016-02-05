@@ -20,6 +20,37 @@
   <body>
     # block body
 
+    {# ------------------------------------------------------------------
+
+    Note: here we produce the main structure of the body element:
+
+      div id="banner"
+        div id="header"
+        ... logo + metanav ...
+        /div
+        ... mainnav ...
+      /div
+      div id="main"
+        ... ctxtnav [+ warnings][+ notices] ...
+
+        # block content
+
+        (here goes the content block produced by the end user page,
+        typically a "content" div, which could (should!) be followed
+        by the parent content produced by the layout.html page)
+
+        # endblock content
+      /div
+      div id="footer"
+        ...
+      /div
+
+    It's entirely possible for the end user page to prepend to, append
+    to, or replace this default structure by redefining the body
+    block, but it should be seldom needed.
+
+    ------------------------------------------------------------------ #}
+
     #   macro navigation(category)
     <div id="${category}" class="nav">
       #   if chrome.nav[category]:
@@ -119,8 +150,18 @@
       </div>
       # endif
 
-      # block bottom
-      # endblock bottom
+      # block content
+
+      {# ------------------------------------------------------------------
+
+      Note: here should go the content defined by the end user page.
+
+      See layout.html which defines an useful default content for this
+      block and has more detailed usage notes.
+
+      ------------------------------------------------------------------ #}
+
+      # endblock content
     </div>
 
     <div id="footer"><hr/>

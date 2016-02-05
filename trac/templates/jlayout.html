@@ -84,10 +84,29 @@
   ## jinjacheck: "meta link style link script" OK ... TODO add <title>
 
   <body>
-    # block bottom
+    # block content
+    {# ------------------------------------------------------------------
 
-    #   block content
-    #   endblock content
+    Note: write the extending template like this:
+
+    ## ------------------
+    # block content
+
+    <div id="content">
+    (your content)
+    </div>
+
+    ${ super() }
+
+    # endblock content
+    ## ------------------
+
+    The end user content should typically go first, as evaluating the
+    expressions it contains could modify the chrome.late_links, which
+    are used afterwards in the default content (which follows), that
+    will get inserted via the call to super.
+
+    ------------------------------------------------------------------ #}
 
     #   if chrome.late_links:
     <script type="text/javascript">
@@ -122,8 +141,8 @@
       </ul>
     </div>
     #   endif
-    #   include 'site_body.html' ignore missing
 
-    # endblock bottom
+    #   include 'site_body.html' ignore missing
+    # endblock content
   </body>
 </html>
