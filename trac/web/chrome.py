@@ -1284,9 +1284,9 @@ class Chrome(Component):
         })
         t5a = time.time()
 
-        # TODO: try with Jinja2, will work as well
         if iterable:
-            print 'iterable... why is it not?'
+            print 'iterable... why is it not set?'
+        # Genshi 'stream':
         #return self.iterable_content(stream, method, doctype=doctype)
 
         try:
@@ -1346,8 +1346,9 @@ class Chrome(Component):
                 return gs
 
             # Now it's easier to control things from here:
-            # 'render', 'generate' or buffer_size for stream (100 seems best)
-            js, ks, gs = jinja(100), None, None # kajiki(), genshi()
+            # 'render', 'generate' or buffer_size for stream (75 seems best)
+            #return genshi() # 'blob'
+            js, ks, gs = jinja(75), None, None # kajiki(), genshi()
             return js or ks or gs
 
         except Exception as e:
