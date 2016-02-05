@@ -40,11 +40,6 @@ try:
 except ImportError:
     print("Genshi is needed by Trac setup, pre-installing")
     # give some context to the warnings we might get when installing Genshi
-try:
-    import kajiki
-except ImportError:
-    print("Kajiki is the point of this branch, pre-installing")
-    # give some context to the warnings we might get when installing Kajiki
 
 
 setup(
@@ -95,7 +90,6 @@ facilities.
     install_requires = [
         'setuptools>=0.6',
         'Genshi>=0.6',
-        'Kajiki>=0.5.2',
         'jinja2>=2.8',
     ],
     extras_require = {

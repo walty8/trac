@@ -35,7 +35,7 @@ except ImportError:
     from StringIO import StringIO
 import time
 
-# Legacy Genshi
+# Legacy Genshi support
 from genshi import Markup
 from genshi.builder import tag, Element
 from genshi.core import Attrs, START
@@ -43,7 +43,6 @@ from genshi.filters import Translator
 from genshi.output import DocType
 from genshi.template import TemplateLoader, MarkupTemplate, NewTextTemplate
 
-from kajiki import FileLoader, TextTemplate, XMLTemplate
 import jinja2
 
 from trac.config import *
@@ -646,9 +645,6 @@ class Chrome(Component):
         'utc': utc,
     }
 
-    def __init__(self):
-        self.ktemplates = {}
-
     # ISystemInfoProvider methods
 
     def get_system_info(self):
@@ -1077,40 +1073,9 @@ class Chrome(Component):
 
         if method == 'text':
             cls = NewTextTemplate
-            kcls = XMLTemplate
         else:
             cls = MarkupTemplate
-            kcls = TextTemplate
         return self.templates.load(filename, cls=cls)
-
-
-    def load_ktemplate(self, filename, method=None):
-        """Retrieve a Kajiki Template.
-
-        Also, if the optional `method` argument is set to `'text'`, a
-        `TextTemplate` instance will be created instead of a
-        `XMLTemplate`. `'xml'`, `'html'` and `'html5'` could also be
-        specified to force the use of a particular kind of
-        `XMLTemplate`, if the `filename` extension can't be used for
-        that.
-        """
-        try:
-            loader = self.ktemplates[method]
-        except KeyError:
-            loader = self.ktemplates[method] = FileLoader(
-                path=self.get_all_templates_dirs(), reload=self.auto_reload,
-                force_mode=method, autoescape_text=True)
-            # e.g. http://turbogears.readthedocs.org/en/development/turbogears/genshi-xml-templates.html#converting-genshi-templates-to-kajiki
-            # on autoblocks.
-            # Also, what about using the PackageLoader?
-        try:
-            return loader.load(filename)
-        except TypeError:
-            # well, if filename is not found, we get a:
-            #   TypeError: coercing to Unicode: need string or buffer,
-            #   NoneType found
-            # A bit crude...
-            pass
 
 
     def load_jtemplate(self, filename, method='ignored'):
@@ -1176,11 +1141,8 @@ class Chrome(Component):
         if content_type is None:
             content_type = 'text/html'
 
-        kmethod = method
         if method is None:
             method = {'text/html': 'xhtml',
-                      'text/plain': 'text'}.get(content_type, 'xml')
-            kmethod = {'text/html': 'html', # TODO: 'html5'
                       'text/plain': 'text'}.get(content_type, 'xml')
 
         if method == "xhtml":
@@ -1201,12 +1163,11 @@ class Chrome(Component):
                    (engine, kind, load + generate + filter + render,
                     load, generate, filter, render))
 
-        # Try loading template (Jinja2 j+name > Kajiki k+name > Genshi name)
+        # Try loading template (Jinja2 j+name > Genshi name)
         t1 = time.time()
         template = self.load_template(filename, method=method)
-        k1 = t2 = time.time()
-        ktemplate = self.load_ktemplate('k' + filename, method=method)
-        j1 = k2 = time.time()
+        t2 = time.time()
+        j1 = time.time()
         jtemplate = self.load_jtemplate('j' + filename)
         j2 = time.time()
 
@@ -1218,46 +1179,35 @@ class Chrome(Component):
         t3 = time.time()
         stream = template.generate(**data)
         t4 = time.time()
-        kstream = None
-        if ktemplate:
-            k3 = time.time()
-            kstream = ktemplate(data)
-            k4 = time.time()
         # Filter through ITemplateStreamFilter plugins
-        # -- disable them to be fair...
-        #if self.stream_filters:
-        #    stream |= self._filter_stream(req, method, filename, stream, data)
+        if self.stream_filters:
+            stream |= self._filter_stream(req, method, filename, stream, data)
+        # FIXME (Jinja2): what do we expect here?
         if fragment:
-            # Note: for Kajiki is_fragment must be passed to load_ktemplate
             return stream
 
         if method == 'text':
-            buffer = StringIO()
-            t5 = time.time()
-            stream.render('text', out=buffer, encoding='utf-8')
-            t6 = time.time()
-            show_times('Genshi', t2 - t1, t4 - t3, t5 - t4, t6 - t5, 'text')
-            s = buffer.getvalue()
-            if kstream:
-                k5 = time.time()
-                try:
-                    s = kstream.render().encode('utf-8')
-                    k6 = time.time()
-                    show_times('Kajiki', k2 - k1, k4 - k3, 0, k6 - k5, 'text')
-                except Exception:
-                    pass # well, we don't really care..
-            if jtemplate:
-                j5 = time.time()
-                s = jtemplate.render(jdata).encode('utf-8')
-                j6 = time.time()
-                show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'text')
-            return s
+            def genshi():
+                buffer = StringIO()
+                t5 = time.time()
+                stream.render('text', out=buffer, encoding='utf-8')
+                t6 = time.time()
+                show_times('Genshi', t2 - t1, t4 - t3, t5 - t4, t6 - t5, 'text')
+                return buffer.getvalue()
+            def jinja():
+                if jtemplate:
+                    j5 = time.time()
+                    js = jtemplate.render(jdata).encode('utf-8')
+                    j6 = time.time()
+                    show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'text')
+                    return js
+            return jinja() or genshi()
 
         t4a = time.time()
         doctype = None
         if content_type == 'text/html':
             doctype = self.html_doctype
-            # XXX
+            # FIXME (Jinja2): find an alternative strategy
             if req.form_token:
                 stream |= self._add_form_token(req.form_token)
             if not int(req.session.get('accesskeys', 0)):
@@ -1274,9 +1224,9 @@ class Chrome(Component):
             'late_scripts': req.chrome['scripts'],
             'late_script_data': req.chrome['script_data'],
         })
-        # TODO: I get the feeling the late links logic will have to be
-        #       revisited... <head> should use the early_, <body> the
-        #       late_
+        # TODO (Jinja2): I get the feeling the late links logic will
+        #                have to be revisited... <head> should use the
+        #                early_*, <body> the late_*
         jdata.setdefault('chrome', {}).update({
             'late_links': req.chrome['links'],
             'late_scripts': req.chrome['scripts'],
@@ -1287,7 +1237,7 @@ class Chrome(Component):
         if iterable:
             print 'iterable... why is it not set?'
         # Genshi 'stream':
-        #return self.iterable_content(stream, method, doctype=doctype)
+        # return self.iterable_content(stream, method, doctype=doctype)
 
         try:
             def jinja(mode='render'):
@@ -1295,12 +1245,10 @@ class Chrome(Component):
                     j5 = time.time()
                     if mode == 'render':
                         js = jtemplate.render(jdata)
-                        print len(js)
                         j5a = time.time()
                         js = js.encode('utf-8') \
                                .translate(_translate_nop,
                                           _invalid_control_chars)
-                        print len(js)
                         j6 = time.time()
                         show_times('Jinja2', j2 - j1, 0, j5a - j5, j6 - j5a,
                                    'html')
@@ -1319,20 +1267,6 @@ class Chrome(Component):
                             j6 = time.time()
                             show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'html')
                         return iterable_content()
-            def kajiki():
-                if kstream:
-                    k5 = time.time()
-                    try:
-                        ks = kstream.render().encode('utf-8') \
-                               .translate(_translate_nop,
-                                          _invalid_control_chars)
-                        k6 = time.time()
-                        show_times('Kajiki',  k2 - t1, k4 - k3, 0, k6 - k5,
-                                   kmethod)
-                        return ks
-                    except Exception:
-                        pass # well, we don't really care..
-
             def genshi():
                 buffer = StringIO()
                 t5 = time.time()
@@ -1341,15 +1275,14 @@ class Chrome(Component):
                 gs = buffer.getvalue().translate(_translate_nop,
                                                  _invalid_control_chars)
                 t6 = time.time()
-                show_times('Genshi', t2 - t1, t4 - t3, t5a - t4a, t6 - t5,
-                           method)
+                # show_times('Genshi', t2 - t1, t4 - t3, t5a - t4a, t6 - t5,
+                #           method)
                 return gs
 
             # Now it's easier to control things from here:
             # 'render', 'generate' or buffer_size for stream (75 seems best)
-            #return genshi() # 'blob'
-            js, ks, gs = jinja(75), None, None # kajiki(), genshi()
-            return js or ks or gs
+            # return genshi() # 'blob'
+            return jinja('render') or genshi()
 
         except Exception as e:
             # restore what may be needed by the error template
