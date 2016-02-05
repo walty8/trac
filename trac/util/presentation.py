@@ -100,26 +100,20 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
                 val = classes(**val)
             elif isinstance(val, list):
                 val = classes(*val)
-            else:
-                val = escape(val)
         elif key == 'style':
             if isinstance(val, dict):
                 val = styles(**val)
             elif isinstance(val, list):
                 val = styles(*val)
-            else:
-                val = escape(val)
         elif key in HTML_ATTRS:
             values = HTML_ATTRS[key]
             if values is None:
                 val = key if val else None
             else:
                 val = values[bool(val)]
-        elif val is not None and not isinstance(val, Undefined):
+        if val is not None and not isinstance(val, Undefined):
             val = escape(val)
-        else:
-            continue
-        attrs.append(u'%s="%s"' % (escape(key), val))
+            attrs.append(u'%s="%s"' % (escape(key), val))
     rv = u' '.join(attrs)
     if autospace and rv:
         rv = u' ' + rv
