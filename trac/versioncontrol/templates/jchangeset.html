@@ -10,10 +10,17 @@
 #}
 
 # extends 'jlayout.html'
+
 <!DOCTYPE html>
 <html>
   <head>
-    <title>${title}</title>
+
+    <title>
+    # block title
+    ${title} ${ super() }
+    # endblock title
+    </title>
+
     # block head
 
     ${ super() }

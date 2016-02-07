@@ -14,17 +14,20 @@ history and logs, available at http://trac.edgewall.org/.
 <!DOCTYPE html>
 <html>
   <head>
+    <title>
+    # block title
+    #   if query:
+    ${_("Search Results")}
+    #   else:
+    ${_("Search")}
+    #   endif
+    ${ super() }
+    # endblock title
+    </title>
+
     # block head
 
     ${ super() }
-
-    <title>
-      # if query:
-      ${_("Search Results")}
-      # else:
-      ${_("Search")}
-      # endif
-    </title>
 
     #   if results:
     <meta name="startIndex" content="${results.span[0] + 1}"/>

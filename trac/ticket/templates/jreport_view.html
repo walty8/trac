@@ -8,15 +8,22 @@ This software consists of voluntary contributions made by many
 individuals. For the exact contribution history, see the revision
 history and logs, available at http://trac.edgewall.org/.
 #}
+
 # extends 'jlayout.html'
+
 <!DOCTYPE html>
 <html>
   <head>
+    <title>
+      # block title
+      ${title} ${ super() }
+      # endblock title
+    </title>
+
     # block head
 
     ${ super() }
 
-    <title>${title}</title>
     #   if show_args_form:
     <script type="text/javascript">
       jQuery(document).ready(function($) {

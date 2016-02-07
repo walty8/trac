@@ -8,25 +8,32 @@
   individuals. For the exact contribution history, see the revision
   history and logs, available at http://trac.edgewall.org/.
 #}
+
 # extends 'jlayout.html'
+
 <!DOCTYPE html>
 <html>
   <head>
+
+    <title>
+      # block title
+      #   if len(path_links) == 1:
+      /
+      #   elif len(path_links) == 2:
+      ${path_links[-1].name}
+      #   else:
+      #     trans basename = path_links[-1].name, dirname = path_links[1:-1]|map(attribute='name')|join('/')
+      ${basename} in ${dirname}
+      #     endtrans
+      #   endif
+      ${ super() }
+      # endblock title
+    </title>
+
+
     # block head
 
     ${ super() }
-
-    <title>
-      # if len(path_links) == 1:
-      /
-      # elif len(path_links) == 2:
-      ${path_links[-1].name}
-      # else:
-      #   trans basename = path_links[-1].name, dirname = path_links[1:-1]|map(attribute='name')|join('/')
-        ${basename} in ${dirname}
-      #   endtrans
-      # endif
-    </title>
 
     #   if file and file.annotate:
     <meta name="ROBOTS" content="NOINDEX, NOFOLLOW" />

@@ -10,9 +10,18 @@
 #}
 
 # extends ('j' + chrome.theme)
+
+<!DOCTYPE html>
 <html>
   <head>
     # block head
+
+    <title>
+    #  block title
+    – ${project.name or 'Trac'}
+    #  endblock title
+    </title>
+
     #   if chrome.content_type == 'text/html':
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -81,7 +90,6 @@
     #   include 'site_head.html' ignore missing
     # endblock head
   </head>
-  ## jinjacheck: "meta link style link script" OK ... TODO add <title>
 
   <body>
     # block content
