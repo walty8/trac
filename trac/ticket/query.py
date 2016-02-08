@@ -742,6 +742,9 @@ class Query(object):
                 # Make $USER work when restrict_owner = true
                 field = field.copy()
                 field['options'].insert(0, '$USER')
+                chrome = Chrome(self.env)
+                field['option_labels'] = [chrome.format_author(context, opt)
+                                          for opt in field['options']]
             if name == 'milestone':
                 milestones = [Milestone(self.env, opt)
                               for opt in field['options']]
@@ -753,6 +756,12 @@ class Query(object):
                     {'label': label, 'options': [m.name for m in milestones]}
                     for (label, milestones) in groups]
             fields[name] = field
+
+        def by_label(name):
+            if 'label' in fields[name]:
+                return fields[name]['label'].lower()
+            return ''
+        field_names = sorted(fields.iterkeys(), key=by_label)
 
         groups = {}
         groupsequence = []
@@ -821,6 +830,7 @@ class Query(object):
                 'clauses': clauses,
                 'headers': headers,
                 'fields': fields,
+                'field_names': field_names,
                 'modes': self.get_modes(),
                 'tickets': tickets,
                 'groups': groupsequence or [(None, tickets)],

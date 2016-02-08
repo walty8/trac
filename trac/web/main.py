@@ -70,7 +70,7 @@ class FakeSession(dict):
     sid = None
     authenticated = False
     last_visit = 0
-    
+
     def save(self):
         pass
 
@@ -389,12 +389,12 @@ class RequestDispatcher(Component):
         if 'trac_form_token' in req.incookie:
             return req.incookie['trac_form_token'].value
         else:
-            req.outcookie['trac_form_token'] = hex_entropy(24)
+            req.outcookie['trac_form_token'] = form_token = hex_entropy(24)
             req.outcookie['trac_form_token']['path'] = req.base_path or '/'
             if self.env.secure_cookies:
                 req.outcookie['trac_form_token']['secure'] = True
             req.outcookie['trac_form_token']['httponly'] = True
-            return req.outcookie['trac_form_token'].value
+            return form_token
 
     def _get_use_xsendfile(self, req):
         return self.use_xsendfile

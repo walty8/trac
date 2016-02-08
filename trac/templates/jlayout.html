@@ -10,6 +10,7 @@
 #}
 
 # extends ('j' + chrome.theme)
+# import "jmacros.html" as jmacros with context
 
 <!DOCTYPE html>
 <html>
@@ -57,7 +58,7 @@
     #   if chrome.script_data:
     <script type="text/javascript">
       #   for key, value in chrome.script_data.iteritems():
-      var ${key}=${to_json(value)};
+      var ${key}=${to_json(value)|safe};
       #   endfor
     </script>
     #   endif
@@ -126,7 +127,7 @@
     #   if chrome.late_script_data:
     <script type="text/javascript">
       #   for key, value in chrome.late_script_data.iteritems():
-      var ${key}=${to_json(value)};
+      var ${key}=${to_json(value)|safe};
       #   endfor
     </script>
     #   endif

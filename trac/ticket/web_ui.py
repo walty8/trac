@@ -15,6 +15,7 @@
 # Author: Jonas Borgström <jonas@edgewall.com>
 
 import csv
+from datetime import datetime
 from functools import partial
 import pkg_resources
 import re

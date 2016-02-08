@@ -1022,6 +1022,7 @@ class Chrome(Component):
             'abs_href': abs_href,
             'href': href,
             'perm': req and req.perm,
+            'form_token': req.form_token,
             'authname': req.authname if req else '<trac>',
             'locale': req and req.locale,
             # show_email_address is deprecated: will be removed in 1.3.1
@@ -1182,8 +1183,13 @@ class Chrome(Component):
         # Filter through ITemplateStreamFilter plugins
         if self.stream_filters:
             stream |= self._filter_stream(req, method, filename, stream, data)
-        # FIXME (Jinja2): what do we expect here?
         if fragment:
+            if jtemplate:
+                t = time.time()
+                js = jtemplate.render(jdata)
+                tt = time.time()
+                print("Jinja2 fragment rendered in: %.3f" % (tt - t))
+                return js
             return stream
 
         if method == 'text':
@@ -1207,7 +1213,6 @@ class Chrome(Component):
         doctype = None
         if content_type == 'text/html':
             doctype = self.html_doctype
-            # FIXME (Jinja2): find an alternative strategy
             if req.form_token:
                 stream |= self._add_form_token(req.form_token)
             if not int(req.session.get('accesskeys', 0)):
@@ -1275,14 +1280,15 @@ class Chrome(Component):
                 gs = buffer.getvalue().translate(_translate_nop,
                                                  _invalid_control_chars)
                 t6 = time.time()
-                # show_times('Genshi', t2 - t1, t4 - t3, t5a - t4a, t6 - t5,
-                #           method)
+                show_times('Genshi', t2 - t1, t4 - t3, t5a - t4a, t6 - t5,
+                           method)
                 return gs
 
             # Now it's easier to control things from here:
             # 'render', 'generate' or buffer_size for stream (75 seems best)
             # return genshi() # 'blob'
-            return jinja('render') or genshi()
+            gs = genshi()
+            return jinja('render') or gs
 
         except Exception as e:
             # restore what may be needed by the error template

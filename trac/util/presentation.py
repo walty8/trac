@@ -16,7 +16,7 @@
 tasks such as grouping or pagination.
 """
 
-from json import dumps
+from json import JSONEncoder
 from math import ceil
 import re
 
@@ -466,10 +466,15 @@ def separated(items, sep=',', last=None):
 _js_quote = dict((c, '\\u%04x' % ord(c)) for c in '&<>')
 _js_quote_re = re.compile('[' + ''.join(_js_quote) + ']')
 
+class TracJSONEncoder(JSONEncoder):
+    def default(self, o):
+        if isinstance(o, Undefined):
+            return ''
+        return JSONEncoder.default(self, o)
 
 def to_json(value):
     """Encode `value` to JSON."""
     def replace(match):
         return _js_quote[match.group(0)]
-    text = dumps(value, sort_keys=True, separators=(',', ':'))
+    text = TracJSONEncoder(sort_keys=True, separators=(',', ':')).encode(value)
     return _js_quote_re.sub(replace, text)
