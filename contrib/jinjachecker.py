@@ -152,8 +152,14 @@ JINJA2_NO_COLON_KEYWORDS = (
 
 JINJA2_NO_EXPRESSION_KEYWORDS = ('else', 'trans', 'with')
 
-Statement = namedtuple('Statement',
-                       ('linenum', 'indent', 'end', 'kw', 'expr', 'colon'))
+StatementTuple = namedtuple('StatementTuple',
+                            ('linenum', 'indent', 'end', 'kw', 'expr', 'colon'))
+
+class Statement(StatementTuple):
+    def __init__(self, *args):
+        super(StatementTuple, self).__init__(*args)
+        self.is_block = (self.kw in JINJA2_BLOCK_KEYWORDS or
+                         self.kw == 'set' and '=' not in self.expr)
 
 LINE_STATEMENT_RE = re.compile(r'^(\s*)%s-?(\s*)(end)?(\w+)(.*?)?(:)?$' %
                                LINE_STATEMENT_PREFIX)
@@ -237,11 +243,9 @@ def check_jinja(filename, line_statements, quiet):
     issues = 0
     for s in line_statements:
         warn = []
-        is_block = (s.kw in JINJA2_BLOCK_KEYWORDS or
-                    s.kw == 'set' and '=' not in s.expr)
         top = kw_stack and kw_stack[-1]
         if s.end:
-            if not is_block:
+            if not s.is_block:
                 warn.append("'end%s' is not a valid keyword" % s.kw)
             else:
                 if top:
@@ -257,8 +261,8 @@ def check_jinja(filename, line_statements, quiet):
                 if s.kw == 'block':
                     if top and top.expr != s.expr:
                         warn.append(("'endblock %s' misplaced or misspelled,"
-                                     " current block is 'block %s'") %
-                                    (s.expr, top.expr))
+                                     " current block is '%s %s'") %
+                                    (s.expr, top.kw, top.expr))
                 else:
                     warn.append("no expression allowed for 'end%s' statement"
                                 % s.kw)
@@ -266,7 +270,7 @@ def check_jinja(filename, line_statements, quiet):
                 warn.append("no ending colon wanted for 'end%s' statement"
                             % s.kw)
         else:
-            if is_block:
+            if s.is_block:
                 kw_stack.append(s)
             if s.expr == '' and s.kw not in JINJA2_NO_EXPRESSION_KEYWORDS:
                 warn.append("expression missing in '%s' statement" % s.kw)
@@ -295,8 +299,9 @@ def print_statement(filename, s, warn=None, quiet=False):
     if not quiet:
         print('%5d %s %s%s%s%s' % (s.linenum,
                                    ' ' * s.indent,
-                                   '/' if s.end else '', s.kw.upper(),
-                                   s.expr, s.colon))
+                                   '}' if s.end else
+                                   '{' if s.is_block else '',
+                                   s.kw.upper(), s.expr, s.colon))
     while warn:
         print('%s:%s: %s' % (filename, s.linenum, warn.pop()))
 
