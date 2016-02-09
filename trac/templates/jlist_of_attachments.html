@@ -55,7 +55,6 @@ ${attachment_links}(<span title="${title}">${size}</span>)
 #   if alist.attachments or alist.can_create:
 <div id="attachments">
   #   if compact and alist.attachments:
-  ${ pprint(alist) }
   <h3 ${{'class': 'foldable' if foldable}|htmlattr}>
     ${_("Attachments")}
     <span class="trac-count">(${len(alist.attachments)})</span></h3>

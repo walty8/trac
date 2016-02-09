@@ -38,12 +38,18 @@
   # macro group_heading(groupname, results)
   #   if groupname is not none:
   <h2 class="report-result" >
-    ## FIXME indent?
-    #   trans grouplabel = fields[query.group].label, groupname = authorinfo(groupname) if query.group in ['owner', 'reporter'] else (groupname or _('None')), count = ngettext('%(num)s match', '%(num)s matches', len(results))
+    #   with
+    #     set grouplabel = fields[query.group].label
+    #     set groupname =  (authorinfo(groupname) if
+                            query.group in ('owner', 'reporter')
+                            else (groupname or _('None')))
+    #     set count = ngettext('%(num)s match', '%(num)s matches', len(results))
+    #     trans grouplabel, groupname, count
 
     ${grouplabel}: ${groupname} <span class="numrows">(${count})</span>
 
-    #   endtrans
+    #     endtrans
+    #  endwith
     </h2>
   #   endif
   # endmacro
@@ -102,15 +108,15 @@
         #     for header in headers:
         #       set name = header.name
         #       set value = result[name]
-        #       set wikitext = header.field.type == 'text' and header.field.format == 'wiki'
-        #       set wikitextarea = header.field.type == 'textarea' and header.field.format == 'wiki'
+        #       set wikitext = (header.field.type == 'text' and
+                                header.field.format == 'wiki')
+        #       set wikitextarea = (header.field.type == 'textarea' and
+                                    header.field.format == 'wiki')
         #       if name == 'id':
         <td class="id"><a href="${result.href}" title="View ticket"
-                        class="${classes(closed=result.status == 'closed')}"
+                          class="${classes(closed=result.status == 'closed')}"
                           >#${result.id}</a></td>
         #       else:
-        ## FIXME: not sure yet what to do with that:
-        ##   xml:space="${'preserve' if wikitextarea else None}"
         <td class="${name}">
           #       if name == 'summary':
           <a href="${result.href}" title="${_("View ticket")}">${value}</a>

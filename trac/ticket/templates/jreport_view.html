@@ -65,8 +65,8 @@ history and logs, available at http://trac.edgewall.org/.
                   <tr>
                     <th scope="row"><label>${name}</label></th>
                     <td class="filter">
-                      <input type="text" name="${name}" value="${value or None}"
-                             size="42" />
+                      <input type="text" name="${name}"
+                             ${{'value': value}|htmlattr} size="42" />
                     </td>
                   </tr>
                 </tbody>
@@ -140,7 +140,8 @@ history and logs, available at http://trac.edgewall.org/.
       #   endif
       # endmacro
 
-      ${group_heading(*row_groups[0]) if row_groups else None}
+      ${group_heading(*row_groups[0]) if row_groups}
+
       # if row_groups:
       <table class="listing tickets">
 
