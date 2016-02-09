@@ -16,7 +16,7 @@ particular to help resolve nesting issues.
 """
 
 def usage():
-    """
+    return """
 Usage: python %s [options] TEMPLATES...
 
 Where options can be:
@@ -147,10 +147,10 @@ JINJA2_BLOCK_KEYWORDS = (
 )
 
 JINJA2_NO_COLON_KEYWORDS = (
-    'block', 'extends', 'include', 'macro', 'set', 'trans', 'with'
+    'block', 'extends', 'include', 'macro', 'pluralize', 'set', 'trans', 'with'
 )
 
-JINJA2_NO_EXPRESSION_KEYWORDS = ('else', 'trans', 'with')
+JINJA2_NO_EXPRESSION_KEYWORDS = ('else', 'pluralize', 'trans', 'with')
 
 StatementTuple = namedtuple('StatementTuple',
                             ('linenum', 'indent', 'end', 'kw', 'expr', 'colon'))
@@ -300,7 +300,7 @@ def print_statement(filename, s, warn=None, quiet=False):
         print('%5d %s %s%s%s%s' % (s.linenum,
                                    ' ' * s.indent,
                                    '}' if s.end else
-                                   '{' if s.is_block else '',
+                                   '{' if s.is_block else ' ',
                                    s.kw.upper(), s.expr, s.colon))
     while warn:
         print('%s:%s: %s' % (filename, s.linenum, warn.pop()))
