@@ -1105,7 +1105,10 @@ class Chrome(Component):
                 len=len,
             )
             jenv.filters.update(
+                groupattr=presentation.groupattr_filter,
                 htmlattr=presentation.htmlattr_filter,
+                max=presentation.max_filter,
+                mix=presentation.min_filter,
                 trim=presentation.trim_filter,
             )
             jenv.tests.update(
@@ -1113,6 +1116,8 @@ class Chrome(Component):
                 greaterthanorequal=presentation.is_greaterthanorequal,
                 lessthan=presentation.is_lessthan,
                 lessthanorequal=presentation.is_lessthanorequal,
+                not_equalto=presentation.is_not_equalto,
+                not_in=presentation.is_not_in,
                 text=presentation.istext,
             )
         try:

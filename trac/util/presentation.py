@@ -20,7 +20,8 @@ from json import JSONEncoder
 from math import ceil
 import re
 
-from jinja2 import Markup, Undefined, evalcontextfilter, escape
+from jinja2 import Markup, Undefined, contextfilter, evalcontextfilter, escape
+from jinja2.filters import make_attrgetter
 from jinja2.utils import soft_unicode
 from jinja2._compat import iteritems
 
@@ -122,6 +123,19 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
     return rv
 
 
+def max_filter(seq, default=None):
+    """Returns the max value from the sequence."""
+    if len(seq):
+        return max(seq)
+    return default
+
+def min_filter(seq, default=None):
+    """Returns the min value from the sequence."""
+    if len(seq):
+        return min(seq)
+    return default
+
+
 def trim_filter(value, what=None):
     """Strip leading and trailing whitespace or other specified character.
 
@@ -129,8 +143,10 @@ def trim_filter(value, what=None):
     """
     return soft_unicode(value).strip(what)
 
-
 # -- Jinja2 custom tests
+
+def is_not_equalto(a, b):
+    return a != b
 
 def is_greaterthan(a, b):
     return a > b
@@ -144,6 +160,11 @@ def is_lessthan(a, b):
 def is_lessthanorequal(a, b):
     return a <= b
 
+def is_in(a, b):
+    return a in b
+
+def is_not_in(a, b):
+    return a not in b
 
 # Note: see which of the following should become Jinja2 filters
 
@@ -274,6 +295,20 @@ def group(iterable, num, predicate=None):
     if buf:
         buf += [None] * (num - len(buf))
         yield tuple(buf)
+
+
+@contextfilter
+def groupattr_filter(_eval_ctx, iterable, num, attr, *args, **kwargs):
+    """Similar to `group`, but as an attribute filter."""
+    attr_getter = make_attrgetter(_eval_ctx.environment, attr)
+    try:
+        name = args[0]
+        args = args[1:]
+        test_func = lambda item: _eval_ctx.environment.call_test(name, item,
+                                                                 args, kwargs)
+    except LookupError:
+        test_func = bool
+    return group(iterable, num, lambda item: test_func(attr_getter(item)))
 
 
 def istext(text):
