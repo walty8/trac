@@ -34,12 +34,14 @@ from trac.util.html import escape, find_element
 from trac.util.presentation import separated
 from trac.util.text import unicode_quote, to_unicode, stripws
 from trac.util.translation import _, dgettext, cleandoc_
-from trac.web.chrome import chrome_resource_path
+from trac.web.chrome import (chrome_resource_path, Chrome, add_stylesheet)
 from trac.wiki.api import IWikiMacroProvider, WikiSystem, parse_args
 from trac.wiki.formatter import (
     format_to_html, format_to_oneliner, extract_link, OutlineFormatter
 )
 from trac.wiki.interwiki import InterWikiMap
+from trac.ticket.report import ReportModule
+import pkg_resources
 
 
 # TODO: should be moved in .api
@@ -907,3 +909,47 @@ class TracGuideTocMacro(WikiMacroBase):
                            class_=(prefix+ref == curpage and 'active'))
                     for ref, title in self.TOC]),
             class_='wiki-toc')
+
+
+class WikiReport(WikiMacroBase):
+    _description = cleandoc_(
+    """Wiki macro inserts the Trac report into the wiki page.
+
+        [[WikiReport(<id>,<key1>=<value1>, <keyN>=<valueN>, ...)]]
+
+    This macro accepts a comma-separated list of keyed parameters,
+    in the form "key=value" and "id".
+       - "id" -- then report id of the Trac
+       - "key" -- then report parameter
+       - "value" -- then value of report parameter
+    It supports dynamic variables.
+    """)
+
+
+    def expand_macro(self, formatter, name, args):
+        req = formatter.req
+        chrome = Chrome(self.env)
+        report = ReportModule(self.env)
+
+        comma_splitter = re.compile(r'(?<!\\),')
+        kwargs = {}
+        for arg in comma_splitter.split(args):
+            arg = arg.replace(r'\,', ',')
+            m = re.match(r'\s*[^=]+=', arg)
+            if m:
+                kw = arg[:m.end() - 1].strip()
+                value = arg[m.end():]
+                if re.match(r'^\$[A-Z]*$', value):
+                   value = req.args.get(value[1:])
+                kwargs[kw] = value if value!= None else ''
+            else:
+                if re.match(r'^\$[A-Z]*$', arg):
+                   arg = req.args.get(arg[1:])
+                id = int(arg)
+
+        req.args = kwargs
+        req.args['page'] = '1'
+        template, data, content_type = report._render_view(req, id)
+        add_stylesheet(req, 'common/css/report.css')
+
+        return chrome.render_template(req, 'report_table.html', data, None, fragment=True)
