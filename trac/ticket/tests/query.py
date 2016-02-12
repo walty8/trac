@@ -1324,7 +1324,193 @@ QUERY_TEST_CASES = u"""
 ------------------------------
 """
 
+WIKI_REPORT_TEST_CASES = u"""
+
+============================== WikiReport(1)
+[[WikiReport(1)]]
+------------------------------
+<p>
+</p><div xmlns="http://www.w3.org/1999/xhtml">
+      <table class="listing tickets">
+          <thead>
+        <tr class="trac-columns">
+          <th>
+            <a href="/report/1?sort=ticket&amp;asc=1&amp;page=1">
+              Ticket
+            </a>
+          </th><th>
+            <a href="/report/1?sort=summary&amp;asc=1&amp;page=1">
+              Summary
+            </a>
+          </th><th>
+            <a href="/report/1?sort=component&amp;asc=1&amp;page=1">
+              Component
+            </a>
+          </th><th>
+            <a href="/report/1?sort=version&amp;asc=1&amp;page=1">
+              Version
+            </a>
+          </th><th>
+            <a href="/report/1?sort=milestone&amp;asc=1&amp;page=1">
+              Milestone
+            </a>
+          </th><th>
+            <a href="/report/1?sort=type&amp;asc=1&amp;page=1">
+              Type
+            </a>
+          </th><th>
+            <a href="/report/1?sort=owner&amp;asc=1&amp;page=1">
+              Owner
+            </a>
+          </th><th>
+            <a href="/report/1?sort=status&amp;asc=1&amp;page=1">
+              Status
+            </a>
+          </th><th>
+            <a href="/report/1?sort=created&amp;asc=1&amp;page=1">
+              Created
+            </a>
+          </th>
+        </tr>
+          </thead>
+          <tbody>
+              <tr class="color3-even">
+                          <td class="ticket">
+                            <a title="View ticket" href="/ticket/1">#1</a>
+                          </td>
+                          <td class="summary">
+                            <a title="View ticket" href="/ticket/1">This is the summary</a>
+                          </td>
+                          <td class="component">
+                          </td>
+                          <td class="version">
+                          </td>
+                          <td class="milestone">
+                          </td>
+                          <td class="type">defect
+                          </td>
+                          <td class="owner">
+                          </td>
+                          <td class="status">new
+                          </td>
+                          <td class="date">02/21/16
+                          </td>
+              </tr>
+              <tr class="color3-odd">
+                          <td class="ticket">
+                            <a title="View ticket" href="/ticket/2">#2</a>
+                          </td>
+                          <td class="summary">
+                            <a title="View ticket" href="/ticket/2">This is another summary</a>
+                          </td>
+                          <td class="component">
+                          </td>
+                          <td class="version">
+                          </td>
+                          <td class="milestone">
+                          </td>
+                          <td class="type">defect
+                          </td>
+                          <td class="owner">elf
+                          </td>
+                          <td class="status">assigned
+                          </td>
+                          <td class="date">02/21/16
+                          </td>
+              </tr>
+          </tbody>
+      </table>
+</div><p>
+</p>
+------------------------------
+============================== WikiReport(7, USER=santa)
+[[WikiReport(7, USER=santa)]]
+------------------------------
+<p>
+</p><div xmlns="http://www.w3.org/1999/xhtml">
+        <h2 class="report-result">
+          Reported
+          <span class="numrows">
+            (1 match)
+          </span>
+        </h2>
+      <table class="listing tickets">
+          <thead>
+        <tr class="trac-columns">
+          <th>
+            <a href="/report/7?sort=ticket&amp;asc=1&amp;USER=santa&amp;page=1">
+              Ticket
+            </a>
+          </th><th>
+            <a href="/report/7?sort=summary&amp;asc=1&amp;USER=santa&amp;page=1">
+              Summary
+            </a>
+          </th><th>
+            <a href="/report/7?sort=component&amp;asc=1&amp;USER=santa&amp;page=1">
+              Component
+            </a>
+          </th><th>
+            <a href="/report/7?sort=version&amp;asc=1&amp;USER=santa&amp;page=1">
+              Version
+            </a>
+          </th><th>
+            <a href="/report/7?sort=milestone&amp;asc=1&amp;USER=santa&amp;page=1">
+              Milestone
+            </a>
+          </th><th>
+            <a href="/report/7?sort=type&amp;asc=1&amp;USER=santa&amp;page=1">
+              Type
+            </a>
+          </th><th>
+            <a href="/report/7?sort=priority&amp;asc=1&amp;USER=santa&amp;page=1">
+              Priority
+            </a>
+          </th><th>
+            <a href="/report/7?sort=created&amp;asc=1&amp;USER=santa&amp;page=1">
+              Created
+            </a>
+          </th>
+        </tr>
+          </thead>
+          <tbody>
+              <tr class="color3-even">
+                          <td class="ticket">
+                            <a title="View ticket" href="/ticket/1">#1</a>
+                          </td>
+                          <td class="summary">
+                            <a title="View ticket" href="/ticket/1">This is the summary</a>
+                          </td>
+                          <td class="component">
+                          </td>
+                          <td class="version">
+                          </td>
+                          <td class="milestone">
+                          </td>
+                          <td class="type">defect
+                          </td>
+                          <td class="priority">major
+                          </td>
+                          <td class="date">02/21/16
+                          </td>
+              </tr>
+          </tbody>
+      </table>
+</div><p>
+</p>
+------------------------------
+============================== WikiReport(7, USER=batman)
+[[WikiReport(7, USER=batman)]]
+------------------------------
+<p>
+</p><div xmlns="http://www.w3.org/1999/xhtml">
+      <div id="report-notfound">No matches found.</div>
+</div><p>
+</p>
+------------------------------
+"""
+
 def ticket_setup(tc):
+    tc.env = EnvironmentStub(default_data=True)
     tc.env.config.set('ticket-custom', 'project', 'text')
     ticket = Ticket(tc.env)
     ticket.populate({'reporter': 'santa',
@@ -1360,6 +1546,8 @@ def suite():
     suite.addTest(unittest.makeSuite(TicketQueryMacroTestCase))
     suite.addTest(formatter.suite(QUERY_TEST_CASES, ticket_setup, __file__,
                                   ticket_teardown))
+    suite.addTest(formatter.suite(WIKI_REPORT_TEST_CASES, ticket_setup,
+                                  __file__, ticket_teardown))
     return suite
 
 if __name__ == '__main__':
