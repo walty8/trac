@@ -242,9 +242,9 @@
         # for prop in properties:
         #   if prop.rendered:
         <dt ${prop.rendered.name_attributes|htmlattr}>
-          prop.rendered.name</dt>
+          ${prop.rendered.name}</dt>
         <dd ${prop.rendered.content_attributes|htmlattr}>
-          prop.rendered.content</dd>
+          ${prop.rendered.content}</dd>
         #   else:
         <dt class="property">${prop.name}:</dt>
         <dd>${prop.value}</dd>
