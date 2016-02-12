@@ -43,7 +43,6 @@ from trac.wiki.formatter import (
 )
 from trac.wiki.interwiki import InterWikiMap
 from trac.ticket.report import ReportModule
-import pkg_resources
 
 
 class WikiMacroBase(Component):
@@ -903,7 +902,7 @@ class TracGuideTocMacro(WikiMacroBase):
             class_='wiki-toc')
 
 
-class WikiReport(WikiMacroBase):
+class WikiReportMacro(WikiMacroBase):
     _description = cleandoc_(
     """Wiki macro inserts the Trac report into the wiki page.
 
