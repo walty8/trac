@@ -462,7 +462,7 @@ class NotificationTestCase(unittest.TestCase):
         config_subscriber(self.env, reporter=True, owner=True)
         self.env.config.set('notification', 'smtp_always_cc',
                             'joe@example.com')
-        self.env.insert_known_users(
+        self.env.insert_users(
             [('joeuser', 'Joe User', 'user-joe@example.com'),
              ('jim@domain', 'Jim User', 'user-jim@example.com')])
         ticket = Ticket(self.env)
@@ -487,7 +487,7 @@ class NotificationTestCase(unittest.TestCase):
         self.env.config.set('notification', 'smtp_from', 'trac@example.com')
         self.env.config.set('notification', 'smtp_from_name', 'My Trac')
         self.env.config.set('notification', 'smtp_from_author', 'true')
-        self.env.insert_known_users(
+        self.env.insert_users(
             [('joeuser', 'Joe User', 'user-joe@example.com'),
              ('jim@domain', 'Jim User', 'user-jim@example.com'),
              ('noemail', 'No e-mail', ''),
@@ -549,7 +549,7 @@ class NotificationTestCase(unittest.TestCase):
         config_subscriber(self.env, reporter=True, owner=True)
         self.env.config.set('notification', 'ignore_domains',
                             'example.com, example.org')
-        self.env.insert_known_users(
+        self.env.insert_users(
             [('kerberos@example.com', 'No Email', ''),
              ('kerberos@example.org', 'With Email', 'kerb@example.net')])
         ticket = Ticket(self.env)
@@ -923,7 +923,7 @@ Resolution:  fixed                   |   Keywords:"""
         self._validate_props_format(formatted, ticket)
 
     def test_props_format_show_full_names(self):
-        self.env.insert_known_users([
+        self.env.insert_users([
             ('joefoo', u'Joę Fœœ', 'joe@foobar.foo.bar.example.org'),
             ('joebar', u'Jœe Bær', 'joe.bar@foobar.foo.bar.example.org')
         ])
@@ -1462,7 +1462,7 @@ Security sensitive:  0                           |          Blocking:
 
     def test_property_change_author_full_name(self):
         self.env.config.set('trac', 'show_email_addresses', True)
-        self.env.insert_known_users([
+        self.env.insert_users([
             ('user0', u'Ußęr0', 'user0@d.org'),
             ('user1', u'Ußęr1', 'user1@d.org'),
             ('user2', u'Ußęr2', 'user2@d.org'),
@@ -1487,7 +1487,7 @@ Security sensitive:  0                           |          Blocking:
 
     def test_comment_author_full_name(self):
         self.env.config.set('trac', 'show_email_addresses', True)
-        self.env.insert_known_users([
+        self.env.insert_users([
             ('user', u'Thę Ußęr', 'user@domain.org')
         ])
         ticket = self._insert_ticket()
@@ -1569,7 +1569,7 @@ class AttachmentNotificationTestCase(unittest.TestCase):
 
     def test_author_full_name(self):
         self.env.config.set('trac', 'show_email_addresses', True)
-        self.env.insert_known_users([
+        self.env.insert_users([
             ('user', u'Thę Ußęr', 'user@domain.org')
         ])
         self._insert_attachment('user')
