@@ -19,8 +19,6 @@
 import pkg_resources
 import re
 
-from genshi.builder import tag
-
 from trac.attachment import AttachmentModule, Attachment
 from trac.config import IntOption
 from trac.core import *
@@ -31,6 +29,7 @@ from trac.search import ISearchSource, search_to_sql, shorten_result
 from trac.timeline.api import ITimelineEventProvider
 from trac.util import get_reporter_id
 from trac.util.datefmt import from_utimestamp, to_utimestamp
+from trac.util.html import tag
 from trac.util.text import shorten_line
 from trac.util.translation import _, tag_
 from trac.versioncontrol.diff import get_diff_options, diff_blocks

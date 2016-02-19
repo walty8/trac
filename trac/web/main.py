@@ -31,7 +31,6 @@ from pprint import pformat, pprint
 import re
 import sys
 
-from genshi.builder import tag
 from genshi.output import DocType
 from genshi.template import TemplateLoader
 
@@ -48,6 +47,7 @@ from trac.util import arity, get_frame_info, get_last_traceback, hex_entropy, \
                       warn_setuptools_issue
 from trac.util.concurrency import threading
 from trac.util.datefmt import format_datetime, localtz, timezone, user_time
+from trac.util.html import tag
 from trac.util.text import exception_to_unicode, shorten_line, to_unicode, \
                            to_utf8, unicode_quote
 from trac.util.translation import _, get_negotiated_locale, has_babel, \

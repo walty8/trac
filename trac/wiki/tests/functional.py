@@ -15,12 +15,11 @@
 import os
 import unittest
 
-from genshi.builder import tag
-
 from trac.mimeview.rst import has_docutils
 from trac.tests.contentgen import random_sentence, random_unique_camel
 from trac.tests.functional import FunctionalTwillTestCaseSetup, tc
 from trac.util import create_file, get_pkginfo
+from trac.util.html import tag
 
 
 class TestWiki(FunctionalTwillTestCaseSetup):
@@ -89,8 +88,8 @@ class TestWikiPageManipulator(FunctionalTwillTestCaseSetup):
         env.config.save()
         create_file(os.path.join(env.path, 'plugins',
                                  plugin_name + '.py'), """\
-from genshi.builder import tag
 from trac.core import Component, implements
+from trac.util.html import tag
 from trac.util.translation import tag_
 from trac.wiki.api import IWikiPageManipulator
 

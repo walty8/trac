@@ -14,9 +14,10 @@
 from HTMLParser import HTMLParser
 import re
 
-from genshi import Markup, HTML, escape, unescape
+from markupsafe import Markup, escape as escape_quotes
+
+from genshi import HTML, unescape
 from genshi.core import stripentities, striptags, START, END
-from genshi.builder import Element, ElementFactory, Fragment, tag
 from genshi.filters.html import HTMLSanitizer
 from genshi.input import ParseError
 try:
@@ -28,10 +29,133 @@ from trac.core import TracError
 from trac.util.text import to_unicode
 
 __all__ = ['Deuglifier', 'FormTokenInjector', 'TracHTMLSanitizer', 'escape',
-           'find_element', 'html', 'plaintext', 'to_fragment', 'unescape']
+           'find_element', 'html', 'plaintext', 'tag', 'to_fragment',
+           'unescape']
+
+def escape(str, quotes=False):
+    return escape_quotes(str) # well, we just no longer care about quotes=False
+
+
+# -- Simplified genshi.builder API
+
+class Fragment(object):
+    """A fragment represents a sequence of strings or elements."""
+
+    __slot__ = ('children')
+
+    def __init__(self, *args):
+        self.children = []
+        for arg in args:
+            self.append(arg)
+
+    def __html__(self):
+        return Markup(unicode(self))
+
+    def __unicode__(self):
+        return u''.join(escape_quotes(c) for c in self.children)
+
+    def __add__(self, other):
+        return Fragment(self, other)
+
+    def append(self, arg):
+        if arg: # ignore None, False, [], (), ''
+            if isinstance(arg, (Fragment, basestring, int, float, long)):
+                self.children.append(arg)
+            else:
+                # support iterators and generators
+                try:
+                    for elt in arg:
+                        self.append(elt)
+                except TypeError:
+                    self.children.append(arg)
+        elif arg is 0: # but not 0!
+            self.children.append(u'0')
+
+    def as_text(self):
+        return u''.join(c.as_text() if isinstance(c, Fragment) else unicode(c)
+                        for c in self.children)
+
+
+class Element(Fragment):
+    """An element represents an HTML element, with a tag name, attributes
+    and content.
+
+    """
+
+    VOID_ELEMENTS = set(('area', 'base', 'br', 'col', 'command', 'embed', 'hr',
+                         'img', 'input', 'keygen', 'link', 'meta', 'param',
+                         'source', 'track', 'wbr'))
+
+    __slot__ = ('tag', 'attrib')
+
+    attrib = {}
+
+    def __init__(self, tag, *args, **kwargs):
+        Fragment.__init__(self, *args)
+        self.tag = unicode(tag)
+        if kwargs:
+            self.attrib = self._dict_from_kwargs(kwargs)
+
+    def _dict_from_kwargs(self, kwargs):
+        # TODO: share more logic with htmlattr_filter
+        try:
+            c = kwargs.pop('class_')
+            kwargs['class'] = c
+        except KeyError:
+            pass
+        return dict((k, escape_quotes(v)) for k, v in kwargs.iteritems()
+                     if v is not None)
+
+    def __call__(self, *args, **kwargs):
+        if kwargs:
+            d = self._dict_from_kwargs(kwargs)
+            if d:
+                if self.attrib:
+                    self.attrib.update(d)
+                else:
+                    self.attrib = d
+        for arg in args:
+            self.append(arg)
+        return self
+
+    def __unicode__(self):
+        elt = u'<' + self.tag
+        if self.attrib:
+            #elt += u''.join(' %s="%s"' % kv for kv in self.attrib.iteritems())
+            # Note that sorting the attrs somehow reduces the impact on the
+            # unit-tests, so we do that for now
+            elt += u''.join(' %s="%s"' % (k, self.attrib[k])
+                            for k in sorted(self.attrib.keys()))
+        if self.children or self.tag not in self.VOID_ELEMENTS:
+            elt += u'>' + Fragment.__unicode__(self) + u'</' + self.tag + u'>'
+        else:
+            elt += u' />'
+        return elt
+
+
+class ElementFactory(object):
+    """A fragment factory can be used to build fragments and element of a
+    given tag name.
+    """
+    __slot__ = ()
+
+    def __call__(self, *args):
+        return Fragment(*args)
+
+    def __getattr__(self, tag):
+        return Element(tag)
+
+tag = html = ElementFactory()
 
 
 class TracHTMLSanitizer(HTMLSanitizer):
+
+    ## Jinja2: the last change upstream on HTMLSanitizer was 4 years
+    ##         ago, and was the integration of some of the changes
+    ##         below (r10788). It should be possible to grab the rest
+    ##         and rewrite __call__ in terms of the regular
+    ##         HTMLParser.
+
     """Sanitize HTML constructions which are potentially vector of
     phishing or XSS attacks, in user-supplied HTML.
 
@@ -108,6 +232,25 @@ class TracHTMLSanitizer(HTMLSanitizer):
     #     7) Particular bit of Unicode characters
     _URL_FINDITER = re.compile(
         u'[Uu][Rr\u0280][Ll\u029F]\s*\(([^)]+)').finditer
+
+    def sanitize_attrs(self, attrs):
+        new_attrs = {}
+        for attr, value in attrs.iteritems():
+            value = stripentities(value)
+            if attr not in self.safe_attrs:
+                continue
+            elif attr in self.uri_attrs:
+                # Don't allow URI schemes such as "javascript:"
+                if not self.is_safe_uri(value):
+                    continue
+            elif attr == 'style':
+                # Remove dangerous CSS declarations from inline styles
+                decls = self.sanitize_css(value)
+                if not decls:
+                    continue
+                value = '; '.join(decls)
+            new_attrs[attr] = value
+        return new_attrs
 
     def sanitize_css(self, text):
         decls = []
@@ -276,29 +419,14 @@ class FormTokenInjector(HTMLParser):
         self.out.write('</' + tag + '>')
 
 
-class TransposingElementFactory(ElementFactory):
-    """A `genshi.builder.ElementFactory` which applies `func` to the
-    named attributes before creating a `genshi.builder.Element`.
-    """
-
-    def __init__(self, func, namespace=None):
-        ElementFactory.__init__(self, namespace=namespace)
-        self.func = func
-
-    def __getattr__(self, name):
-        return ElementFactory.__getattr__(self, self.func(name))
-
-html = TransposingElementFactory(str.lower)
-
-
 def plaintext(text, keeplinebreaks=True):
     """Extract the text elements from (X)HTML content
 
-    :param text: `unicode` or `genshi.builder.Fragment`
+    :param text: `unicode` or `Fragment`
     :param keeplinebreaks: optionally keep linebreaks
     """
     if isinstance(text, Fragment):
-        text = text.generate().render('text', encoding=None)
+        text = text.as_text()
     else:
         text = stripentities(striptags(text))
     if not keeplinebreaks:
@@ -323,6 +451,7 @@ def find_element(frag, attr=None, cls=None, tag=None):
             if elt is not None:
                 return elt
 
+## Jinja2: not needed/wanted and also not used in the current Trac code base
 
 def expand_markup(stream, ctxt=None):
     """A Genshi stream filter for expanding `genshi.Markup` events.

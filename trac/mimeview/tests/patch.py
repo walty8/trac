@@ -30,7 +30,7 @@ class PatchRendererTestCase(unittest.TestCase):
         env = EnvironmentStub(enable=[Chrome, PatchRenderer])
         req = Mock(base_path='', chrome={}, args={}, session={},
                    abs_href=Href('/'), href=Href('/'), locale='',
-                   perm=MockPerm(), authname=None, tz=None)
+                   perm=MockPerm(), form_token=0, authname=None, tz=None)
         self.context = web_context(req)
         self.patch = Mimeview(env).renderers[0]
         patch_html = open(os.path.join(os.path.split(__file__)[0],
@@ -42,8 +42,9 @@ class PatchRendererTestCase(unittest.TestCase):
 
     def _test(self, expected_id, result):
         expected = self._expected(expected_id).render(encoding='utf-8')
-        result = XML(result.render(encoding='utf-8')).render(encoding='utf-8')
         expected, result = expected.splitlines(), result.splitlines()
+        self.maxDiff = None
+        self.assertEqual(expected, result)
         for exp, res in zip(expected, result):
             self.assertEqual(exp, res)
         self.assertEqual(len(expected), len(result))

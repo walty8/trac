@@ -17,13 +17,11 @@ import re
 from abc import ABCMeta, abstractmethod
 from email.utils import formatdate
 
-from genshi.builder import tag
-
 from trac.core import *
 from trac.notification.api import NotificationSystem
 from trac.notification.mail import (create_charset, create_header,
                                     create_mime_text, RecipientMatcher)
-from trac.util.html import to_fragment
+from trac.util.html import tag, to_fragment
 from trac.util.text import CRLF
 from trac.util.translation import _, deactivate, reactivate, tag_
 

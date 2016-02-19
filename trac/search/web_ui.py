@@ -17,15 +17,13 @@
 import pkg_resources
 import re
 
-from genshi.builder import tag
-
 from trac.config import IntOption, ListOption
 from trac.core import *
 from trac.perm import IPermissionRequestor
 from trac.search.api import ISearchSource
 from trac.util import as_int
 from trac.util.datefmt import format_datetime, user_time
-from trac.util.html import find_element
+from trac.util.html import find_element, tag
 from trac.util.presentation import Paginator
 from trac.util.text import quote_query_string
 from trac.util.translation import _

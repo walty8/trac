@@ -24,8 +24,6 @@ import os
 import posixpath
 import re
 
-from genshi.builder import tag
-
 from trac.config import BoolOption, IntOption, Option
 from trac.core import *
 from trac.mimeview.api import Mimeview
@@ -35,6 +33,7 @@ from trac.search import ISearchSource, search_to_sql, shorten_result
 from trac.timeline.api import ITimelineEventProvider
 from trac.util import as_bool, content_disposition, embedded_numbers, pathjoin
 from trac.util.datefmt import from_utimestamp, pretty_timedelta
+from trac.util.html import tag
 from trac.util.presentation import to_json
 from trac.util.text import CRLF, exception_to_unicode, shorten_line, \
                            to_unicode, unicode_urlencode

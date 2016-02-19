@@ -12,12 +12,13 @@
 # history and logs, available at http://trac.edgewall.org/log/.
 
 import unittest
-from genshi.builder import Element, Fragment, tag
 from genshi.input import HTML
 
 import trac.tests.compat
 from trac.core import TracError
-from trac.util.html import TracHTMLSanitizer, find_element, to_fragment
+from trac.util.html import (
+    Element, Fragment, TracHTMLSanitizer, find_element, to_fragment, tag
+)
 from trac.util.translation import gettext, tgettext
 
 

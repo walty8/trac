@@ -11,13 +11,13 @@
 # individuals. For the exact contribution history, see the revision
 # history and logs, available at http://trac.edgewall.org/log/.
 
-from genshi.builder import tag
 from genshi.filters import Transformer
 
 from trac.core import Component, implements
-from trac.web.api import ITemplateStreamFilter
+from trac.util.html import tag
 from trac.util.presentation import captioned_button
 from trac.util.translation import _
+from trac.web.api import ITemplateStreamFilter
 
 
 class TicketCloneButton(Component):

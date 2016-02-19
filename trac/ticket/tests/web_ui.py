@@ -142,7 +142,7 @@ class TicketModuleTestCase(unittest.TestCase):
         field = data['changes'][0]['fields']['owner']
 
         self.assertEqual("changed from <em>owner1</em> to <em>owner2</em>",
-                         str(field['rendered']))
+                         unicode(field['rendered']))
 
     def test_ticket_property_diff_owner_add(self):
         """Property diff message when ticket owner is added."""
@@ -153,7 +153,7 @@ class TicketModuleTestCase(unittest.TestCase):
         data = self.ticket_module.process_request(req)[1]
         field = data['changes'][0]['fields']['owner']
 
-        self.assertEqual("set to <em>owner2</em>", str(field['rendered']))
+        self.assertEqual("set to <em>owner2</em>", unicode(field['rendered']))
 
     def test_ticket_property_diff_owner_remove(self):
         """Property diff message when ticket owner is removed."""
@@ -164,7 +164,7 @@ class TicketModuleTestCase(unittest.TestCase):
         data = self.ticket_module.process_request(req)[1]
         field = data['changes'][0]['fields']['owner']
 
-        self.assertEqual("<em>owner1</em> deleted", str(field['rendered']))
+        self.assertEqual("<em>owner1</em> deleted", unicode(field['rendered']))
 
     def test_ticket_property_diff_reporter_change(self):
         """Property diff message when ticket reporter is changed."""
@@ -176,7 +176,7 @@ class TicketModuleTestCase(unittest.TestCase):
         field = data['changes'][0]['fields']['reporter']
 
         self.assertEqual("changed from <em>reporter1</em> to "
-                         "<em>reporter2</em>", str(field['rendered']))
+                         "<em>reporter2</em>", unicode(field['rendered']))
 
     def test_ticket_property_diff_reporter_add(self):
         """Property diff message when ticket reporter is added."""
@@ -187,7 +187,8 @@ class TicketModuleTestCase(unittest.TestCase):
         data = self.ticket_module.process_request(req)[1]
         field = data['changes'][0]['fields']['reporter']
 
-        self.assertEqual("set to <em>reporter2</em>", str(field['rendered']))
+        self.assertEqual("set to <em>reporter2</em>",
+                         unicode(field['rendered']))
 
     def test_ticket_property_diff_reporter_remove(self):
         """Property diff message when ticket reporter is removed."""
@@ -198,7 +199,8 @@ class TicketModuleTestCase(unittest.TestCase):
         data = self.ticket_module.process_request(req)[1]
         field = data['changes'][0]['fields']['reporter']
 
-        self.assertEqual("<em>reporter1</em> deleted", str(field['rendered']))
+        self.assertEqual("<em>reporter1</em> deleted",
+                         unicode(field['rendered']))
 
     def _test_invalid_cnum_raises(self, action, cnum=None):
         self._insert_ticket()

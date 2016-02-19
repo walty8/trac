@@ -17,8 +17,6 @@
 import copy
 import re
 
-from genshi.builder import tag
-
 from trac.cache import cached
 from trac.config import (
     BoolOption, ConfigSection, ListOption, Option, OrderedExtensionsOption
@@ -27,6 +25,7 @@ from trac.core import *
 from trac.perm import IPermissionRequestor, PermissionCache, PermissionSystem
 from trac.resource import IResourceManager
 from trac.util import Ranges, as_int
+from trac.util.html import tag
 from trac.util.text import shorten_line
 from trac.util.translation import _, N_, gettext
 from trac.wiki import IWikiSyntaxProvider, WikiParser

@@ -19,8 +19,6 @@ from StringIO import StringIO
 from datetime import datetime, timedelta
 import re
 
-from genshi.builder import tag
-
 from trac.attachment import Attachment, AttachmentModule
 from trac.config import ConfigSection, ExtensionOption, Option
 from trac.core import *
@@ -33,6 +31,7 @@ from trac.util.datefmt import (datetime_now, format_date, format_datetime,
                                from_utimestamp, get_datetime_format_hint,
                                parse_date, pretty_timedelta, to_datetime,
                                user_time, utc)
+from trac.util.html import tag
 from trac.util.text import CRLF, exception_to_unicode, to_unicode
 from trac.util.translation import _, tag_
 from trac.ticket.api import TicketSystem

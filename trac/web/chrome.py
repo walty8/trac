@@ -36,8 +36,6 @@ except ImportError:
 import time
 
 # Legacy Genshi support
-from genshi import Markup
-from genshi.builder import tag, Element
 from genshi.core import Attrs, START
 from genshi.filters import Translator
 from genshi.output import DocType
@@ -53,7 +51,7 @@ from trac.perm import IPermissionRequestor
 from trac.resource import *
 from trac.util import as_bool, as_int, compat, get_reporter_id, html,\
                       presentation, get_pkginfo, pathjoin, translation
-from trac.util.html import escape, plaintext
+from trac.util.html import Element, Markup, escape, plaintext, tag
 from trac.util.text import pretty_size, obfuscate_email_address, \
                            shorten_line, unicode_quote_plus, to_unicode, \
                            javascript_quote, exception_to_unicode, to_js_string
@@ -827,7 +825,7 @@ class Chrome(Component):
                     if category_section.getbool(name, True):
                         # the navigation item is enabled (this is the default)
                         item = text if isinstance(text, Element) and \
-                                       text.tag.localname == 'a' \
+                                       text.tag == u'a' \
                                     else None
                         label = category_section.get(name + '.label')
                         href = category_section.get(name + '.href')
@@ -1022,7 +1020,7 @@ class Chrome(Component):
             'abs_href': abs_href,
             'href': href,
             'perm': req and req.perm,
-            'form_token': req.form_token,
+            'form_token': req and req.form_token,
             'authname': req.authname if req else '<trac>',
             'locale': req and req.locale,
             # show_email_address is deprecated: will be removed in 1.3.1
@@ -1544,8 +1542,9 @@ class Chrome(Component):
     # Template filters
 
     def _add_form_token(self, token):
-        elem = tag.div(
-            tag.input(type='hidden', name='__FORM_TOKEN', value=token)
+        from genshi.builder import tag as gtag
+        elem = gtag.div(
+            gtag.input(type='hidden', name='__FORM_TOKEN', value=token)
         )
         def _generate(stream, ctxt=None):
             for kind, data, pos in stream:

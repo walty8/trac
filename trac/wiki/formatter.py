@@ -23,10 +23,8 @@ import os
 
 from StringIO import StringIO
 
-from genshi.builder import tag, Element
-from genshi.core import Stream, Markup, escape
+from genshi.core import Stream
 from genshi.input import HTMLParser, ParseError
-from genshi.util import plaintext
 
 from trac.core import *
 from trac.mimeview import *
@@ -34,7 +32,9 @@ from trac.resource import get_relative_resource, get_resource_url
 from trac.util import arity, as_int
 from trac.util.text import exception_to_unicode, shorten_line, to_unicode, \
                            unicode_quote, unicode_quote_plus, unquote_label
-from trac.util.html import TracHTMLSanitizer
+from trac.util.html import (
+    Element, Fragment, Markup, TracHTMLSanitizer, escape, plaintext, tag
+)
 from trac.util.translation import _, tag_
 from trac.wiki.api import WikiSystem, parse_args
 from trac.wiki.parser import WikiParser, parse_processor_args
@@ -101,8 +101,8 @@ def concat_path_query_fragment(path, query, fragment=None):
 
 def _markup_to_unicode(markup):
     stream = None
-    if isinstance(markup, Element):
-        stream = markup.generate()
+    if isinstance(markup, Fragment):
+        return Markup(markup)
     elif isinstance(markup, Stream):
         stream = markup
     if stream:
@@ -243,9 +243,7 @@ class WikiProcessor(object):
         elt = getattr(tag, eltname)(**(self.args or {}))
         if not WikiSystem(self.env).render_unsafe_content:
             sanitized_elt = getattr(tag, eltname)
-            for (k, data, pos) in (Stream(elt) | self._sanitizer):
-                sanitized_elt.attrib = data[1]
-                break # only look at START (elt,attrs)
+            sanitized_elt.attrib = self._sanitizer.sanitize_attrs(elt.attrib)
             elt = sanitized_elt
         elt.append(format_to(self.env, self.formatter.context, text))
         return elt

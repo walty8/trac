@@ -11,7 +11,6 @@
 # individuals. For the exact contribution history, see the revision
 # history and logs, available at http://trac.edgewall.org/log/.
 
-from genshi.builder import tag
 from genshi.filters import Transformer
 from genshi.filters.transform import StreamBuffer
 
@@ -21,6 +20,7 @@ from trac.ticket.model import Ticket
 from trac.ticket.web_ui import TicketModule
 from trac.util import get_reporter_id
 from trac.util.datefmt import from_utimestamp
+from trac.util.html import tag
 from trac.util.presentation import captioned_button
 from trac.util.translation import _
 from trac.web.api import IRequestFilter, IRequestHandler, ITemplateStreamFilter

@@ -25,8 +25,6 @@ import sys
 import urllib2
 import urlparse
 
-from genshi.builder import tag
-
 from trac.config import BoolOption, IntOption, Option
 from trac.core import *
 from trac.web.api import IAuthenticator, IRequestHandler
@@ -35,6 +33,7 @@ from trac.util import hex_entropy, md5crypt
 from trac.util.compat import crypt
 from trac.util.concurrency import threading
 from trac.util.datefmt import time_now
+from trac.util.html import tag
 from trac.util.translation import _, tag_
 
 

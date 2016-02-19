@@ -203,14 +203,15 @@ def classes(*args, **kwargs):
         return None
     return u' '.join(classes)
 
+
 def styles(*args, **kwargs):
     """Helper function for dynamically assembling a list of CSS style name
     and values in templates.
 
-    Any positional arguments are added to the list of class names. All
+    Any positional arguments are added to the list of styles. All
     positional arguments must be strings:
 
-    >>> classes('foo: bar', 'fu: baz')
+    >>> styles('foo: bar', 'fu: baz')
     u'foo: bar; fu: baz'
 
     In addition, the names of any supplied keyword arguments are added
@@ -218,13 +219,13 @@ def styles(*args, **kwargs):
 
     >>> styles(foo='bar', fu='baz')
     u'foo: bar; fu: baz'
-    >>> styles(bar=False)
-    u''
+    >>> styles(foo='bar', bar=False)
+    u'foo: bar'
 
     If none of the arguments are added to the list, this function returns
     `None`:
 
-    >>> classes(bar=False)
+    >>> styles(bar=False)
 
     """
     styles = (list(filter(None, args)) +
@@ -315,7 +316,6 @@ def groupattr_filter(_eval_ctx, iterable, num, attr, *args, **kwargs):
 
 def istext(text):
     """`True` for text (`unicode` and `str`), but `False` for `Markup`."""
-    from genshi.core import Markup
     return isinstance(text, basestring) and not isinstance(text, Markup)
 
 def prepared_paginate(items, num_items, max_per_page):

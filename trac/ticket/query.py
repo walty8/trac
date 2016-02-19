@@ -22,8 +22,6 @@ from math import ceil
 import csv
 import re
 
-from genshi.builder import tag
-
 from trac.config import Option, IntOption
 from trac.core import *
 from trac.db import get_column_names
@@ -36,6 +34,7 @@ from trac.util import Ranges, as_bool
 from trac.util.datefmt import (datetime_now, from_utimestamp,
                                format_date_or_datetime, parse_date,
                                to_timestamp, to_utimestamp, utc, user_time)
+from trac.util.html import tag
 from trac.util.presentation import Paginator
 from trac.util.text import empty, shorten_line, quote_query_string
 from trac.util.translation import _, cleandoc_, ngettext, tag_

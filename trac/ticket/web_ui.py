@@ -21,9 +21,6 @@ import pkg_resources
 import re
 from StringIO import StringIO
 
-from genshi.core import Markup
-from genshi.builder import tag
-
 from trac.attachment import AttachmentModule
 from trac.config import BoolOption, Option, IntOption
 from trac.core import *
@@ -45,7 +42,7 @@ from trac.util.datefmt import (
     get_date_format_hint, get_datetime_format_hint, parse_date, to_utimestamp,
     user_time, utc
 )
-from trac.util.html import to_fragment
+from trac.util.html import Markup, tag, to_fragment
 from trac.util.text import (
     exception_to_unicode, empty, is_obfuscated, obfuscate_email_address,
     shorten_line

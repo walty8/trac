@@ -72,7 +72,7 @@ class DivCodeElementMacro(WikiMacroBase):
     """A dummy macro returning a Genshi Element, used by the unit test."""
 
     def expand_macro(self, formatter, name, content):
-        return html.DIV('Hello World, args = ', content, class_="code")
+        return html.div('Hello World, args = ', content, class_="code")
 
 class DivCodeStreamMacro(WikiMacroBase):
     """A dummy macro returning a Genshi Stream, used by the unit test."""
@@ -125,7 +125,7 @@ class SampleResolver(Component):
             module = 'thing'
         except ValueError:
             pass
-        return html.A(label, class_='%s resolver' % kind,
+        return html.a(label, class_='%s resolver' % kind,
                       href=formatter.href(module, target))
 
 
@@ -147,6 +147,7 @@ class WikiTestCase(unittest.TestCase):
         self.req = Mock(href=Href('/'),
                         abs_href=Href('http://www.example.com/'),
                         chrome={}, session={}, authname='anonymous',
+                        form_token=101,
                         perm=MockPerm(), tz=utc, args={}, locale=locale_en,
                         lc_time=locale_en)
         if context:

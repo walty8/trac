@@ -14,8 +14,6 @@
 import unittest
 from email import message_from_string
 
-from genshi.builder import tag
-
 import trac.tests.compat
 from trac.core import Component, implements
 from trac.notification.api import (
@@ -25,6 +23,7 @@ from trac.notification.api import (
 from trac.notification.model import Subscription
 from trac.test import EnvironmentStub
 from trac.util.datefmt import datetime_now, utc
+from trac.util.html import tag
 from trac.web.session import DetachedSession
 
 

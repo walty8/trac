@@ -63,9 +63,8 @@ import re
 from StringIO import StringIO
 from collections import namedtuple
 
-from genshi import Markup, Stream
+from genshi import Stream
 from genshi.core import TEXT, START, END, START_NS, END_NS
-from genshi.builder import Fragment, tag
 from genshi.input import HTMLParser
 
 from trac.config import IntOption, ListOption, Option
@@ -73,6 +72,7 @@ from trac.core import Component, ExtensionPoint, Interface, TracError, \
                       implements
 from trac.resource import Resource
 from trac.util import Ranges, content_disposition
+from trac.util.html import Fragment, Markup, tag
 from trac.util.text import exception_to_unicode, to_unicode
 from trac.util.translation import _, tag_
 

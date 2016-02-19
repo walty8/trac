@@ -20,14 +20,13 @@ import pkg_resources
 import re
 import shutil
 
-from genshi.builder import tag
-
 from trac.admin.api import IAdminPanelProvider
 from trac.core import *
 from trac.loader import get_plugin_info, get_plugins_dir
 from trac.log import LOG_LEVELS
 from trac.perm import PermissionSystem, IPermissionRequestor
 from trac.util.datefmt import all_timezones, pytz
+from trac.util.html import tag
 from trac.util.text import exception_to_unicode, \
                            unicode_to_base64, unicode_from_base64
 from trac.util.translation import _, Locale, get_available_locales, ngettext

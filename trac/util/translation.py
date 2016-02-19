@@ -16,9 +16,8 @@
 import pkg_resources
 import re
 
-from genshi.builder import tag
-
 from trac.util.concurrency import ThreadLocal, threading
+from trac.util.html import tag
 from trac.util.text import cleandoc
 
 

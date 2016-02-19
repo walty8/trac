@@ -19,8 +19,8 @@ url = "$URL$"
 
 from datetime import datetime
 
-from genshi.builder import tag
 from trac.util.datefmt import datetime_now, format_datetime, utc
+from trac.util.html import tag
 from trac.wiki.macros import WikiMacroBase
 
 

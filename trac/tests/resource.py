@@ -14,10 +14,10 @@
 import doctest
 import unittest
 
-from genshi.builder import tag
 from trac import resource
 from trac.core import Component, implements
 from trac.test import EnvironmentStub, Mock, MockPerm
+from trac.util.html import tag
 from trac.web.chrome import web_context
 from trac.web.href import Href
 

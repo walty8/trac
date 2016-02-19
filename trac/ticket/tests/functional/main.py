@@ -144,9 +144,9 @@ class TestTicketManipulator(FunctionalTwillTestCaseSetup):
         env.config.save()
         create_file(os.path.join(env.path, 'plugins', plugin_name + '.py'),
 """\
-from genshi.builder import tag
 from trac.core import Component, implements
 from trac.ticket.api import ITicketManipulator
+from trac.util.html import tag
 from trac.util.translation import tag_
 
 

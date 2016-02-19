@@ -21,8 +21,6 @@ import pkg_resources
 import re
 from datetime import datetime, timedelta
 
-from genshi.builder import tag
-
 from trac.config import IntOption, BoolOption
 from trac.core import *
 from trac.perm import IPermissionRequestor
@@ -32,6 +30,7 @@ from trac.util.datefmt import (datetime_now, format_date, format_datetime,
                                format_time, localtz, parse_date,
                                pretty_timedelta, utc, to_datetime,
                                to_utimestamp, user_time)
+from trac.util.html import tag
 from trac.util.text import exception_to_unicode, to_unicode
 from trac.util.translation import _, tag_
 from trac.web import IRequestHandler, IRequestFilter

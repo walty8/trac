@@ -15,7 +15,6 @@ import os
 import tempfile
 import unittest
 
-from genshi.builder import tag
 import trac.tests.compat
 from trac.config import ConfigurationError
 from trac.core import Component, TracError, implements
@@ -25,6 +24,7 @@ from trac.tests.contentgen import random_sentence
 from trac.resource import Resource
 from trac.util import create_file
 from trac.util.datefmt import pytz, timezone, utc
+from trac.util.html import tag
 from trac.web.chrome import (
     Chrome, INavigationContributor, add_link, add_meta, add_notice, add_script,
     add_script_data, add_stylesheet, add_warning, web_context)

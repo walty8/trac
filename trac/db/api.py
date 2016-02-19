@@ -19,13 +19,13 @@ import time
 import urllib
 from abc import ABCMeta, abstractmethod
 
-from genshi.builder import tag
 from trac.config import BoolOption, ConfigurationError, IntOption, Option
 from trac.core import *
 from trac.db.pool import ConnectionPool
 from trac.db.schema import Table
 from trac.db.util import ConnectionWrapper
 from trac.util.concurrency import ThreadLocal
+from trac.util.html import tag
 from trac.util.text import unicode_passwd
 from trac.util.translation import _, tag_
 

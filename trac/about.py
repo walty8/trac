@@ -19,12 +19,11 @@
 
 import re
 
-from genshi.builder import tag
-
 from trac.config import get_configinfo
 from trac.core import *
 from trac.loader import get_plugin_info
 from trac.perm import IPermissionRequestor
+from trac.util.html import tag
 from trac.util.translation import _
 from trac.web.api import IRequestHandler
 from trac.web.chrome import Chrome, INavigationContributor

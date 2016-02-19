@@ -19,12 +19,12 @@ import unittest
 from StringIO import StringIO
 
 import trac.tests.compat
-from genshi.builder import tag
 from trac import perm
 from trac.core import TracError
 from trac.test import EnvironmentStub, Mock, MockPerm, locale_en
 from trac.util import create_file
 from trac.util.datefmt import utc
+from trac.util.html import tag
 from trac.util.text import shorten_line
 from trac.web.api import HTTPBadRequest, HTTPInternalError, Request, \
                          RequestDone, parse_arg_list

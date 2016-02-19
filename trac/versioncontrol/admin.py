@@ -14,13 +14,12 @@
 import os.path
 import sys
 
-from genshi.builder import tag
-
 from trac.admin import IAdminCommandProvider, IAdminPanelProvider
 from trac.config import ListOption
 from trac.core import *
 from trac.perm import IPermissionRequestor
 from trac.util import as_bool, is_path_below
+from trac.util.html import tag
 from trac.util.text import breakable_path, normalize_whitespace, print_table, \
                            printout
 from trac.util.translation import _, ngettext, tag_
