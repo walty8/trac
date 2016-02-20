@@ -1103,6 +1103,7 @@ class Chrome(Component):
                 len=len,
             )
             jenv.filters.update(
+                flatten=presentation.flatten_filter,
                 groupattr=presentation.groupattr_filter,
                 htmlattr=presentation.htmlattr_filter,
                 max=presentation.max_filter,

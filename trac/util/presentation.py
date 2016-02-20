@@ -145,6 +145,14 @@ def trim_filter(value, what=None):
     """
     return soft_unicode(value).strip(what)
 
+def flatten_filter(value):
+    """Combine incoming sequences in one."""
+    seq = []
+    for s in value:
+        seq.extend(s)
+    return seq
+
+
 # -- Jinja2 custom tests
 
 def is_not_equalto(a, b):
