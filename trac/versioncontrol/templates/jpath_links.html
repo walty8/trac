@@ -30,8 +30,9 @@
 {# the/path/.../...
 
   Note: in the `for` loop below, we take great care of not introducing
-        any space character, so that one can easily copy the path to
+        any space characters, so that one can easily copy the path to
         the clipboard.
+
 #}
 #-   for part in path_links[1:]:
 <a class="pathentry" href="${part.href}"
@@ -45,7 +46,7 @@ if not loop.last %}<span class="pathentry sep">/</span>{% endif %}
 <span class="pathentry sep">@</span>
 <a class="pathentry" href="${href.changeset(stickyrev, reponame)}"
    title="${_('View changeset %(rev)s', rev=drev)}">${drev}</a>
-#    endwith
+#   endwith
 # endif
 <br style="clear: both" />
 ## jinjacheck: "(a a span span a br )" OK
