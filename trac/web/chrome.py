@@ -1106,7 +1106,7 @@ class Chrome(Component):
         inferred from the `content_type` if not specified.
 
         When `fragment` is specified, the (filtered) Genshi stream is
-        returned.
+        returned. See also `template_fragment`.
 
         When `iterable` is specified, the content as an iterable instance
         which is generated from filtered Genshi stream is returned.
@@ -1138,7 +1138,10 @@ class Chrome(Component):
 
         # Try loading template (Jinja2 j+name > Genshi name)
         t1 = time.time()
-        template = self.load_template(filename, method=method)
+        try:
+            template = self.load_template(filename, method=method)
+        except:
+            template = None
         t2 = time.time()
         j1 = time.time()
         jtemplate = self.load_jtemplate('j' + filename)
@@ -1150,10 +1153,12 @@ class Chrome(Component):
         data['chrome']['content_type'] = content_type
         jdata['chrome']['content_type'] = content_type
         t3 = time.time()
-        stream = template.generate(**data)
+        stream = None
+        if template:
+            stream = template.generate(**data)
         t4 = time.time()
         # Filter through ITemplateStreamFilter plugins
-        if self.stream_filters:
+        if stream and self.stream_filters:
             stream |= self._filter_stream(req, method, filename, stream, data)
         if fragment:
             if jtemplate:
@@ -1183,7 +1188,7 @@ class Chrome(Component):
 
         t4a = time.time()
         doctype = None
-        if content_type == 'text/html':
+        if stream and content_type == 'text/html':
             doctype = self.html_doctype
             if req.form_token:
                 stream |= self._add_form_token(req.form_token)
@@ -1243,8 +1248,9 @@ class Chrome(Component):
             def genshi():
                 buffer = StringIO()
                 t5 = time.time()
-                stream.render(method, doctype=doctype, out=buffer,
-                              encoding='utf-8')
+                if stream:
+                    stream.render(method, doctype=doctype, out=buffer,
+                                  encoding='utf-8')
                 gs = valid_html_bytes(buffer.getvalue())
                 t6 = time.time()
                 show_times('Genshi', t2 - t1, t4 - t3, t5a - t4a, t6 - t5,
@@ -1275,6 +1281,27 @@ class Chrome(Component):
                                   error=e.__class__.__name__,
                                   location=location))
             raise
+
+    def generate_template_fragment(self, req, template, data, method='html'):
+        """Produce content from given template, with minimal overhead.
+
+        Use this when the chrome content is not needed.
+        The generated output is suitable to use by `Request.send`
+        (UTF-8 bytes or iterable, depending on `use_chunked_encoding`).
+
+        """
+        jtemplate = self.load_jtemplate('j' + template)
+        jdata = self.populate_data(req, data, {})
+        if self.use_chunked_encoding:
+            stream = jtemplate.stream(jdata)
+            stream.enable_buffering(75) # buffer_size
+            return jiterable_content(stream, method)
+            # output = chrome.iterable_content(stream, 'xhtml')
+        else:
+            bytes = jtemplate.render(jdata).encode('utf-8')
+            if method != 'text':
+                bytes = valid_html_bytes(bytes)
+            return bytes
 
     def get_interface_customization_files(self):
         """Returns a dictionary containing the lists of files present in the
@@ -1328,6 +1355,26 @@ class Chrome(Component):
                 location = '(unknown template location)'
             self.log.error('Genshi %s error while rendering template %s%s',
                            e.__class__.__name__, location,
+                           exception_to_unicode(e, traceback=True))
+
+    def jiterable_content(self, stream, method):
+        """Generate an iterable object which iterates `str` instances
+        from the given generator.
+
+        :param method: the serialization method; can be either "xml",
+                       "xhtml", "html", "text", or a custom serializer
+                       class
+        """
+        try:
+            if method == 'text':
+                for chunk in stream:
+                    yield chunk.encode('utf-8')
+            else:
+                for chunk in stream:
+                    yield valid_html_bytes(chunk.encode('utf-8'))
+        except Exception as e:
+            self.log.error('Jinja2 %s error while rendering %s template %s',
+                           e.__class__.__name__, method,
                            exception_to_unicode(e, traceback=True))
 
     # E-mail formatting utilities

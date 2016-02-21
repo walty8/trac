@@ -665,14 +665,9 @@ class ChangesetModule(Component):
 
         if req.is_xhr:  # render and return the content only
             chrome = Chrome(self.env)
-            stream = chrome.render_template(req, 'changeset.html', data,
-                                            fragment=True)
-            stream = stream.select('//div[@id="content"]')
-            if chrome.use_chunked_encoding:
-                output = chrome.iterable_content(stream, 'xhtml')
-            else:
-                output = stream.render('xhtml', encoding='utf-8')
-            req.send(output)
+            stream = chrome.generate_template_fragment(
+                req, 'changeset_content.html', data)
+            req.send(stream)
 
         return data
 
