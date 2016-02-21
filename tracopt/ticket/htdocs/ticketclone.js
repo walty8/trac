@@ -13,7 +13,8 @@
   };
 
   addField = function(form, name, value) {
-    return form.append($("<input type=\"hidden\" name=\"field_" + name + "\" value=\"" + ($.htmlEscape(value)) + "\">"));
+    value = value != null ? $.htmlEscape(value) : '';
+    return form.append($("<input type=\"hidden\" name=\"field_" + name + "\" value=\"" + value + "\">"));
   };
 
   addCloneAction = function(container) {

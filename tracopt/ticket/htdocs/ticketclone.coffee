@@ -17,8 +17,9 @@ captionedButton = (symbol, text) ->
   if ui.use_symbols then symbol else "#{symbol} #{text}"
 
 addField = (form, name, value) ->
+  value = if value? then $.htmlEscape value else ''
   form.append $ """
-    <input type="hidden" name="field_#{name}" value="#{$.htmlEscape value}">
+    <input type="hidden" name="field_#{name}" value="#{value}">
   """
 
 
