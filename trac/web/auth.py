@@ -114,10 +114,15 @@ class LoginModule(Component):
                    tag_("logged in as %(user)s",
                         user=Chrome(self.env).authorinfo(req, req.authname)))
             yield ('metanav', 'logout',
-                   tag.form(tag.div(tag.button(_("Logout"),
-                                               name='logout', type='submit')),
-                            action=req.href.logout(), method='post',
-                            id='logout', class_='trac-logout'))
+                   tag.form(
+                       tag.div(
+                           tag.button(_("Logout"), name='logout',
+                                      type='submit'),
+                           tag.input(type='hidden', name='__FORM_TOKEN',
+                                     value=req.form_token)
+                       ),
+                       action=req.href.logout(), method='post',
+                       id='logout', class_='trac-logout'))
         else:
             yield ('metanav', 'login',
                    tag.a(_("Login"), href=req.href.login()))
