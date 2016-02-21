@@ -1111,6 +1111,16 @@ class Chrome(Component):
         When `iterable` is specified, the content as an iterable instance
         which is generated from filtered Genshi stream is returned.
         """
+        try:
+            return self.jrender_template(req, filename, data, content_type,
+                                         fragment, iterable, method)
+        except TemplateNotFound:
+            return self.grender_template(req, filename, data, content_type,
+                                         fragment, iterable, method)
+
+    def grender_template(self, req, filename, data, content_type=None,
+                         fragment=False, iterable=False, method=None):
+        """Legacy Genshi rendering (TODO: remove)"""
         if content_type is None:
             content_type = 'text/html'
 
@@ -1130,65 +1140,26 @@ class Chrome(Component):
                 except KeyError:
                     pass
 
-        def show_times(engine, load, generate, filter, render, kind):
-            print(('%s %s: %.3f total ' +
-                   '(load=%.3f, generate=%.3f, filter=%.3f, render=%.3f)') %
-                   (engine, kind, load + generate + filter + render,
-                    load, generate, filter, render))
-
-        # Try loading template (Jinja2 j+name > Genshi name)
-        t1 = time.time()
-        try:
-            template = self.load_template(filename, method=method)
-        except:
-            template = None
-        t2 = time.time()
-        j1 = time.time()
-        jtemplate = self.load_jtemplate('j' + filename)
-        j2 = time.time()
+        template = self.load_template(filename, method=method)
 
         # Populate data with request dependent data
         data = self.populate_data(req, data)
-        jdata = self.populate_data(req, data, {})
         data['chrome']['content_type'] = content_type
-        jdata['chrome']['content_type'] = content_type
-        t3 = time.time()
         stream = None
-        if template:
-            stream = template.generate(**data)
-        t4 = time.time()
+        stream = template.generate(**data)
         # Filter through ITemplateStreamFilter plugins
-        if stream and self.stream_filters:
+        if self.stream_filters:
             stream |= self._filter_stream(req, method, filename, stream, data)
         if fragment:
-            if jtemplate:
-                t = time.time()
-                js = jtemplate.render(jdata)
-                tt = time.time()
-                print("Jinja2 fragment rendered in: %.3f" % (tt - t))
-                return js
             return stream
 
         if method == 'text':
-            def genshi():
-                buffer = StringIO()
-                t5 = time.time()
-                stream.render('text', out=buffer, encoding='utf-8')
-                t6 = time.time()
-                show_times('Genshi', t2 - t1, t4 - t3, t5 - t4, t6 - t5, 'text')
-                return buffer.getvalue()
-            def jinja():
-                if jtemplate:
-                    j5 = time.time()
-                    js = jtemplate.render(jdata).encode('utf-8')
-                    j6 = time.time()
-                    show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'text')
-                    return js
-            return jinja() or genshi()
+            buffer = StringIO()
+            stream.render('text', out=buffer, encoding='utf-8')
+            return buffer.getvalue()
 
-        t4a = time.time()
         doctype = None
-        if stream and content_type == 'text/html':
+        if content_type == 'text/html':
             doctype = self.html_doctype
             if req.form_token:
                 stream |= self._add_form_token(req.form_token)
@@ -1206,63 +1177,15 @@ class Chrome(Component):
             'late_scripts': req.chrome['scripts'],
             'late_script_data': req.chrome['script_data'],
         })
-        # TODO (Jinja2): I get the feeling the late links logic will
-        #                have to be revisited... <head> should use the
-        #                early_*, <body> the late_*
-        jdata.setdefault('chrome', {}).update({
-            'late_links': req.chrome['links'],
-            'late_scripts': req.chrome['scripts'],
-            'late_script_data': req.chrome['script_data'],
-        })
-        t5a = time.time()
 
         if iterable:
-            print 'iterable... why is it not set?'
-        # Genshi 'stream':
-        # return self.iterable_content(stream, method, doctype=doctype)
+            return self.iterable_content(stream, method, doctype=doctype)
 
         try:
-            def jinja(mode='render'):
-                if jtemplate:
-                    j5 = time.time()
-                    if mode == 'render':
-                        js = jtemplate.render(jdata)
-                        j5a = time.time()
-                        js = valid_html_bytes(js.encode('utf-8'))
-                        j6 = time.time()
-                        show_times('Jinja2', j2 - j1, 0, j5a - j5, j6 - j5a,
-                                   'html')
-                        return js
-                    else:
-                        def iterable_content():
-                            if mode == 'generate':
-                                stream = jtemplate.generate(jdata)
-                            else:
-                                stream = jtemplate.stream(jdata)
-                                stream.enable_buffering(mode) # buffer_size
-                            for chunk in stream:
-                                yield valid_html_bytes(chunk.encode('utf-8'))
-                            j6 = time.time()
-                            show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'html')
-                        return iterable_content()
-            def genshi():
-                buffer = StringIO()
-                t5 = time.time()
-                if stream:
-                    stream.render(method, doctype=doctype, out=buffer,
-                                  encoding='utf-8')
-                gs = valid_html_bytes(buffer.getvalue())
-                t6 = time.time()
-                show_times('Genshi', t2 - t1, t4 - t3, t5a - t4a, t6 - t5,
-                           method)
-                return gs
-
-            # Now it's easier to control things from here:
-            # 'render', 'generate' or buffer_size for stream (75 seems best)
-            # return genshi() # 'blob'
-            gs = genshi()
-            return jinja('render') or gs
-
+            buffer = StringIO()
+            stream.render(method, doctype=doctype, out=buffer,
+                          encoding='utf-8')
+            return valid_html_bytes(buffer.getvalue())
         except Exception as e:
             # restore what may be needed by the error template
             req.chrome.update({'early_links': None, 'early_scripts': None,
@@ -1282,6 +1205,84 @@ class Chrome(Component):
                                   location=location))
             raise
 
+    def jrender_template(self, req, filename, data, content_type=None,
+                         fragment=False, iterable=False, method=None):
+        """Render the `filename` using the `data` for the context.
+
+        The `content_type` argument is used to choose the kind of template
+        used (`NewTextTemplate` if `'text/plain'`, `MarkupTemplate`
+        otherwise), and tweak the rendering process. Doctype for `'text/html'`
+        can be specified by setting the `html_doctype` attribute (default
+        is `XHTML_STRICT`)
+
+        The rendering `method` (xml, xhtml or text) may be specified and is
+        inferred from the `content_type` if not specified.
+
+        When `fragment` is specified, the (filtered) Genshi stream is
+        returned. See also `template_fragment`.
+
+        When `iterable` is specified, the content as an iterable instance
+        which is generated from filtered Genshi stream is returned.
+        """
+        if content_type is None:
+            content_type = 'text/html'
+
+        if method is None:
+            method = {'text/html': 'xhtml',
+                      'text/plain': 'text'}.get(content_type, 'xml')
+
+        if method == "xhtml":
+            # Retrieve post-redirect messages saved in session
+            for type_ in ['warnings', 'notices']:
+                try:
+                    for i in itertools.count():
+                        message = Markup(req.session.pop('chrome.%s.%d'
+                                                         % (type_, i)))
+                        if message not in req.chrome[type_]:
+                            req.chrome[type_].append(message)
+                except KeyError:
+                    pass
+
+        if fragment or method == 'text':
+            return self.generate_template_fragment(req, filename, data, method)
+
+        jtemplate = self.load_jtemplate('j' + filename)
+        # Populate data with request dependent data
+        jdata = self.populate_data(req, data, {})
+        jdata['chrome']['content_type'] = content_type
+
+        doctype = None
+        links = req.chrome.get('links')
+        scripts = req.chrome.get('scripts')
+        script_data = req.chrome.get('script_data')
+        req.chrome.update({'early_links': links, 'early_scripts': scripts,
+                           'early_script_data': script_data,
+                           'links': {}, 'scripts': [], 'script_data': {}})
+        # TODO (Jinja2): I get the feeling the late links logic will
+        #                have to be revisited... <head> should use the
+        #                early_*, <body> the late_*
+        jdata.setdefault('chrome', {}).update({
+            'late_links': req.chrome['links'],
+            'late_scripts': req.chrome['scripts'],
+            'late_script_data': req.chrome['script_data'],
+        })
+
+        try:
+            if iterable:
+                stream = jtemplate.stream(jdata)
+                stream.enable_buffering(75) # buffer_size
+                return self.jiterable_content(stream, method)
+            else:
+                return valid_html_bytes(jtemplate.render(jdata).encode('utf-8'))
+
+        except Exception as e:
+            # restore what may be needed by the error template
+            req.chrome.update({'early_links': None, 'early_scripts': None,
+                               'early_script_data': None, 'links': links,
+                               'scripts': scripts, 'script_data': script_data})
+            raise
+
+
     def generate_template_fragment(self, req, template, data, method='html'):
         """Produce content from given template, with minimal overhead.
 
@@ -1296,7 +1297,6 @@ class Chrome(Component):
             stream = jtemplate.stream(jdata)
             stream.enable_buffering(75) # buffer_size
             return jiterable_content(stream, method)
-            # output = chrome.iterable_content(stream, 'xhtml')
         else:
             bytes = jtemplate.render(jdata).encode('utf-8')
             if method != 'text':
