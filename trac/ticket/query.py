@@ -1530,3 +1530,51 @@ class TicketQueryMacro(WikiMacroBase):
     def is_inline(self, content):
         query_string, kwargs, format = self.parse_args(content)
         return format in ('count', 'compact')
+
+
+class WikiReportMacro(WikiMacroBase):
+    _description = cleandoc_(
+    """Wiki macro inserts the Trac report into the wiki page.
+
+        [[WikiReport(<id>,<key1>=<value1>, <keyN>=<valueN>, ...)]]
+
+    This macro accepts a comma-separated list of keyed parameters,
+    in the form "key=value" and "id".
+       - "id" -- then report id of the Trac
+       - "key" -- then report parameter
+       - "value" -- then value of report parameter
+    It supports dynamic variables.
+    """)
+
+
+    def expand_macro(self, formatter, name, args):
+        from trac.ticket.report import ReportModule
+        req = formatter.req
+        chrome = Chrome(self.env)
+        report = ReportModule(self.env)
+        comma_splitter = re.compile(r'(?<!\\),')
+        kwargs = {}
+        for arg in comma_splitter.split(args):
+            arg = arg.replace(r'\,', ',')
+            m = re.match(r'\s*[^=]+=', arg)
+            if m:
+                kw = arg[:m.end() - 1].strip()
+                value = arg[m.end():]
+                if re.match(r'^\$[A-Z]*$', value):
+                   value = req.args.get(value[1:])
+                kwargs[kw] = value if value!= None else ''
+            else:
+                if re.match(r'^\$[A-Z]*$', arg):
+                   arg = req.args.get(arg[1:])
+                report_id = int(arg)
+
+        prev_args = req.args
+        req.args = kwargs
+        req.args['page'] = '1'
+        template, data, content_type = report._render_view(req, report_id)
+        add_stylesheet(req, 'common/css/report.css')
+        #generator object would produce extra newlines during wiki generation
+        html_result = unicode(chrome.render_template(req, 'report_table.html',
+                              data, None, fragment=True))
+        req.args = prev_args    #avoid side effect to other macros
+        return html_result
