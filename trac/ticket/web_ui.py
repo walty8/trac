@@ -746,7 +746,14 @@ class TicketModule(Component):
                             add_ticket_link('next', int(next_id))
                     break
 
-        add_script_data(req, {'comments_prefs': self._get_prefs(req)})
+        # Data need for Javascript-specific logic
+        old_values = dict((name, ticket[name]) for name in
+                          [field['name'] for field in ticket.fields])
+        old_values['id'] = ticket.id
+        add_script_data(req, {'comments_prefs': self._get_prefs(req),
+                              'old_values': old_values,
+                              'changes': data['changes'],
+                              })
         add_stylesheet(req, 'common/css/ticket.css')
         add_script(req, 'common/js/folding.js')
         chrome = Chrome(self.env)
