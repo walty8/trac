@@ -45,7 +45,7 @@
   ## use a placeholder if it's a new ticket
 
   <h2>
-    <a href="${href.ticket(ticket.id)}" class="trac-id">#${ticket.id}</a>
+    <a href="${href.ticket(ticket.id)}" class="trac-id">#${ticket.id or ''}</a>
     <span class="trac-status">
       ${'status' in fields_map and
       fields[fields_map['status']].rendered or ticket.status}
@@ -82,12 +82,13 @@
 
   <table class="properties">
     ## fields = [f for f in fields if not f.skip and f.name not in ('type', 'owner')]
-    # set fields = fields|rejectattr('skip')
-    # set fields = fields|selectattr('name', 'not_in', ('type', 'owner'))
-    # set v_reporter = (reporter_link if reporter_link else
-                        authorinfo(ticket.reporter))
-    # set v_owner = ((owner_link if owner_link else authorinfo(ticket.owner))
-                     if ticket.owner)
+    # with
+    #   set fields = fields|rejectattr('skip')
+    #   set fields = fields|selectattr('name', 'not_in', ('type', 'owner'))
+    #   set v_reporter = (reporter_link if reporter_link else
+                          authorinfo(ticket.reporter))
+    #   set v_owner = ((owner_link if owner_link else authorinfo(ticket.owner))
+                       if ticket.owner)
     <tr>
       <th id="h_reporter" ${{'class': {'missing': not v_reporter}}|htmlattr}>${
         _("Reported by:")}</th>
@@ -139,6 +140,7 @@
       # endfor
     </tr>
     # endfor
+    # endwith
   </table> {# jinjacheck: "got (CDATA tr tr )" OK #}
   <div class="description">
     <h3 id="comment:description">
