@@ -19,6 +19,7 @@
 #         Christian Boos <cboos@edgewall.org>
 
 import __builtin__
+from functools import partial
 import locale
 import os
 import re
@@ -26,6 +27,8 @@ import sys
 import textwrap
 from urllib import quote, quote_plus, unquote
 from unicodedata import east_asian_width
+
+import jinja2
 
 CRLF = '\r\n'
 
@@ -36,6 +39,35 @@ class Empty(unicode):
 empty = Empty()
 
 del Empty # shouldn't be used outside of Trac core
+
+
+# -- Jinja2
+
+def jinja2env(**kwargs):
+    """Creates a Jinja2 environment set with Trac conventions.
+
+    All default parameters can be overriden, but what *has* to be
+    specified is the ``loader`` parameter.
+
+    """
+    def autoescape_extensions(exts, template):
+        return template and template.rsplit('.', 1)[1] in exts
+    defaults = dict(
+        variable_start_string='${',
+        variable_end_string='}',
+        line_statement_prefix='#',
+        line_comment_prefix='##',
+        trim_blocks=True,
+        lstrip_blocks=True,
+        extensions=['jinja2.ext.i18n', 'jinja2.ext.with_'],
+        autoescape=partial(autoescape_extensions, ('html', 'rss', 'xml')),
+    )
+    defaults.update(kwargs)
+    jenv = jinja2.Environment(**defaults)
+    jenv.globals.update(
+        len=len,
+    )
+    return jenv
 
 
 # -- Unicode

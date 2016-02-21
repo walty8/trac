@@ -41,7 +41,7 @@ from genshi.filters import Translator
 from genshi.output import DocType
 from genshi.template import TemplateLoader, MarkupTemplate, NewTextTemplate
 
-import jinja2
+from jinja2 import FileSystemLoader, TemplateNotFound
 
 from trac.config import *
 from trac.core import *
@@ -51,10 +51,12 @@ from trac.perm import IPermissionRequestor
 from trac.resource import *
 from trac.util import as_bool, as_int, compat, get_reporter_id, html,\
                       presentation, get_pkginfo, pathjoin, translation
-from trac.util.html import Element, Markup, escape, plaintext, tag
-from trac.util.text import pretty_size, obfuscate_email_address, \
-                           shorten_line, unicode_quote_plus, to_unicode, \
-                           javascript_quote, exception_to_unicode, to_js_string
+from trac.util.html import (Element, Markup, escape, plaintext, tag,
+                            valid_html_bytes)
+from trac.util.text import (jinja2env, pretty_size, obfuscate_email_address,
+                            shorten_line, unicode_quote_plus, to_unicode,
+                            javascript_quote, exception_to_unicode,
+                            to_js_string)
 from trac.util.datefmt import (
     pretty_timedelta, datetime_now, format_datetime, format_date, format_time,
     from_utimestamp, http_date, utc, get_date_format_jquery_ui, is_24_hours,
@@ -382,11 +384,6 @@ def _save_messages(req, url, permanent):
             req.session['chrome.%s.%d' % (type_, i)] = escape(message, False)
 
 
-# Mappings for removal of control characters
-_translate_nop = "".join([chr(i) for i in range(256)])
-_invalid_control_chars = "".join([chr(i) for i in range(32)
-                                  if i not in [0x09, 0x0a, 0x0d]])
-
 
 class Chrome(Component):
     """Web site chrome assembly manager.
@@ -601,28 +598,18 @@ class Chrome(Component):
 
     # A dictionary of default context data for templates
     _default_context_data = {
-        '_': translation.gettext,
         'all': all,
         'any': any,
         'as_bool': as_bool,
         'as_int': as_int,
-        'classes': presentation.classes,
         'date': datetime.date,
         'datetime': datetime.datetime,
-        'dgettext': translation.dgettext,
-        'dngettext': translation.dngettext,
-        'first_last': presentation.first_last,
         'find_element': html.find_element,
         'get_reporter_id': get_reporter_id,
-        'gettext': translation.gettext,
-        'group': presentation.group,
         'groupby': compat.py_groupby,  # http://bugs.python.org/issue2246
         'http_date': http_date,
-        'istext': presentation.istext,
         'javascript_quote': javascript_quote,
-        'ngettext': translation.ngettext,
         'operator': operator,
-        'paginate': presentation.paginate,
         'partial': partial,
         'pathjoin': pathjoin,
         'plaintext': plaintext,
@@ -631,14 +618,10 @@ class Chrome(Component):
         'pretty_timedelta': pretty_timedelta,
         'quote_plus': unicode_quote_plus,
         'reversed': reversed,
-        'separated': presentation.separated,
         'shorten_line': shorten_line,
         'sorted': sorted,
-        'styles': presentation.styles,
-        'tag_': translation.tag_,
         'time': datetime.time,
         'timedelta': datetime.timedelta,
-        'to_json': presentation.to_json,
         'to_unicode': to_unicode,
         'utc': utc,
     }
@@ -924,7 +907,20 @@ class Chrome(Component):
         return logo
 
     def populate_data(self, req, data, base=None):
-        d = self._default_context_data.copy() if base is None else base
+        d = base
+        if d is None: # Genshi
+            d = self._default_context_data.copy()
+            d.update({
+                'classes': presentation.classes,
+                'first_last': presentation.first_last,
+                'group': presentation.group,
+                'istext': presentation.istext,
+                'paginate': presentation.paginate,
+                'separated': presentation.separated,
+                'styles': presentation.styles,
+                'to_json': presentation.to_json,
+            })
+            d.update(translation.functions)
         d['trac'] = {
             'version': self.env.trac_version,
             'homepage': 'http://trac.edgewall.org/',  # FIXME: use setup data
@@ -1084,44 +1080,16 @@ class Chrome(Component):
         `Environment` on first use.
         """
         if not self.jenv:
-            def autoescape_extensions(exts, template):
-                return template and template.rsplit('.', 1)[1] in exts
-            self.jenv = jenv = jinja2.Environment(
-                variable_start_string='${',
-                variable_end_string='}',
-                line_statement_prefix='#',
-                line_comment_prefix='##',
-                trim_blocks=True,
-                lstrip_blocks=True,
-                extensions=['jinja2.ext.i18n', 'jinja2.ext.with_'],
-                autoescape=partial(autoescape_extensions, ('xml', 'html')),
-                loader=jinja2.FileSystemLoader(self.get_all_templates_dirs()),
+            self.jenv = jinja2env(
+                loader=FileSystemLoader(self.get_all_templates_dirs()),
                 auto_reload=self.auto_reload,
             )
-            jenv.globals.update(self._default_context_data.copy())
-            jenv.globals.update(
-                len=len,
-            )
-            jenv.filters.update(
-                flatten=presentation.flatten_filter,
-                groupattr=presentation.groupattr_filter,
-                htmlattr=presentation.htmlattr_filter,
-                max=presentation.max_filter,
-                mix=presentation.min_filter,
-                trim=presentation.trim_filter,
-            )
-            jenv.tests.update(
-                greaterthan=presentation.is_greaterthan,
-                greaterthanorequal=presentation.is_greaterthanorequal,
-                lessthan=presentation.is_lessthan,
-                lessthanorequal=presentation.is_lessthanorequal,
-                not_equalto=presentation.is_not_equalto,
-                not_in=presentation.is_not_in,
-                text=presentation.istext,
-            )
+            self.jenv.globals.update(self._default_context_data.copy())
+            self.jenv.globals.update(translation.functions)
+            presentation.jinja2_update(self.jenv)
         try:
             return self.jenv.get_template(filename)
-        except jinja2.TemplateNotFound:
+        except TemplateNotFound:
             pass
 
     def render_template(self, req, filename, data, content_type=None,
@@ -1255,9 +1223,7 @@ class Chrome(Component):
                     if mode == 'render':
                         js = jtemplate.render(jdata)
                         j5a = time.time()
-                        js = js.encode('utf-8') \
-                               .translate(_translate_nop,
-                                          _invalid_control_chars)
+                        js = valid_html_bytes(js.encode('utf-8'))
                         j6 = time.time()
                         show_times('Jinja2', j2 - j1, 0, j5a - j5, j6 - j5a,
                                    'html')
@@ -1270,9 +1236,7 @@ class Chrome(Component):
                                 stream = jtemplate.stream(jdata)
                                 stream.enable_buffering(mode) # buffer_size
                             for chunk in stream:
-                                yield chunk.encode('utf-8') \
-                                           .translate(_translate_nop,
-                                                      _invalid_control_chars)
+                                yield valid_html_bytes(chunk.encode('utf-8'))
                             j6 = time.time()
                             show_times('Jinja2', j2 - j1, 0, 0, j6 - j5, 'html')
                         return iterable_content()
@@ -1281,8 +1245,7 @@ class Chrome(Component):
                 t5 = time.time()
                 stream.render(method, doctype=doctype, out=buffer,
                               encoding='utf-8')
-                gs = buffer.getvalue().translate(_translate_nop,
-                                                 _invalid_control_chars)
+                gs = valid_html_bytes(buffer.getvalue())
                 t6 = time.time()
                 show_times('Genshi', t2 - t1, t4 - t3, t5a - t4a, t6 - t5,
                            method)
@@ -1356,9 +1319,7 @@ class Chrome(Component):
                     yield chunk.encode('utf-8')
             else:
                 for chunk in stream.serialize(method, **kwargs):
-                    yield chunk.encode('utf-8') \
-                               .translate(_translate_nop,
-                                          _invalid_control_chars)
+                    yield valid_html_bytes(chunk.encode('utf-8'))
         except Exception as e:
             pos = self._stream_location(stream)
             if pos:

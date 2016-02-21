@@ -31,6 +31,41 @@ __all__ = ['captioned_button', 'classes', 'first_last', 'group', 'istext',
            'prepared_paginate', 'paginate', 'Paginator']
 __no_apidoc__ = 'prepared_paginate'
 
+
+def jinja2_update(jenv):
+    """Augment a Jinja2 environment with filters, tests and global functions
+    defined in this module.
+
+    """
+    jenv.filters.update(
+        flatten=flatten_filter,
+        groupattr=groupattr_filter,
+        htmlattr=htmlattr_filter,
+        max=max_filter,
+        mix=min_filter,
+        trim=trim_filter,
+    )
+    jenv.tests.update(
+        greaterthan=is_greaterthan,
+        greaterthanorequal=is_greaterthanorequal,
+        lessthan=is_lessthan,
+        lessthanorequal=is_lessthanorequal,
+        not_equalto=is_not_equalto,
+        not_in=is_not_in,
+        text=istext,
+    )
+    jenv.globals.update(
+        classes=classes,
+        first_last=first_last,
+        group=group,
+        istext=istext,
+        paginate=paginate,
+        separated=separated,
+        styles=styles,
+        to_json=to_json,
+    )
+
+
 NO_YES = ('no', 'yes')
 OFF_ON = ('off', 'on')
 FALSE_TRUE = ('false', 'true')

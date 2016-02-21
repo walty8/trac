@@ -402,3 +402,15 @@ except ImportError: # fall back on 0.11 behavior, i18n functions are no-ops
 
     def get_negotiated_locale(preferred=None, default=None):
         return None
+
+
+# For template engines:
+
+functions = {
+    '_': gettext,
+    'dgettext': dgettext,
+    'dngettext': dngettext,
+    'gettext': gettext,
+    'ngettext': ngettext,
+    'tag_': tag_,
+}

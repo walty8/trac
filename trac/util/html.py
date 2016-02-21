@@ -30,7 +30,7 @@ from trac.util.text import to_unicode
 
 __all__ = ['Deuglifier', 'FormTokenInjector', 'TracHTMLSanitizer', 'escape',
            'find_element', 'html', 'plaintext', 'tag', 'to_fragment',
-           'unescape']
+           'valid_html_bytes', 'unescape']
 
 def escape(str, quotes=False):
     return escape_quotes(str) # well, we just no longer care about quotes=False
@@ -480,3 +480,12 @@ def to_fragment(input):
     if isinstance(input, Fragment):
         return input
     return tag(to_unicode(input))
+
+
+# Mappings for removal of control characters
+_translate_nop = ''.join(chr(i) for i in range(256))
+_invalid_control_chars = ''.join(chr(i) for i in range(32)
+                                 if i not in [0x09, 0x0a, 0x0d])
+
+def valid_html_bytes(bytes):
+    return bytes.translate(_translate_nop, _invalid_control_chars)
