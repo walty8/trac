@@ -1,4 +1,4 @@
-<!--!  Copyright (C) 2006-2014 Edgewall Software
+{# Copyright (C) 2006-2014 Edgewall Software
 
   This software is licensed as described in the file COPYING, which
   you should have received as part of this distribution. The terms
@@ -7,16 +7,19 @@
   This software consists of voluntary contributions made by many
   individuals. For the exact contribution history, see the revision
   history and logs, available at http://trac.edgewall.org/.
--->
-<!DOCTYPE html
-    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:py="http://genshi.edgewall.org/"
-      xmlns:xi="http://www.w3.org/2001/XInclude">
-  <xi:include href="prefs.html" />
+#}
+# extends "jprefs.html"
+<!DOCTYPE html>
+<html>
   <head>
-    <title>Syntax Highlighting</title>
+    <title>
+    # block preftitle
+    ${_("Syntax Highlighting")}
+    # endblock preftitle
+    </title>
+
+    # block head
+    ${ super() }
     <style type="text/css">
       div.code pre { border: 1px solid #999; font-size: 90%; margin: 1em 2em;
         padding: 5px; width: 60%;
@@ -38,21 +41,31 @@
         });
       });
     </script>
+    # endblock head
   </head>
-  <body>
 
+  <body>
+    # block prefpanel
     <div class="field">
-      <p class="hint">The Pygments syntax highlighter can be used with
-      different coloring styles.</p>
-      <p><label>Style:
+      <p class="hint">
+        # trans
+
+        The Pygments syntax highlighter can be used with different
+        coloring styles.
+
+        # endtrans
+      </p>
+      <p><label>${_("Style:")}
         <select id="pygment_theme" name="style">
-          <option py:for="style in sorted(styles)" value="${style}"
-                  selected="${selection == style or None}">${style.title()}</option>
+          # for style in sorted(styles):
+          <option ${{'value': style, 'selected': selection == style
+                  }|htmlattr}>${style.title()}</option>
+          # endfor
         </select>
       </label></p>
-      Preview:
-      <div class="code"><pre>${output}</pre></div>
+      ${_("Preview:")}
+      <div class="code"><pre>${output|safe}</pre></div>
     </div>
-
+    # endblock prefpanel
   </body>
 </html>
