@@ -41,7 +41,6 @@ from trac.wiki.api import IWikiMacroProvider, WikiSystem, parse_args
 from trac.wiki.formatter import (
     format_to_html, format_to_oneliner, extract_link, OutlineFormatter
 )
-from trac.wiki.interwiki import InterWikiMap
 
 
 class WikiMacroBase(Component):
