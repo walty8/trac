@@ -70,11 +70,12 @@
           </div>
           # endfor
 
-          ## if not has forms... find a solution!
+          # if not prefpanel_has_forms:
           <div class="buttons">
             <input type="hidden" name="action" value="save" />
             <input type="submit" value="${_('Save changes')}" />
-          </div >
+          </div>
+          # endif
         </form>
       </div>
 
