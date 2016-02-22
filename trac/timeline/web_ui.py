@@ -152,8 +152,7 @@ class TimelineModule(Component):
                 'yesterday': user_time(req, format_date, yesterday),
                 'precisedate': precisedate, 'precision': precision,
                 'events': [], 'filters': [],
-                'abbreviated_messages': self.abbreviated_messages,
-                'lastvisit': lastvisit}
+                'abbreviated_messages': self.abbreviated_messages}
 
         available_filters = []
         for event_provider in self.event_providers:
