@@ -1247,6 +1247,8 @@ class Chrome(Component):
             return self.generate_template_fragment(req, filename, data, method)
 
         jtemplate = self.load_jtemplate('j' + filename)
+        if not jtemplate:
+            raise TemplateNotFound(filename) ## TEMPORARY
         # Populate data with request dependent data
         jdata = self.populate_data(req, data, {})
         jdata['chrome']['content_type'] = content_type
