@@ -23,8 +23,9 @@ from trac.util.datefmt import from_utimestamp
 from trac.util.html import tag
 from trac.util.presentation import captioned_button
 from trac.util.translation import _
-from trac.web.api import IRequestFilter, IRequestHandler, ITemplateStreamFilter
-from trac.web.chrome import ITemplateProvider, add_notice, add_stylesheet
+from trac.web.api import IRequestFilter, IRequestHandler
+from trac.web.chrome import (ITemplateProvider, add_notice, add_stylesheet,
+                             add_script, add_script_data)
 
 
 class TicketDeleter(Component):
@@ -42,8 +43,7 @@ class TicketDeleter(Component):
     ticket deletion) or the ticket change (in the case of a comment deletion).
     """
 
-    implements(ITemplateProvider, ITemplateStreamFilter, IRequestFilter,
-               IRequestHandler)
+    implements(ITemplateProvider, IRequestFilter, IRequestHandler)
 
     # ITemplateProvider methods
 
@@ -53,56 +53,6 @@ class TicketDeleter(Component):
     def get_templates_dirs(self):
         from pkg_resources import resource_filename
         return [resource_filename(__name__, 'templates')]
-
-    # ITemplateStreamFilter methods
-
-    def filter_stream(self, req, method, filename, stream, data):
-        if filename not in ('ticket.html', 'ticket_preview.html'):
-            return stream
-        ticket = data.get('ticket')
-        if not (ticket and ticket.exists
-                and 'TICKET_ADMIN' in req.perm(ticket.resource)):
-            return stream
-
-        # Insert "Delete" buttons for ticket description and each comment
-        def delete_ticket():
-            return tag.form(
-                tag.div(
-                    tag.input(type='hidden', name='action', value='delete'),
-                    tag.input(type='submit',
-                              value=captioned_button(req, u'–', # 'EN DASH'
-                                                     _("Delete")),
-                              title=_('Delete ticket'),
-                              class_="trac-delete"),
-                    class_="inlinebuttons"),
-                action='#', method='get')
-
-        def delete_comment():
-            for event in buffer:
-                cnum, cdate = event[1][1].get('id')[12:].split('-', 1)
-                return tag.form(
-                    tag.div(
-                        tag.input(type='hidden', name='action',
-                                  value='delete-comment'),
-                        tag.input(type='hidden', name='cnum', value=cnum),
-                        tag.input(type='hidden', name='cdate', value=cdate),
-                        tag.input(type='submit',
-                                  value=captioned_button(req, u'–', # 'EN DASH'
-                                                         _("Delete")),
-                                  title=_('Delete comment %(num)s', num=cnum),
-                                  class_="trac-delete"),
-                        class_="inlinebuttons"),
-                    action='#', method='get')
-
-        buffer = StreamBuffer()
-        return stream | Transformer('//div[@class="description"]'
-                                    '/h3[@id="comment:description"]') \
-            .after(delete_ticket).end() \
-            .select('//div[starts-with(@class, "change")]/@id') \
-            .copy(buffer).end() \
-            .select('//div[starts-with(@class, "change") and @id]'
-                    '//div[@class="trac-ticket-buttons"]') \
-            .prepend(delete_comment)
 
     # IRequestFilter methods
 
@@ -116,6 +66,13 @@ class TicketDeleter(Component):
             return handler
 
     def post_process_request(self, req, template, data, content_type):
+        if template in ('ticket.html', 'ticket_preview.html'):
+            ticket = data.get('ticket')
+            if (ticket and ticket.exists
+                and 'TICKET_ADMIN' in req.perm(ticket.resource)):
+                add_script(req, 'ticketopt/ticketdeleter.js')
+                add_script_data(req, ui={'use_symbols':
+                                         req.session.get('ui.use_symbols')})
         return template, data, content_type
 
     # IRequestHandler methods
