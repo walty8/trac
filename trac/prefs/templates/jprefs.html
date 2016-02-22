@@ -58,7 +58,7 @@
 
       <div id="tabcontent" py:with="has_forms = list(select('.//form'))">
         <form id="userprefs" action="" method="post">
-          ${jmacros.form_token_input|safe}
+          ${jmacros.form_token_input()}
 
           # block prefpanel
           # endblock prefpanel

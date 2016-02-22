@@ -25,10 +25,10 @@
 Example:
 
    <form id="query" method="post" action="${href.query()}">
-   ${jmacros.form_token_input|safe}
+   ${jmacros.form_token_input()}
    ...
    </form>
 #}
-# set form_token_input
+# macro form_token_input()
 <input type="hidden" name="__FORM_TOKEN" value="${form_token}" />
-# endset
+# endmacro

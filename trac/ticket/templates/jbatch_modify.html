@@ -12,7 +12,7 @@
 ## Batch modification form for ticket queries
 
 <form id="batchmod_form" method="post" action="${req.href + '/batchmodify'}">
-  ${jmacros.form_token_input|safe}
+  ${jmacros.form_token_input()}
 
   <fieldset id="batchmod_fieldset">
     <legend class="foldable">${_("Batch Modify")}</legend>

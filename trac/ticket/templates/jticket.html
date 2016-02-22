@@ -231,7 +231,7 @@
       <form method="post" id="propertyform"
             action="${href.ticket(ticket.id) + '#trac-add-comment' if
                     ticket.exists else href.newticket() + '#ticket'}">
-        ${jmacros.form_token_input|safe}
+        ${jmacros.form_token_input()}
 
         <div>
           # if ticket.exists:

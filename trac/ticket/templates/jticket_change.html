@@ -165,7 +165,7 @@
 #   if show_editor:
 <form id="trac-comment-editor" method="post"
       action="${href.ticket(ticket.id) + '#comment:' + cnum}">
-  ${jmacros.form_token_input|safe}
+  ${jmacros.form_token_input()}
 
   <div>
     <textarea name="edited_comment"
