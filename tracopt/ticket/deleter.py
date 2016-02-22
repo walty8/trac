@@ -48,7 +48,8 @@ class TicketDeleter(Component):
     # ITemplateProvider methods
 
     def get_htdocs_dirs(self):
-        return []
+        from pkg_resources import resource_filename
+        yield 'ticketopt', resource_filename(__name__, 'htdocs')
 
     def get_templates_dirs(self):
         from pkg_resources import resource_filename
