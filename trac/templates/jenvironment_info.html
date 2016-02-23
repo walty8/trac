@@ -60,8 +60,8 @@
       <tbody>
         # for plugin in plugins:
         #   set components = plugin.modules|map(attribute='components')|flatten
-        <tr ${{'class': 'disabled' if not components|selectattr('enabled')
-            }|htmlattr}>
+        <tr ${{'class': 'disabled' if not components|selectattr('enabled')}
+            |htmlattr}>
           # set url = (plugin.info.home_page or
                        plugin.info.author_email and
                        'mailto:' + plugin.info.author_email)
@@ -80,7 +80,7 @@
             ${plugin.path}
             # endif
           </td>
-        </tr>
+        </tr> {# jinjacheck: "CDATA th" OK #}
         # endfor
       </tbody>
     </table>

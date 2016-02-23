@@ -140,7 +140,7 @@
         </td>
         #       endif
         #     endfor
-      </tr>
+      </tr>{# jinjacheck: "CDATA td" OK #}
       #       if ticket_context.resource in context:
       <tr class="fullrow">
         <td colspan="${num_cols}">
