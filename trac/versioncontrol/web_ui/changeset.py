@@ -664,8 +664,7 @@ class ChangesetModule(Component):
                      'longcol': 'Revision', 'shortcol': 'r'})
 
         if req.is_xhr:  # render and return the content only
-            chrome = Chrome(self.env)
-            stream = chrome.generate_template_fragment(
+            stream = Chrome(self.env).generate_template_fragment(
                 req, 'changeset_content.html', data)
             req.send(stream)
 
