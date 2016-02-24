@@ -1,4 +1,4 @@
-<!--!  Copyright (C) 2006-2014 Edgewall Software
+{# Copyright (C) 2006-2014 Edgewall Software
 
   This software is licensed as described in the file COPYING, which
   you should have received as part of this distribution. The terms
@@ -7,17 +7,20 @@
   This software consists of voluntary contributions made by many
   individuals. For the exact contribution history, see the revision
   history and logs, available at http://trac.edgewall.org/.
--->
-<!DOCTYPE html
-    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:py="http://genshi.edgewall.org/"
-      xmlns:xi="http://www.w3.org/2001/XInclude"
-      xmlns:i18n="http://genshi.edgewall.org/i18n">
-  <xi:include href="layout.html" />
+#}
+
+# extends "jlayout.html"
+<!DOCTYPE html>
+<html>
   <head>
-    <title>$title</title>
+    <title>
+      # block title
+      ${title}
+      ${ super() }
+      # endblock title
+    </title>
+    # block head
+    ${ super() }
     <meta name="ROBOTS" content="NOINDEX, NOFOLLOW" />
     <script type="text/javascript">/*<![CDATA[*/
       jQuery(function ($) {
@@ -26,57 +29,76 @@
         });
       });
     /*]]>*/</script>
+    # endblock head
   </head>
 
   <body>
+    # block content
     <div id="content" class="ticket">
-      <h1 i18n:msg="name">Change History for <a href="${url or url_of(resource)}">${name or name_of(resource)}</a></h1>
-
-      <form py:if="history" id="history" class="printableform" method="get" action="">
+      <h1>${tag_("Change History for %(name)s",
+            name='<a href="%s">%s</a>'|safe %
+                 (url or url_of(resource), name or name_of(resource)))}
+      </h1>
+      # if history:
+      <form id="history" class="printableform" method="get" action="">
         <div class="buttons">
           <input type="hidden" name="action" value="${diff_action or 'diff'}" />
-          <input py:for="k, v in diff_args or []" type="hidden" name="$k" value="$v"/>
+          # for k, v in  diff_args or []:
+          <input type="hidden" name="${k}" value="${v}"/>
+          # endfor
           <input type="submit" value="${_('View changes')}" />
         </div>
-        <table id="fieldhist" class="listing" summary="Change history">
+        <table id="fieldhist" class="listing" summary="${_("Change history")}">
           <thead>
             <tr>
               <th class="diff"></th>
-              <th class="version">Version</th>
-              <th class="date">Date</th>
-              <th class="author">Author</th>
-              <th class="comment">Comment</th>
+              <th class="version">${_("Version")}</th>
+              <th class="date">${_("Date")}</th>
+              <th class="author">${_("Author")}</th>
+              <th class="comment">${_("Comment")}</th>
             </tr>
           </thead>
           <tbody>
-            <tr py:for="idx, item in enumerate(history)" class="${'odd' if idx % 2 else 'even'}">
+            # for item in history:
+            <tr class="${loop.cycle('odd', 'even')}">
               <td class="diff">
-                <input type="radio" name="old_version" value="$item.version"
-                       checked="${idx == 1 or None}" />
-                <input type="radio" name="version" value="$item.version"
-                       checked="${idx == 0 or None}" />
+                <input type="radio" name="old_version" value="${item.version}"
+                       ${{'checked': loop.index0 == 1}|htmlattr} />
+                <input type="radio" name="version" value="${item.version}"
+                       ${{'checked': loop.first}|htmlattr} />
               </td>
               <td class="version">
-                <a href="${item.url or url_of(resource, version=item.version)}" title="View this version">$item.version</a>
+                <a href="${item.url or url_of(resource, version=item.version)}"
+                   title="${_("View this version")}">${item.version}</a>
               </td>
               <td class="date">${pretty_dateinfo(item.date, dateonly=True)}</td>
               <td class="author"
-                  title="${_('IP-Address: %(ipnr)s', ipnr=item.ipnr)
-                           if show_ip_addresses and item.ipnr else None}">${authorinfo(item.author)}</td>
-              <td class="comment">${wiki_to_oneliner(context.child(resource), item.comment, shorten=True)}
-                <span py:if="can_edit_comment" class="inlinebuttons">
-                  <a href="${url_of(resource, action='edit_comment', version=item.version)}">${captioned_button("✎", _("Edit"))}</a>
+                  ${{'title': _('IP-Address: %(ipnr)s', ipnr=item.ipnr)
+                              if show_ip_addresses and item.ipnr}|htmlattr}>${
+                authorinfo(item.author)}</td>
+              <td class="comment">
+                ${wiki_to_oneliner(context.child(resource), item.comment,
+                                   shorten=true)}
+                # if can_edit_comment:
+                <span class="inlinebuttons">
+                  <a href="${url_of(resource, action='edit_comment',
+                             version=item.version)}">${
+                    captioned_button("✎", _("Edit"))}</a>
                 </span>
+                # endif
               </td>
             </tr>
+            # endfor
           </tbody>
         </table>
-        <py:if test="len(history) &gt; 10">
-          <div class="buttons">
-            <input type="submit" value="${_('View changes')}" />
-          </div>
-        </py:if>
+        # if len(history) is greaterthan(10):
+        <div class="buttons">
+          <input type="submit" value="${_('View changes')}" />
+        </div>
+        # endif
       </form>
+      # endif
     </div>
+    # endblock content
   </body>
 </html>
