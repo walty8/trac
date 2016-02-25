@@ -33,7 +33,10 @@ __all__ = ['Deuglifier', 'FormTokenInjector', 'TracHTMLSanitizer', 'escape',
            'valid_html_bytes', 'unescape']
 
 def escape(str, quotes=False):
-    return escape_quotes(str) # well, we just no longer care about quotes=False
+    e = escape_quotes(str)
+    if quotes or '&#3' not in e:
+        return e
+    return Markup(unicode(e).replace('&#34;', '"').replace('&#39;', "'"))
 
 
 # -- Simplified genshi.builder API
@@ -52,7 +55,7 @@ class Fragment(object):
         return Markup(unicode(self))
 
     def __unicode__(self):
-        return u''.join(escape_quotes(c) for c in self.children)
+        return u''.join(escape(c) for c in self.children)
 
     def __add__(self, other):
         return Fragment(self, other)
