@@ -21,7 +21,8 @@ from datetime import datetime
 from math import ceil
 import re
 
-from jinja2 import Markup, Undefined, contextfilter, evalcontextfilter, escape
+from jinja2 import (Markup, Undefined, contextfilter, evalcontextfilter,
+                    escape as escape_quotes)
 from jinja2.filters import make_attrgetter
 from jinja2.utils import soft_unicode
 from jinja2._compat import iteritems
@@ -154,8 +155,8 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
             else:
                 val = values[bool(val)]
         if val is not None and not isinstance(val, Undefined):
-            val = escape(val)
-            attrs.append(u'%s="%s"' % (escape(key), val))
+            val = escape_quotes(val)
+            attrs.append(u'%s="%s"' % (escape_quotes(key), val))
     rv = u' '.join(attrs)
     if autospace and rv:
         rv = u' ' + rv
