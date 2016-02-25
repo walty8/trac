@@ -30,6 +30,7 @@ from trac.mimeview.api import IHTMLPreviewRenderer, Mimeview
 from trac.prefs import IPreferencePanelProvider
 from trac.util import get_pkginfo, lazy
 from trac.util.datefmt import http_date, localtz
+from trac.util.html import Markup
 from trac.util.translation import _
 from trac.web.api import IRequestHandler, HTTPNotFound
 from trac.web.chrome import ITemplateProvider, add_notice, add_stylesheet
@@ -253,7 +254,7 @@ class PygmentsRenderer(Component):
         lexer = get_lexer_by_name(lexer_name, **lexer_options)
         out = StringIO()
         HtmlFormatter(nowrap=True).format(lexer.get_tokens(content), out)
-        return out.getvalue()
+        return Markup(out.getvalue())
 
     def _lexer_alias_to_name(self, alias):
         return self._lexer_alias_name_map.get(alias, alias)

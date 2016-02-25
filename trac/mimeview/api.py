@@ -829,7 +829,7 @@ class Mimeview(Component):
                 else:
                     if isinstance(result, list):
                         result = Markup('\n').join(result)
-                    return tag.div(class_='code')(tag.pre(result)).generate()
+                    return tag.div(class_='code')(tag.pre(result))
 
             except Exception as e:
                 self.log.warning('HTML preview using %s failed: %s',
@@ -887,7 +887,7 @@ class Mimeview(Component):
                                                line, data)
                     else:
                         row.append(tag.td())
-                row.append(tag.td(Markup(line)))
+                row.append(tag.td(line))
                 yield row
 
         return tag.table(class_='code')(
