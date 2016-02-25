@@ -314,7 +314,7 @@
                       <textarea id="field-description" name="field_description"
                                 class="wikitext trac-fullwidth trac-resizable"
                                 rows="10" cols="68">${
-ticket.description or ''}</textarea>
+                        ticket.description or ''}</textarea>
                     </fieldset>
                   </td>
                 </tr>
@@ -410,8 +410,8 @@ ticket.description or ''}</textarea>
                         <a href="${href.prefs()}" class="trac-target-new">${
                           _("Preferences")}</a>
                         # endset
-                        ${_("Set your email in %(preferences_link)s",
-                        preferences_link=preferences_link)}
+                        ${tag_("Set your email in %(preferences_link)s",
+                               preferences_link=preferences_link|safe)}
                       </em>
                       #           else:
                       <label for="field-cc"><em>${field.cc_entry}</em></label>

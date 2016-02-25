@@ -125,14 +125,14 @@
         #     if 'dateinfo' in field:
         ${pretty_dateinfo(field.dateinfo, field.format)}
         #     elif 'rendered' in field:
-        ${field.rendered}
+        ${field.rendered or ''}
         #     elif field.type == 'text' and field.format == 'wiki':
         ${wiki_to_oneliner(context, value) if value}
         #     elif field.type == 'textarea' and field.format == 'wiki':
         ${wiki_to_html(context, value, escape_newlines=preserve_newlines)
           if value}
         #     else:
-        ${value}
+        ${value or ''}
         #     endif
         #   endif
       </td>
