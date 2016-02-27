@@ -80,8 +80,7 @@ class Fragment(object):
 
     def __iter__(self):
         """Genshi compatibility layer. Will be removed in Trac 1.5.1."""
-        for c in self.children:
-            yield TEXT, Markup(c), (None, -1, -1)
+        yield TEXT, Markup(self), (None, -1, -1)
 
 
 class Element(Fragment):
@@ -142,10 +141,6 @@ class Element(Fragment):
 
     def __html__(self):
         return Markup(unicode(self))
-
-    def __iter__(self):
-        """Genshi compatibility layer. Will be removed in Trac 1.5.1."""
-        yield TEXT, Markup(self), (None, -1, -1)
 
 
 class ElementFactory(object):
