@@ -17,7 +17,7 @@ import re
 from markupsafe import Markup, escape as escape_quotes
 
 from genshi import HTML, unescape
-from genshi.core import stripentities, striptags, START, END
+from genshi.core import stripentities, striptags, START, END, TEXT
 from genshi.filters.html import HTMLSanitizer
 from genshi.input import ParseError
 try:
@@ -78,6 +78,11 @@ class Fragment(object):
         return u''.join(c.as_text() if isinstance(c, Fragment) else unicode(c)
                         for c in self.children)
 
+    def __iter__(self):
+        """Genshi compatibility layer. Will be removed in Trac 1.5.1."""
+        for c in self.children:
+            yield TEXT, Markup(c), (None, -1, -1)
+
 
 class Element(Fragment):
     """An element represents an HTML element, with a tag name, attributes
@@ -134,6 +139,13 @@ class Element(Fragment):
         else:
             elt += u' />'
         return elt
+
+    def __html__(self):
+        return Markup(unicode(self))
+
+    def __iter__(self):
+        """Genshi compatibility layer. Will be removed in Trac 1.5.1."""
+        yield TEXT, Markup(self), (None, -1, -1)
 
 
 class ElementFactory(object):
