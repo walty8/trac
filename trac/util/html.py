@@ -11,14 +11,18 @@
 # individuals. For the exact contribution history, see the revision
 # history and logs, available at http://trac.edgewall.org/log/.
 
+# Note that a significant part of the code below was inspired or
+# copied from the Genshi project, the tag build API from
+# genshi.builder and the HTMLSanitizer from genshi.filters.html.
+
 from HTMLParser import HTMLParser
 import re
 
 from markupsafe import Markup, escape as escape_quotes
 
 from genshi import HTML, unescape
-from genshi.core import stripentities, striptags, START, END, TEXT
-from genshi.filters.html import HTMLSanitizer
+from genshi.core import (Attrs, COMMENT, START, END, TEXT,
+                         stripentities, striptags)
 from genshi.input import ParseError
 try:
     from babel.support import LazyProxy
@@ -158,7 +162,7 @@ class ElementFactory(object):
 tag = html = ElementFactory()
 
 
-class TracHTMLSanitizer(HTMLSanitizer):
+class TracHTMLSanitizer(object):
 
     ## Jinja2: the last change upstream on HTMLSanitizer was 4 years
     ##         ago, and was the integration of some of the changes
@@ -169,11 +173,39 @@ class TracHTMLSanitizer(HTMLSanitizer):
     """Sanitize HTML constructions which are potentially vector of
     phishing or XSS attacks, in user-supplied HTML.
 
-    See also `genshi.HTMLSanitizer`_.
+    See also `genshi.HTMLSanitizer`_ from which the TracHTMLSanitizer
+    has evolved.
 
     .. _genshi.HTMLSanitizer:
        http://genshi.edgewall.org/wiki/Documentation/filters.html#html-sanitizer
+
     """
+
+    # TODO: check from time to time if there are any upstream changes
+    #       we could integrate.
+
+    SAFE_TAGS = frozenset(['a', 'abbr', 'acronym', 'address', 'area', 'b',
+        'big', 'blockquote', 'br', 'button', 'caption', 'center', 'cite',
+        'code', 'col', 'colgroup', 'dd', 'del', 'dfn', 'dir', 'div', 'dl', 'dt',
+        'em', 'fieldset', 'font', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'hr', 'i', 'img', 'input', 'ins', 'kbd', 'label', 'legend', 'li', 'map',
+        'menu', 'ol', 'optgroup', 'option', 'p', 'pre', 'q', 's', 'samp',
+        'select', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'table',
+        'tbody', 'td', 'textarea', 'tfoot', 'th', 'thead', 'tr', 'tt', 'u',
+        'ul', 'var'])
+
+    SAFE_ATTRS = frozenset(['abbr', 'accept', 'accept-charset', 'accesskey',
+        'action', 'align', 'alt', 'axis', 'bgcolor', 'border', 'cellpadding',
+        'cellspacing', 'char', 'charoff', 'charset', 'checked', 'cite', 'class',
+        'clear', 'cols', 'colspan', 'color', 'compact', 'coords', 'datetime',
+        'dir', 'disabled', 'enctype', 'for', 'frame', 'headers', 'height',
+        'href', 'hreflang', 'hspace', 'id', 'ismap', 'label', 'lang',
+        'longdesc', 'maxlength', 'media', 'method', 'multiple', 'name',
+        'nohref', 'noshade', 'nowrap', 'prompt', 'readonly', 'rel', 'rev',
+        'rows', 'rowspan', 'rules', 'scope', 'selected', 'shape', 'size',
+        'span', 'src', 'start', 'style',
+        'summary', 'tabindex', 'target', 'title',
+        'type', 'usemap', 'valign', 'value', 'vspace', 'width'])
 
     SAFE_CSS = frozenset([
         # CSS 3 properties <http://www.w3.org/TR/CSS/#properties>
@@ -205,13 +237,27 @@ class TracHTMLSanitizer(HTMLSanitizer):
         'widows', 'width', 'word-spacing', 'z-index',
     ])
 
-    def __init__(self, safe_schemes=HTMLSanitizer.SAFE_SCHEMES,
-                 safe_css=SAFE_CSS):
-        safe_attrs = HTMLSanitizer.SAFE_ATTRS | frozenset(['style'])
-        safe_schemes = frozenset(safe_schemes)
-        super(TracHTMLSanitizer, self).__init__(safe_attrs=safe_attrs,
-                                                safe_schemes=safe_schemes)
-        self.safe_css = frozenset(safe_css)
+    SAFE_SCHEMES = frozenset(['file', 'ftp', 'http', 'https', 'mailto', None])
+
+    URI_ATTRS = frozenset(['action', 'background', 'dynsrc', 'href', 'lowsrc',
+        'src'])
+
+    def __init__(self, safe_schemes=SAFE_SCHEMES, safe_css=SAFE_CSS,
+                 safe_tags=SAFE_TAGS, safe_attrs=SAFE_ATTRS,
+                 uri_attrs=URI_ATTRS):
+        """Note: safe_schemes and safe_css have to remain the first
+        parameters, for backward-compatibility purpose.
+        """
+        self.safe_tags = safe_tags
+        # The set of tag names that are considered safe.
+        self.safe_attrs = safe_attrs
+        # The set of attribute names that are considered safe.
+        self.safe_css = safe_css
+        # The set of CSS properties that are considered safe.
+        self.uri_attrs = uri_attrs
+        # The set of names of attributes that may contain URIs.
+        self.safe_schemes = safe_schemes
+        # The set of URI schemes that are considered safe.
 
     # IE6 <http://heideri.ch/jso/#80>
     _EXPRESSION_SEARCH = re.compile(
@@ -243,7 +289,103 @@ class TracHTMLSanitizer(HTMLSanitizer):
     _URL_FINDITER = re.compile(
         u'[Uu][Rr\u0280][Ll\u029F]\s*\(([^)]+)').finditer
 
+    def __call__(self, stream):
+        """Apply the filter to the given stream.
+
+        :param stream: the markup event stream to filter
+        """
+        waiting_for = None
+
+        for kind, data, pos in stream:
+            if kind is START:
+                if waiting_for:
+                    continue
+                tag, attrs = data
+                if not self.is_safe_elem(tag, attrs):
+                    waiting_for = tag
+                    continue
+
+                new_attrs = self.sanitize_attrs(dict(attrs)).iteritems()
+
+                yield kind, (tag, Attrs(new_attrs)), pos
+
+            elif kind is END:
+                tag = data
+                if waiting_for:
+                    if waiting_for == tag:
+                        waiting_for = None
+                else:
+                    yield kind, data, pos
+
+            elif kind is not COMMENT:
+                if not waiting_for:
+                    yield kind, data, pos
+
+    def is_safe_css(self, prop, value):
+        """Determine whether the given css property declaration is to be
+        considered safe for inclusion in the output.
+        """
+        if prop not in self.safe_css:
+            return False
+        # Position can be used for phishing, 'static' excepted
+        if prop == 'position':
+            return value.lower() == 'static'
+        # Negative margins can be used for phishing
+        if prop.startswith('margin'):
+            return '-' not in value
+        return True
+
+    def is_safe_elem(self, tag, attrs):
+        """Determine whether the given element should be considered safe for
+        inclusion in the output.
+
+        :param tag: the tag name of the element
+        :type tag: QName
+        :param attrs: the element attributes
+        :type attrs: Attrs
+        :return: whether the element should be considered safe
+        :rtype: bool
+        """
+        if tag not in self.safe_tags:
+            return False
+        if tag.localname == 'input':
+            input_type = attrs.get('type', '').lower()
+            if input_type == 'password':
+                return False
+        return True
+
+    def is_safe_uri(self, uri):
+        """Determine whether the given URI is to be considered safe for
+        inclusion in the output.
+
+        The default implementation checks whether the scheme of the URI is in
+        the set of allowed URIs (`safe_schemes`).
+
+        >>> sanitizer = HTMLSanitizer()
+        >>> sanitizer.is_safe_uri('http://example.org/')
+        True
+        >>> sanitizer.is_safe_uri('javascript:alert(document.cookie)')
+        False
+
+        :param uri: the URI to check
+        :return: `True` if the URI can be considered safe, `False` otherwise
+        :rtype: `bool`
+        """
+        if '#' in uri:
+            uri = uri.split('#', 1)[0] # Strip out the fragment identifier
+        if ':' not in uri:
+            return True # This is a relative URI
+        chars = [char for char in uri.split(':', 1)[0] if char.isalnum()]
+        return ''.join(chars).lower() in self.safe_schemes
+
     def sanitize_attrs(self, attrs):
+        """Remove potentially dangerous attributes and sanitize
+        the style attribute .
+
+        :type attrs: dict corresponding to tag attributes
+        :return: a dict containing only safe or sanitized attributes
+        :rtype: dict
+        """
         new_attrs = {}
         for attr, value in attrs.iteritems():
             value = stripentities(value)
@@ -263,6 +405,33 @@ class TracHTMLSanitizer(HTMLSanitizer):
         return new_attrs
 
     def sanitize_css(self, text):
+        """Remove potentially dangerous property declarations from CSS code.
+
+        In particular, properties using the CSS ``url()`` function with a scheme
+        that is not considered safe are removed:
+
+        >>> sanitizer = HTMLSanitizer()
+        >>> sanitizer.sanitize_css(u'''
+        ...   background: url(javascript:alert("foo"));
+        ...   color: #000;
+        ... ''')
+        [u'color: #000']
+
+        Also, the proprietary Internet Explorer function ``expression()`` is
+        always stripped:
+
+        >>> sanitizer.sanitize_css(u'''
+        ...   background: #fff;
+        ...   color: #000;
+        ...   width: e/**/xpression(alert("foo"));
+        ... ''')
+        [u'background: #fff', u'color: #000']
+
+        :param text: the CSS text; this is expected to be `unicode` and to not
+                     contain any character or numeric references
+        :return: a list of declarations that are considered safe
+        :rtype: `list`
+        """
         decls = []
         text = self._strip_css_comments(self._replace_unicode_escapes(text))
         for decl in filter(None, text.split(';')):
@@ -285,39 +454,6 @@ class TracHTMLSanitizer(HTMLSanitizer):
             if not is_evil:
                 decls.append(decl.strip())
         return decls
-
-    def __call__(self, stream):
-        """Remove input type="password" elements from the stream
-        """
-        suppress = False
-        for kind, data, pos in super(TracHTMLSanitizer, self).__call__(stream):
-            if kind is START:
-                tag, attrs = data
-                if (tag == 'input' and
-                    attrs.get('type', '').lower() == 'password'):
-                    suppress = True
-                else:
-                    yield kind, data, pos
-            elif kind is END:
-                if not suppress:
-                    yield kind, data, pos
-                suppress = False
-            else:
-                yield kind, data, pos
-
-    def is_safe_css(self, prop, value):
-        """Determine whether the given css property declaration is to be
-        considered safe for inclusion in the output.
-        """
-        if prop not in self.safe_css:
-            return False
-        # Position can be used for phishing, 'static' excepted
-        if prop == 'position':
-            return value.lower() == 'static'
-        # Negative margins can be used for phishing
-        if prop.startswith('margin'):
-            return '-' not in value
-        return True
 
     _NORMALIZE_NEWLINES = re.compile(r'\r\n').sub
     _UNICODE_ESCAPE = re.compile(
