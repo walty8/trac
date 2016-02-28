@@ -14,13 +14,11 @@
 from StringIO import StringIO
 import unittest
 
-from genshi.input import HTML
-
 import trac.tests.compat
 from trac.core import TracError
 from trac.util.html import (
-    Element, FormTokenInjector, Fragment, TracHTMLSanitizer,
-    find_element, to_fragment, tag
+    HTML, Element, FormTokenInjector, Fragment, TracHTMLSanitizer,
+    genshi, find_element, to_fragment, tag
 )
 from trac.util.translation import gettext, tgettext
 
@@ -164,9 +162,10 @@ class TracHTMLSanitizerTestCase(unittest.TestCase):
         self.assertEqual('<div>XSS</div>', self.sanitize(html))
 
 
-class TracHTMLSanitizerLegacyGenshiTestCase(TracHTMLSanitizerTestCase):
-    def sanitize(self, html):
-        return unicode(HTML(html, encoding='utf-8') | TracHTMLSanitizer())
+if genshi:
+    class TracHTMLSanitizerLegacyGenshiTestCase(TracHTMLSanitizerTestCase):
+        def sanitize(self, html):
+            return unicode(HTML(html, encoding='utf-8') | TracHTMLSanitizer())
 
 
 class FindElementTestCase(unittest.TestCase):
@@ -285,7 +284,8 @@ def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(FormTokenInjectorTestCase))
     suite.addTest(unittest.makeSuite(TracHTMLSanitizerTestCase))
-    suite.addTest(unittest.makeSuite(TracHTMLSanitizerLegacyGenshiTestCase))
+    if genshi:
+        suite.addTest(unittest.makeSuite(TracHTMLSanitizerLegacyGenshiTestCase))
     suite.addTest(unittest.makeSuite(FindElementTestCase))
     suite.addTest(unittest.makeSuite(ToFragmentTestCase))
     return suite

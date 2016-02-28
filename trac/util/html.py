@@ -21,10 +21,24 @@ import re
 
 from markupsafe import Markup, escape as escape_quotes
 
-from genshi import HTML, unescape
-from genshi.core import (Attrs, COMMENT, START, END, TEXT,
-                         stripentities, striptags)
-from genshi.input import ParseError
+# Imports related to the legacy Genshi template engine should all go
+# through trac.html, e.g.
+#
+#   from trac.html import genshi, Stream
+
+try:
+    import genshi
+    from genshi import HTML, unescape
+    from genshi.core import (Attrs, Stream, COMMENT, START, END, TEXT,
+                             stripentities, striptags)
+    from genshi.input import ParseError
+except ImportError:
+    genshi = None
+    COMMENT = START = END = TEXT = None
+    HTML = Attrs = ParseError = Stream = None
+    # These are problematic, as they are used in non-Genshi specific code
+    unescape = stripentities = striptags = None
+
 try:
     from babel.support import LazyProxy
 except ImportError:
@@ -83,9 +97,10 @@ class Fragment(object):
         return u''.join(c.as_text() if isinstance(c, Fragment) else unicode(c)
                         for c in self.children)
 
-    def __iter__(self):
-        """Genshi compatibility layer. Will be removed in Trac 1.5.1."""
-        yield TEXT, Markup(self), (None, -1, -1)
+    if genshi:
+        def __iter__(self):
+            """Genshi compatibility layer. Will be removed in Trac 1.5.1."""
+            yield TEXT, Markup(self), (None, -1, -1)
 
 
 class Element(Fragment):
@@ -298,35 +313,36 @@ class TracHTMLSanitizer(object):
         transform.close()
         return Markup(transform.out.getvalue())
 
-    def __call__(self, stream):
-        """Apply the filter to the given stream.
+    if genshi:
+        def __call__(self, stream):
+            """Apply the filter to the given stream.
 
-        :param stream: the markup event stream to filter
-        """
-        waiting_for = None
+            :param stream: the markup event stream to filter
+            """
+            waiting_for = None
 
-        for kind, data, pos in stream:
-            if kind is START:
-                if waiting_for:
-                    continue
-                tag, attrs = data
-                if not self.is_safe_elem(tag, attrs):
-                    waiting_for = tag
-                    continue
-                new_attrs = self.sanitize_attrs(dict(attrs)).iteritems()
-                yield kind, (tag, Attrs(new_attrs)), pos
+            for kind, data, pos in stream:
+                if kind is START:
+                    if waiting_for:
+                        continue
+                    tag, attrs = data
+                    if not self.is_safe_elem(tag, attrs):
+                        waiting_for = tag
+                        continue
+                    new_attrs = self.sanitize_attrs(dict(attrs)).iteritems()
+                    yield kind, (tag, Attrs(new_attrs)), pos
 
-            elif kind is END:
-                tag = data
-                if waiting_for:
-                    if waiting_for == tag:
-                        waiting_for = None
-                else:
-                    yield kind, data, pos
+                elif kind is END:
+                    tag = data
+                    if waiting_for:
+                        if waiting_for == tag:
+                            waiting_for = None
+                    else:
+                        yield kind, data, pos
 
-            elif kind is not COMMENT:
-                if not waiting_for:
-                    yield kind, data, pos
+                elif kind is not COMMENT:
+                    if not waiting_for:
+                        yield kind, data, pos
 
     def is_safe_css(self, prop, value):
         """Determine whether the given css property declaration is to be
@@ -683,25 +699,6 @@ def find_element(frag, attr=None, cls=None, tag=None):
             if elt is not None:
                 return elt
 
-## Jinja2: not needed/wanted and also not used in the current Trac code base
-
-def expand_markup(stream, ctxt=None):
-    """A Genshi stream filter for expanding `genshi.Markup` events.
-
-    Note: Expansion may not be possible if the fragment is badly
-    formed, or partial.
-    """
-    for event in stream:
-        if isinstance(event[1], Markup):
-            try:
-                for subevent in HTML(event[1]):
-                    yield subevent
-            except ParseError:
-                yield event
-        else:
-            yield event
-
-
 def to_fragment(input):
     """Convert input to a `Fragment` object."""
 
@@ -721,3 +718,26 @@ _invalid_control_chars = ''.join(chr(i) for i in range(32)
 
 def valid_html_bytes(bytes):
     return bytes.translate(_translate_nop, _invalid_control_chars)
+
+
+if genshi:
+    # Genshi compatibility - this code will be kept for as long as we
+    # still the Genshi template engine besides the Jinja2 one.
+
+    def expand_markup(stream, ctxt=None):
+        """A Genshi stream filter for expanding `genshi.Markup` events.
+
+        :deprecated:  not used in the current Trac code base
+
+        Note: Expansion may not be possible if the fragment is badly
+        formed, or partial.
+        """
+        for event in stream:
+            if isinstance(event[1], Markup):
+                try:
+                    for subevent in HTML(event[1]):
+                        yield subevent
+                except ParseError:
+                    yield event
+            else:
+                yield event
