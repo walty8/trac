@@ -53,6 +53,7 @@ $pgPassword = 'Password12!'
 # External Python dependencies
 
 $pipCommonPackages = @(
+    'jinja2',
     'genshi', 
     'babel', 
     'twill==0.9.1',
