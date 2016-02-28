@@ -54,7 +54,8 @@ def main(args):
         elif not quiet:
             print '%s (%d lines)' % (template, lines)
     print('%.2f%% converted to Jinja2'
-          ' (%d Jinja2 lines vs. %d/%d Genshi lines))' %
+          ' (%d Jinja2 lines corresponding to %d Genshi lines'
+          ' on a total of %d Genshi lines)' %
           (100.0 * converted / total, jconverted, converted, total))
     exit(0)
 
