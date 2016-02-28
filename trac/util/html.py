@@ -101,10 +101,7 @@ def unescape(text):
         return ''
     if not isinstance(text, Markup):
         return text
-    return unicode(text).replace('&#34;', '"') \
-                        .replace('&gt;', '>') \
-                        .replace('&lt;', '<') \
-                        .replace('&amp;', '&')
+    return text.unescape()
 
 
 _STRIPENTITIES_RE = re.compile(r'&(?:#((?:\d+)|(?:[xX][0-9a-fA-F]+));?|(\w+);)')
@@ -152,7 +149,6 @@ def stripentities(text, keepxmlentities=False):
     return Markup(_STRIPENTITIES_RE.sub(_replace_entity, text))
 
 
-_STRIPTAGS_RE = re.compile(r'(<!--.*?-->|<[^>]*>)')
 def striptags(text):
     """Return a copy of the text with any XML/HTML tags removed.
 
@@ -172,7 +168,7 @@ def striptags(text):
     :return: a `Markup` instance with all tags removed
     :rtype: `Markup`
     """
-    return Markup(_STRIPTAGS_RE.sub('', text))
+    return Markup(Markup(text).striptags())
 
 
 # -- Simplified genshi.builder API
