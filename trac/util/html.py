@@ -521,24 +521,21 @@ class Deuglifier(object):
                 return '<span class="code-%s">' % mtype
 
 
-class FormTokenInjector(HTMLParser):
-    """Identify and protect forms from CSRF attacks.
+class HTMLTransform(HTMLParser):
+    """Convenience base class for writing HTMLParsers.
 
-    This filter works by adding a input type=hidden field to POST forms.
+    The default implementation of the HTMLParser ``handle_*`` methods
+    do nothing, while in our case we try to rewrite the incoming
+    document unmodified.
+
     """
-    def __init__(self, form_token, out):
+
+    def __init__(self, out):
         HTMLParser.__init__(self)
         self.out = out
-        self.token = form_token
 
     def handle_starttag(self, tag, attrs):
         self.out.write(self.get_starttag_text())
-        if tag.lower() == 'form':
-            for name, value in attrs:
-                if name.lower() == 'method' and value.lower() == 'post':
-                    self.out.write('<input type="hidden" name="__FORM_TOKEN"'
-                                   ' value="%s"/>' % self.token)
-                    break
 
     def handle_startendtag(self, tag, attrs):
         self.out.write(self.get_starttag_text())
@@ -563,6 +560,25 @@ class FormTokenInjector(HTMLParser):
 
     def handle_endtag(self, tag):
         self.out.write('</' + tag + '>')
+
+
+class FormTokenInjector(HTMLTransform):
+    """Identify and protect forms from CSRF attacks.
+
+    This filter works by adding a input type=hidden field to POST forms.
+    """
+    def __init__(self, form_token, out):
+        HTMLTransform.__init__(self, out)
+        self.token = form_token
+
+    def handle_starttag(self, tag, attrs):
+        HTMLTransform.handle_starttag(self, tag, attrs)
+        if tag.lower() == 'form':
+            for name, value in attrs:
+                if name == 'method' and value.lower() == 'post':
+                    self.out.write('<input type="hidden" name="__FORM_TOKEN"'
+                                   ' value="%s"/>' % self.token)
+                    break
 
 
 def plaintext(text, keeplinebreaks=True):

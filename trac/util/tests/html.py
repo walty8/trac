@@ -11,15 +11,47 @@
 # individuals. For the exact contribution history, see the revision
 # history and logs, available at http://trac.edgewall.org/log/.
 
+from StringIO import StringIO
 import unittest
+
 from genshi.input import HTML
 
 import trac.tests.compat
 from trac.core import TracError
 from trac.util.html import (
-    Element, Fragment, TracHTMLSanitizer, find_element, to_fragment, tag
+    Element, FormTokenInjector, Fragment, TracHTMLSanitizer,
+    find_element, to_fragment, tag
 )
 from trac.util.translation import gettext, tgettext
+
+
+class FormTokenInjectorTestCase(unittest.TestCase):
+    def test_no_form(self):
+        html = '<div><img src="trac.png"/></div>'
+        out = StringIO()
+        injector = FormTokenInjector('123123', out)
+        injector.feed(html)
+        injector.close()
+        self.assertEqual(html, injector.out.getvalue())
+
+    def test_form_get(self):
+        html = '<form method="get"><input name="age" value=""/></form>'
+        out = StringIO()
+        injector = FormTokenInjector('123123', out)
+        injector.feed(html)
+        injector.close()
+        self.assertEqual(html, injector.out.getvalue())
+
+    def test_form_post(self):
+        html = '<form method="POST">%s<input name="age" value=""/></form>'
+        out = StringIO()
+        token = '123123'
+        injector = FormTokenInjector(token, out)
+        injector.feed(html % '')
+        injector.close()
+        self.assertEqual(html % (
+            '<input type="hidden" name="__FORM_TOKEN" value="%s"/>' % token),
+                         injector.out.getvalue())
 
 
 class TracHTMLSanitizerTestCase(unittest.TestCase):
@@ -271,6 +303,7 @@ class ToFragmentTestCase(unittest.TestCase):
 
 def suite():
     suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(FormTokenInjectorTestCase))
     suite.addTest(unittest.makeSuite(TracHTMLSanitizerTestCase))
     suite.addTest(unittest.makeSuite(FindElementTestCase))
     suite.addTest(unittest.makeSuite(ToFragmentTestCase))
