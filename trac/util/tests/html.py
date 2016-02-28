@@ -12,10 +12,12 @@
 # history and logs, available at http://trac.edgewall.org/log/.
 
 from StringIO import StringIO
+import doctest
 import unittest
 
 import trac.tests.compat
 from trac.core import TracError
+from trac.util import html
 from trac.util.html import (
     HTML, Element, FormTokenInjector, Fragment, TracHTMLSanitizer,
     genshi, find_element, to_fragment, tag
@@ -282,6 +284,7 @@ class ToFragmentTestCase(unittest.TestCase):
 
 def suite():
     suite = unittest.TestSuite()
+    suite.addTest(doctest.DocTestSuite(html))
     suite.addTest(unittest.makeSuite(FormTokenInjectorTestCase))
     suite.addTest(unittest.makeSuite(TracHTMLSanitizerTestCase))
     if genshi:

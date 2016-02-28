@@ -11,12 +11,15 @@
 # individuals. For the exact contribution history, see the revision
 # history and logs, available at http://trac.edgewall.org/log/.
 
-# Note that a significant part of the code below was inspired or
-# copied from the Genshi project, the tag build API from
-# genshi.builder and the HTMLSanitizer from genshi.filters.html.
+# Note that a significant part of the code in this module was inspired
+# or simply copied from the Genshi project
+# (http://genshi.edgewall.org): escape utilities from genshi.core,
+# strip utilities from genshi.util, the tag builder API from
+# genshi.builder, and the HTMLSanitizer from genshi.filters.html.
 
 from HTMLParser import HTMLParser
 from StringIO import StringIO
+import htmlentitydefs as entities
 import re
 
 from markupsafe import Markup, escape as escape_quotes
@@ -28,16 +31,12 @@ from markupsafe import Markup, escape as escape_quotes
 
 try:
     import genshi
-    from genshi import HTML, unescape
-    from genshi.core import (Attrs, Stream, COMMENT, START, END, TEXT,
-                             stripentities, striptags)
+    from genshi import HTML
+    from genshi.core import Attrs, Stream, COMMENT, START, END, TEXT
     from genshi.input import ParseError
 except ImportError:
     genshi = None
-    COMMENT = START = END = TEXT = None
-    HTML = Attrs = ParseError = Stream = None
-    # These are problematic, as they are used in non-Genshi specific code
-    unescape = stripentities = striptags = None
+    HTML = COMMENT = START = END = TEXT = Attrs = ParseError = Stream = None
 
 try:
     from babel.support import LazyProxy
@@ -49,13 +48,131 @@ from trac.util.text import to_unicode
 
 __all__ = ['Deuglifier', 'FormTokenInjector', 'TracHTMLSanitizer', 'escape',
            'find_element', 'html', 'plaintext', 'tag', 'to_fragment',
-           'valid_html_bytes', 'unescape']
+           'stripentities', 'striptags', 'valid_html_bytes', 'unescape']
 
-def escape(str, quotes=False):
+
+def escape(str, quotes=True):
+    """Create a Markup instance from a string and escape special characters
+    it may contain (<, >, & and \").
+
+    >>> escape('"1 < 2"')
+    Markup(u'&#34;1 &lt; 2&#34;')
+
+    If the `quotes` parameter is set to `False`, the \" character is left
+    as is. Escaping quotes is generally only required for strings that are
+    to be used in attribute values.
+
+    >>> escape('"1 < 2"', quotes=False)
+    Markup(u'"1 &lt; 2"')
+
+    :param text: the text to escape
+    :param quotes: if ``True``, double quote characters are escaped in
+                   addition to the other special characters
+    :return: the escaped `Markup` string
+    :rtype: `Markup`
+    """
     e = escape_quotes(str)
-    if quotes or '&#3' not in e:
+    if quotes:
+        if '&#39;' not in e:
+            return e
+        return Markup(unicode(e).replace('&#39;', "'"))
+    elif '&#3' not in e:
         return e
     return Markup(unicode(e).replace('&#34;', '"').replace('&#39;', "'"))
+
+
+def unescape(text):
+    """Reverse-escapes &, <, >, and \" and returns a `unicode` object.
+
+    >>> unescape(Markup('1 &lt; 2'))
+    u'1 < 2'
+
+    If the provided `text` object is not a `Markup` instance, it is returned
+    unchanged.
+
+    >>> unescape('1 &lt; 2')
+    '1 &lt; 2'
+
+    :param text: the text to unescape
+    :return: the unescsaped string
+    :rtype: `unicode`
+    """
+    if not text:
+        return ''
+    if not isinstance(text, Markup):
+        return text
+    return unicode(text).replace('&#34;', '"') \
+                        .replace('&gt;', '>') \
+                        .replace('&lt;', '<') \
+                        .replace('&amp;', '&')
+
+
+_STRIPENTITIES_RE = re.compile(r'&(?:#((?:\d+)|(?:[xX][0-9a-fA-F]+));?|(\w+);)')
+def stripentities(text, keepxmlentities=False):
+    """Return a copy of the given text with any character or numeric entities
+    replaced by the equivalent UTF-8 characters.
+
+    >>> stripentities('1 &lt; 2')
+    Markup(u'1 < 2')
+    >>> stripentities('more &hellip;')
+    Markup(u'more \u2026')
+    >>> stripentities('&#8230;')
+    Markup(u'\u2026')
+    >>> stripentities('&#x2026;')
+    Markup(u'\u2026')
+
+    If the `keepxmlentities` parameter is provided and is a truth value, the
+    core XML entities (&amp;, &apos;, &gt;, &lt; and &quot;) are left intact.
+
+    >>> stripentities('1 &lt; 2 &hellip;', keepxmlentities=True)
+    Markup(u'1 &lt; 2 \u2026')
+
+    :return: a `Markup` instance with entities removed
+    :rtype: `Markup`
+    """
+    def _replace_entity(match):
+        if match.group(1): # numeric entity
+            ref = match.group(1)
+            if ref.startswith('x'):
+                ref = int(ref[1:], 16)
+            else:
+                ref = int(ref, 10)
+            return unichr(ref)
+        else: # character entity
+            ref = match.group(2)
+            if keepxmlentities and ref in ('amp', 'apos', 'gt', 'lt', 'quot'):
+                return '&%s;' % ref
+            try:
+                return unichr(entities.name2codepoint[ref])
+            except KeyError:
+                if keepxmlentities:
+                    return '&amp;%s;' % ref
+                else:
+                    return ref
+    return Markup(_STRIPENTITIES_RE.sub(_replace_entity, text))
+
+
+_STRIPTAGS_RE = re.compile(r'(<!--.*?-->|<[^>]*>)')
+def striptags(text):
+    """Return a copy of the text with any XML/HTML tags removed.
+
+    >>> striptags('<span>Foo</span> bar')
+    Markup(u'Foo bar')
+    >>> striptags('<span class="bar">Foo</span>')
+    Markup(u'Foo')
+    >>> striptags('Foo<br />')
+    Markup(u'Foo')
+
+    HTML/XML comments are stripped, too:
+
+    >>> striptags('<!-- <blub>hehe</blah> -->test')
+    Markup(u'test')
+
+    :param text: the string to remove tags from
+    :return: a `Markup` instance with all tags removed
+    :rtype: `Markup`
+    """
+    return Markup(_STRIPTAGS_RE.sub('', text))
 
 
 # -- Simplified genshi.builder API
@@ -448,9 +565,9 @@ class TracHTMLSanitizer(object):
         >>> sanitizer.sanitize_css(u'''
         ...   background: #fff;
         ...   color: #000;
-        ...   width: e/**/xpression(alert("foo"));
+        ...   width: e/**/xpression(alert("F"));
         ... ''')
-        [u'background: #fff', u'color: #000']
+        [u'background: #fff', u'color: #000', u'width: e xpression(alert("F"))']
 
         :param text: the CSS text; this is expected to be `unicode` and to not
                      contain any character or numeric references
