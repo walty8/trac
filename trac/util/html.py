@@ -16,6 +16,7 @@
 # genshi.builder and the HTMLSanitizer from genshi.filters.html.
 
 from HTMLParser import HTMLParser
+from StringIO import StringIO
 import re
 
 from markupsafe import Markup, escape as escape_quotes
@@ -164,12 +165,6 @@ tag = html = ElementFactory()
 
 class TracHTMLSanitizer(object):
 
-    ## Jinja2: the last change upstream on HTMLSanitizer was 4 years
-    ##         ago, and was the integration of some of the changes
-    ##         below (r10788). It should be possible to grab the rest
-    ##         and rewrite __call__ in terms of the regular
-    ##         HTMLParser.
-
     """Sanitize HTML constructions which are potentially vector of
     phishing or XSS attacks, in user-supplied HTML.
 
@@ -289,6 +284,20 @@ class TracHTMLSanitizer(object):
     _URL_FINDITER = re.compile(
         u'[Uu][Rr\u0280][Ll\u029F]\s*\(([^)]+)').finditer
 
+    def sanitize(self, html):
+        """Transforms the incoming HTML by removing anything's that deemed
+        unsafe.
+
+        :param html: the input HTML
+        :type: basestring
+        :return: the sanitized content
+        :rtype: Markup
+        """
+        transform = HTMLSanitization(self, StringIO())
+        transform.feed(html)
+        transform.close()
+        return Markup(transform.out.getvalue())
+
     def __call__(self, stream):
         """Apply the filter to the given stream.
 
@@ -304,9 +313,7 @@ class TracHTMLSanitizer(object):
                 if not self.is_safe_elem(tag, attrs):
                     waiting_for = tag
                     continue
-
                 new_attrs = self.sanitize_attrs(dict(attrs)).iteritems()
-
                 yield kind, (tag, Attrs(new_attrs)), pos
 
             elif kind is END:
@@ -340,15 +347,17 @@ class TracHTMLSanitizer(object):
         inclusion in the output.
 
         :param tag: the tag name of the element
-        :type tag: QName
+        :type tag: QName or basestring
         :param attrs: the element attributes
-        :type attrs: Attrs
+        :type attrs: Attrs or dict
         :return: whether the element should be considered safe
         :rtype: bool
         """
         if tag not in self.safe_tags:
             return False
-        if tag.localname == 'input':
+        if hasattr(tag, 'localname'): # Genshi QName
+            tag = tag.localname
+        if tag == 'input':
             input_type = attrs.get('type', '').lower()
             if input_type == 'password':
                 return False
@@ -361,7 +370,7 @@ class TracHTMLSanitizer(object):
         The default implementation checks whether the scheme of the URI is in
         the set of allowed URIs (`safe_schemes`).
 
-        >>> sanitizer = HTMLSanitizer()
+        >>> sanitizer = TracHTMLSanitizer()
         >>> sanitizer.is_safe_uri('http://example.org/')
         True
         >>> sanitizer.is_safe_uri('javascript:alert(document.cookie)')
@@ -410,7 +419,7 @@ class TracHTMLSanitizer(object):
         In particular, properties using the CSS ``url()`` function with a scheme
         that is not considered safe are removed:
 
-        >>> sanitizer = HTMLSanitizer()
+        >>> sanitizer = TracHTMLSanitizer()
         >>> sanitizer.sanitize_css(u'''
         ...   background: url(javascript:alert("foo"));
         ...   color: #000;
@@ -579,6 +588,67 @@ class FormTokenInjector(HTMLTransform):
                     self.out.write('<input type="hidden" name="__FORM_TOKEN"'
                                    ' value="%s"/>' % self.token)
                     break
+
+class HTMLSanitization(HTMLTransform):
+    """Sanitize parsed HTML using TracHTMLSanitizer."""
+
+    def __init__(self, sanitizer, out):
+        HTMLTransform.__init__(self, out)
+        self.sanitizer = sanitizer
+        self.waiting_for = None
+
+    def _handle_start(self, tag, attrs, startend):
+        if self.waiting_for:
+           return
+        if not self.sanitizer.is_safe_elem(tag, attrs):
+            self.waiting_for = tag
+            return
+
+        new_attrs = self.sanitizer.sanitize_attrs(dict(attrs))
+        html_attrs = ' '.join(
+            '%s="%s"' % (name, escape_quotes(value))
+            for name, value in new_attrs.iteritems()
+        )
+        self.out.write('<%s%s%s>' %
+                       (tag, html_attrs and ' ' + html_attrs, startend))
+
+    def handle_starttag(self, tag, attrs):
+        if not self.waiting_for:
+            self._handle_start(tag, attrs, '')
+
+    def handle_startendtag(self, tag, attrs):
+        if not self.waiting_for:
+            self._handle_start(tag, attrs, '/')
+
+    def handle_charref(self, name):
+        if not self.waiting_for:
+            self.out.write('&#%s;' % name)
+
+    def handle_entityref(self, name):
+        if not self.waiting_for:
+            self.out.write('&%s;' % name)
+
+    def handle_comment(self, data):
+        pass
+
+    def handle_decl(self, data):
+        if not self.waiting_for:
+            self.out.write('<!%s>' % data)
+
+    def handle_pi(self, data):
+        if not self.waiting_for:
+            self.out.write('<?%s?>' % data.replace('?>', ''))
+
+    def handle_data(self, data):
+        if not self.waiting_for:
+            self.out.write(data)
+
+    def handle_endtag(self, tag):
+        if self.waiting_for:
+            if self.waiting_for == tag:
+                self.waiting_for = None
+        else:
+            self.out.write('</' + tag + '>')
 
 
 def plaintext(text, keeplinebreaks=True):

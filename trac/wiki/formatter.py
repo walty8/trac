@@ -18,13 +18,12 @@
 #         Christopher Lenz <cmlenz@gmx.de>
 #         Christian Boos <cboos@edgewall.org>
 
-import re
+from HTMLParser import HTMLParseError
 import os
-
 from StringIO import StringIO
+import re
 
 from genshi.core import Stream
-from genshi.input import HTMLParser, ParseError
 
 from trac.core import *
 from trac.mimeview import *
@@ -223,9 +222,8 @@ class WikiProcessor(object):
         if WikiSystem(self.env).render_unsafe_content:
             return Markup(text)
         try:
-            stream = Stream(HTMLParser(StringIO(text)))
-            return (stream | self._sanitizer).render('xhtml', encoding=None)
-        except ParseError as e:
+            return self._sanitizer.sanitize(text)
+        except HTMLParseError as e:
             self.env.log.warn(e)
             line = unicode(text).splitlines()[e.lineno - 1].strip()
             return system_message(_('HTML parsing error: %(message)s',
