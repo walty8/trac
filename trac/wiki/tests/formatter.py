@@ -28,7 +28,7 @@ except ImportError:
 from trac.core import Component, TracError, implements
 from trac.test import Mock, MockPerm, EnvironmentStub, locale_en
 from trac.util.datefmt import datetime_now, utc
-from trac.util.html import html
+from trac.util.html import genshi, html
 from trac.util.text import strip_line_ws, to_unicode
 from trac.web.chrome import web_context
 from trac.web.href import Href
@@ -69,20 +69,21 @@ class DivCodeMacro(WikiMacroBase):
         return '<div class="code">Hello World, args = %s</div>' % content
 
 class DivCodeElementMacro(WikiMacroBase):
-    """A dummy macro returning a Genshi Element, used by the unit test."""
+    """A dummy macro returning an Element, used by the unit test."""
 
     def expand_macro(self, formatter, name, content):
         return html.div('Hello World, args = ', content, class_="code")
 
-class DivCodeStreamMacro(WikiMacroBase):
-    """A dummy macro returning a Genshi Stream, used by the unit test."""
+if genshi:
+    class DivCodeStreamMacro(WikiMacroBase):
+        """A dummy macro returning a Genshi Stream, used by the unit test."""
 
-    def expand_macro(self, formatter, name, content):
-        from genshi.template import MarkupTemplate
-        tmpl = MarkupTemplate("""
-        <div>Hello World, args = $args</div>
-        """)
-        return tmpl.generate(args=content)
+        def expand_macro(self, formatter, name, content):
+            from genshi.template import MarkupTemplate
+            tmpl = MarkupTemplate("""
+            <div>Hello World, args = $args</div>
+            """)
+            return tmpl.generate(args=content)
 
 class NoneMacro(WikiMacroBase):
     """A dummy macro returning `None`, used by the unit test."""
@@ -158,10 +159,13 @@ class WikiTestCase(unittest.TestCase):
         self.context = context
 
     def _create_env(self):
+        global genshi
         all_test_components = [
                 HelloWorldMacro, DivHelloWorldMacro, TableHelloWorldMacro,
-                DivCodeMacro, DivCodeElementMacro, DivCodeStreamMacro,
+                DivCodeMacro, DivCodeElementMacro,
                 NoneMacro, WikiProcessorSampleMacro, SampleResolver]
+        if genshi:
+            all_test_components.append(DivCodeStreamMacro)
         env = EnvironmentStub(enable=['trac.*'] + all_test_components)
         # -- macros support
         env.path = ''

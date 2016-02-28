@@ -23,8 +23,6 @@ import os
 from StringIO import StringIO
 import re
 
-from genshi.core import Stream
-
 from trac.core import *
 from trac.mimeview import *
 from trac.resource import get_relative_resource, get_resource_url
@@ -32,7 +30,8 @@ from trac.util import arity, as_int
 from trac.util.text import exception_to_unicode, shorten_line, to_unicode, \
                            unicode_quote, unicode_quote_plus, unquote_label
 from trac.util.html import (
-    Element, Fragment, Markup, TracHTMLSanitizer, escape, plaintext, tag
+    Element, Fragment, Markup, Stream, TracHTMLSanitizer,
+    escape, genshi, plaintext, tag
 )
 from trac.util.translation import _, tag_
 from trac.wiki.api import WikiSystem, parse_args
@@ -42,6 +41,22 @@ __all__ = ['wiki_to_html', 'wiki_to_oneliner', 'wiki_to_outline',
            'Formatter', 'format_to', 'format_to_html', 'format_to_oneliner',
            'extract_link', 'split_url_into_path_query_fragment',
            'concat_path_query_fragment']
+
+
+def _markup_to_unicode(markup):
+    if isinstance(markup, Fragment):
+        return Markup(markup)
+    else:
+        return to_unicode(markup)
+
+if genshi:
+    def _markup_to_unicode(markup):
+        if isinstance(markup, Fragment):
+            return Markup(markup)
+        elif isinstance(markup, Stream):
+            markup = markup.render('xhtml', encoding=None,
+                                   strip_whitespace=False)
+        return to_unicode(markup)
 
 
 def system_message(msg, text=None):
@@ -96,17 +111,6 @@ def concat_path_query_fragment(path, query, fragment=None):
     if fragment:
         f = fragment
     return p + q + ('' if f == '#' else f)
-
-
-def _markup_to_unicode(markup):
-    stream = None
-    if isinstance(markup, Fragment):
-        return Markup(markup)
-    elif isinstance(markup, Stream):
-        stream = markup
-    if stream:
-        markup = stream.render('xhtml', encoding=None, strip_whitespace=False)
-    return to_unicode(markup)
 
 
 class ProcessorError(TracError):

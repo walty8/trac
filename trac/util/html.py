@@ -187,7 +187,7 @@ class Fragment(object):
         return Markup(unicode(self))
 
     def __unicode__(self):
-        return u''.join(escape(c) for c in self.children)
+        return u''.join(escape(c, False) for c in self.children)
 
     def __add__(self, other):
         return Fragment(self, other)
@@ -243,8 +243,8 @@ class Element(Fragment):
             kwargs['class'] = c
         except KeyError:
             pass
-        return dict((k, escape_quotes(v)) for k, v in kwargs.iteritems()
-                     if v is not None)
+        return dict((k, escape(v)) for k, v in kwargs.iteritems()
+                    if v is not None)
 
     def __call__(self, *args, **kwargs):
         if kwargs:
@@ -735,7 +735,7 @@ class HTMLSanitization(HTMLTransform):
 
         new_attrs = self.sanitizer.sanitize_attrs(dict(attrs))
         html_attrs = ' '.join(
-            '%s="%s"' % (name, escape_quotes(value))
+            '%s="%s"' % (name, escape(value))
             for name, value in new_attrs.iteritems()
         )
         self.out.write('<%s%s%s>' %
