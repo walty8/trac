@@ -192,6 +192,9 @@ class Fragment(object):
     def __unicode__(self):
         return u''.join(escape(c, False) for c in self.children)
 
+    def __str__(self):
+        return str(self.__unicode__())
+
     def __add__(self, other):
         return Fragment(self, other)
 
