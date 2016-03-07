@@ -36,7 +36,7 @@ class PrettyDateinfoTestCase(unittest.TestCase):
         self.req = Mock(href=Href('/'), abs_href=Href('http://example.org/'),
                         authname='anonymous', tz=utc, locale=locale_en,
                         lc_time=locale_en, chrome={}, perm=MockPerm(),
-                        session={})
+                        session={}, form_token=123123)
 
     def tearDown(self):
         self.env.reset_db()
