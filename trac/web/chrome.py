@@ -1087,10 +1087,7 @@ class Chrome(Component):
             self.jenv.globals.update(self._default_context_data.copy())
             self.jenv.globals.update(translation.functions)
             presentation.jinja2_update(self.jenv)
-        try:
-            return self.jenv.get_template(filename)
-        except TemplateNotFound:
-            pass
+        return self.jenv.get_template(filename)
 
     def render_template(self, req, filename, data, content_type=None,
                         fragment=False, iterable=False, method=None):
@@ -1247,8 +1244,6 @@ class Chrome(Component):
             return self.generate_template_fragment(req, filename, data, method)
 
         jtemplate = self.load_jtemplate('j' + filename)
-        if not jtemplate:
-            raise TemplateNotFound(filename) ## TEMPORARY
         # Populate data with request dependent data
         jdata = self.populate_data(req, data, {})
         jdata['chrome']['content_type'] = content_type

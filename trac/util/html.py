@@ -34,8 +34,11 @@ try:
     from genshi import HTML
     from genshi.core import Attrs, Stream, COMMENT, START, END, TEXT
     from genshi.input import ParseError
+    def stream_to_unicode(stream):
+        return Markup(stream.render('xhtml', encoding=None,
+                                    strip_whitespace=False))
 except ImportError:
-    genshi = None
+    genshi = stream_to_unicode = None
     HTML = COMMENT = START = END = TEXT = Attrs = ParseError = Stream = None
 
 try:
@@ -196,6 +199,8 @@ class Fragment(object):
         if arg: # ignore None, False, [], (), ''
             if isinstance(arg, (Fragment, basestring, int, float, long)):
                 self.children.append(arg)
+            elif genshi and isinstance(arg, Stream):
+                self.children.append(stream_to_unicode(arg))
             else:
                 # support iterators and generators
                 try:

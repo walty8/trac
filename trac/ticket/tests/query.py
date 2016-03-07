@@ -971,13 +971,13 @@ class QueryLinksTestCase(unittest.TestCase):
         return ticket
 
     def _format_link(self, query, label):
-        return str(self.query_module._format_link(self.formatter, 'query',
-                                                  query, label))
+        return unicode(self.query_module._format_link(self.formatter, 'query',
+                                                      query, label))
 
     def test_empty_query(self):
-        self.assertEqual(self._format_link('', 'label'),
-                         '<em class="error">[Error: Query filter requires '
-                         'field and constraints separated by a "="]</em>')
+        self.assertEqual(u'<em class="error">[Error: Query filter requires '
+                         'field and constraints separated by a "="]</em>',
+                         self._format_link('', 'label'))
 
     def _process_request(self, query_string):
         self.req.arg_list = parse_arg_list(query_string)

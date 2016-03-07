@@ -31,7 +31,7 @@ from trac.util.text import exception_to_unicode, shorten_line, to_unicode, \
                            unicode_quote, unicode_quote_plus, unquote_label
 from trac.util.html import (
     Element, Fragment, Markup, Stream, TracHTMLSanitizer,
-    escape, genshi, plaintext, tag
+    escape, genshi, plaintext, stream_to_unicode, tag
 )
 from trac.util.translation import _, tag_
 from trac.wiki.api import WikiSystem, parse_args
@@ -46,16 +46,9 @@ __all__ = ['wiki_to_html', 'wiki_to_oneliner', 'wiki_to_outline',
 def _markup_to_unicode(markup):
     if isinstance(markup, Fragment):
         return Markup(markup)
+    elif genshi and isinstance(markup, Stream):
+        return stream_to_unicode(markup)
     else:
-        return to_unicode(markup)
-
-if genshi:
-    def _markup_to_unicode(markup):
-        if isinstance(markup, Fragment):
-            return Markup(markup)
-        elif isinstance(markup, Stream):
-            markup = markup.render('xhtml', encoding=None,
-                                   strip_whitespace=False)
         return to_unicode(markup)
 
 
