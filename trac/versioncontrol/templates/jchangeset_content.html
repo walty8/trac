@@ -45,9 +45,9 @@
 
     #     endtrans
     #   elif not changeset and restricted:
-    #     trans newpath = newpath|safe, reponame
+    #     trans newpath = newpath|safe, logoldnew = logoldnew|safe, reponame
 
-    Changes in ${newpath} ${log} in ${reponame}
+    Changes in ${newpath} ${logoldnew} in ${reponame}
 
     #     endtrans
     #   elif not changeset and not restricted:
@@ -82,7 +82,7 @@
     #   elif not changeset and restricted:
     #     trans newpath = newpath|safe, logoldnew = logoldnew|safe
 
-    Changes in ${newpath} ${log}
+    Changes in ${newpath} ${logoldnew}
 
     #     endtrans
     #   elif not changeset and not restricted:
