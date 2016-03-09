@@ -165,7 +165,7 @@ class Statement(StatementTuple):
 LINE_STATEMENT_RE = re.compile(r'^(\s*)%s-?(\s*)(end)?(\w+)(.*?)?(:)?$' %
                                LINE_STATEMENT_PREFIX)
 
-JINJACHECK_RE = re.compile(r'jinjacheck: "([^"]+)" OK')
+JINJACHECK_RE = re.compile(r'jinjacheck(?:er)?: "([^"]+)" OK')
 
 
 def scan(lines):
@@ -332,16 +332,17 @@ def check_html(filename, html_lines, html_hints, quiet):
             normalized, opened_braces = remove_jinja_exprs(linenum, line,
                                                            opened_braces)
             normalized_lines.append(normalized)
-
-    if not has_body_elt:
-        normalized_lines[0] = '<body>' + normalized_lines[0]
-        normalized_lines[-1] = normalized_lines[-1] + '</body>'
-    if not has_head_elt:
-        normalized_lines[0] = '<head><title/></head>' + normalized_lines[0]
-    if not has_html_elt:
-        normalized_lines[0] = '<html>' + normalized_lines[0]
-        normalized_lines[-1] = normalized_lines[-1] + '</html>'
-    normalized_lines[0] = XHTML_DOCTYPE + normalized_lines[0]
+    is_xml = html_lines[0][1].startswith('<?xml ')
+    if not is_xml:
+        if not has_body_elt:
+            normalized_lines[0] = '<body>' + normalized_lines[0]
+            normalized_lines[-1] = normalized_lines[-1] + '</body>'
+        if not has_head_elt:
+            normalized_lines[0] = '<head><title/></head>' + normalized_lines[0]
+        if not has_html_elt:
+            normalized_lines[0] = '<html>' + normalized_lines[0]
+            normalized_lines[-1] = normalized_lines[-1] + '</html>'
+        normalized_lines[0] = XHTML_DOCTYPE + normalized_lines[0]
     page = '\n'.join(normalized_lines)
     ## print('LINES %s' % ''.join("%5d: %s" % l for l in html_lines)) # DEBUG
     ## print('PAGE %s' %
