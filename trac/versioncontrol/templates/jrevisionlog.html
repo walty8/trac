@@ -18,6 +18,7 @@
       # block title
       ${path_links[1:]|map(attribute='name')|join('/') if path_links else '/'}
       (log)
+      ${ super() }
       # endblock title
     </title>
 
