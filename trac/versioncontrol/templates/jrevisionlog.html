@@ -234,10 +234,10 @@
               <td class="age">${pretty_dateinfo(change.date, dateonly=true)}</td>
               <td class="author">${authorinfo_short(change.author)}</td>
               <td class="summary"
-                  style="${styles('border-left' if graph and
-                                  ('2px solid ' +
-                                   graph.colors[graph.vertices[loop.index0][1] %
-                                                len(graph.colors)]))}">
+                  style="${styles(**{
+			   'border-left': ('2px solid ' +
+                               graph.colors[graph.vertices[loop.index0][1] %
+                                            len(graph.colors)]) if graph})}">
                 # if verbose:
                 ## really?
                 # elif wiki_format_messages:
