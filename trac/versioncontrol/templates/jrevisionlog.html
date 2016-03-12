@@ -26,9 +26,8 @@
     #   if graph:
     <script type="text/javascript">//<![CDATA[
       jQuery(document).ready(function($) {
-        var graph=${graph};
         $('th.trac-graph, td.trac-graph').show();
-        var canvas = $('<canvas>').css({width: '{graph.columns * 2}em',
+        var canvas = $('<canvas>').css({width: '${graph.columns * 2}em',
                                         height: '${len(items) * 2}em'})
                                   .appendTo('td.trac-graph')[0];
         canvas.width = $(canvas).width();
@@ -237,7 +236,7 @@
               <td class="summary"
                   style="${styles('border-left' if graph and
                                   ('2px solid ' +
-                                   graph.colors[graph.vertices[idx][1] %
+                                   graph.colors[graph.vertices[loop.index0][1] %
                                                 len(graph.colors)]))}">
                 # if verbose:
                 ## really?
