@@ -140,14 +140,12 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
     for key, val in d:
         if key == 'class':
             if isinstance(val, dict):
-                val = classes(**val)
+                val = classes(**val) or None
             elif isinstance(val, list):
-                val = classes(*val)
+                val = classes(*val) or None
         elif key == 'style':
-            if isinstance(val, dict):
-                val = styles(**val)
-            elif isinstance(val, list):
-                val = styles(*val)
+            if isinstance(val, list):
+                val = styles(*val) or None
         elif key in HTML_ATTRS:
             values = HTML_ATTRS[key]
             if values is None:
@@ -242,13 +240,12 @@ def classes(*args, **kwargs):
     u'foo'
 
     If none of the arguments are added to the list, this function returns
-    `None`:
+    `''`:
 
     >>> classes(bar=False)
+    u''
     """
     classes = list(filter(None, args)) + [k for k, v in kwargs.items() if v]
-    if not classes:
-        return None
     return u' '.join(classes)
 
 
@@ -257,10 +254,10 @@ def styles(*args, **kwargs):
     and values in templates.
 
     Any positional arguments are added to the list of styles. All
-    positional arguments must be strings:
+    positional arguments must be strings or dicts:
 
-    >>> styles('foo: bar', 'fu: baz')
-    u'foo: bar; fu: baz'
+    >>> styles('foo: bar', 'fu: baz', {'bottom-right': '1em'})
+    u'foo: bar; fu: baz; bottom-right: 1em'
 
     In addition, the names of any supplied keyword arguments are added
     if they have a string value:
@@ -271,15 +268,21 @@ def styles(*args, **kwargs):
     u'foo: bar'
 
     If none of the arguments are added to the list, this function returns
-    `None`:
+    `''`:
 
     >>> styles(bar=False)
-
+    u''
     """
-    styles = (list(filter(None, args)) +
-              ['%s: %s' % (k, v) for k, v in kwargs.items() if v])
-    if not styles:
-        return None
+    args = list(filter(None, args))
+    d = {}
+    styles = []
+    for arg in args:
+        if isinstance(arg, dict):
+            d.update(arg)
+        else:
+            styles.append(arg)
+    d.update(kwargs)
+    styles.extend('%s: %s' % (k, v) for k, v in d.items() if v)
     return u'; '.join(styles)
 
 

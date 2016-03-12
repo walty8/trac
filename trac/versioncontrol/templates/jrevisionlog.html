@@ -234,7 +234,7 @@
               <td class="age">${pretty_dateinfo(change.date, dateonly=true)}</td>
               <td class="author">${authorinfo_short(change.author)}</td>
               <td class="summary"
-                  style="${styles(**{
+                  style="${styles({
 			   'border-left': ('2px solid ' +
                                graph.colors[graph.vertices[loop.index0][1] %
                                             len(graph.colors)]) if graph})}">
