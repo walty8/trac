@@ -72,20 +72,24 @@
     <script type="text/javascript">
       jQuery("#trac-noscript").remove();
       jQuery(document).ready(function($) {
-      $(".trac-close-msg").show().click(function () {
-      $(this).closest(".system-message").hide();
-      return false;
-      });
-      $(".trac-autofocus").focus();
-      $(".trac-target-new").attr("target", "_blank");
-      if ($.ui) { /* is jquery-ui added? */
-      $(".trac-datepicker:not([readonly])").prop("autocomplete", "off").datepicker();
-      $(".trac-datetimepicker:not([readonly])").prop("autocomplete", "off").datetimepicker();
-      $("#main").addClass("trac-nodatetimehint");
-      }
-      $(".trac-disable").disableSubmit(".trac-disable-determinant");
-      setTimeout(function() { $(".trac-scroll").scrollToTop() }, 1);
-      $(".trac-disable-on-submit").disableOnSubmit();
+        # if chrome.warnings or chrome.notices:
+        $(".trac-close-msg").show().click(function () {
+          $(this).closest(".system-message").hide();
+          return false;
+        });
+        # endif
+        $(".trac-autofocus").focus();
+        $(".trac-target-new").attr("target", "_blank");
+        if ($.ui) { /* is jquery-ui added? */
+          $(".trac-datepicker:not([readonly])")
+            .prop("autocomplete", "off").datepicker();
+          $(".trac-datetimepicker:not([readonly])")
+            .prop("autocomplete", "off").datetimepicker();
+          $("#main").addClass("trac-nodatetimehint");
+        }
+        $(".trac-disable").disableSubmit(".trac-disable-determinant");
+        setTimeout(function() { $(".trac-scroll").scrollToTop() }, 1);
+        $(".trac-disable-on-submit").disableOnSubmit();
       });
     </script>
     #   include 'site_head.html' ignore missing
@@ -143,7 +147,8 @@
       <ul>
         # for link in chrome.links.alternate:
         <li class="${first_last(loop.index0, chrome.links.alternate)}">
-          <a rel="nofollow" href="${link.href}" class="${link.class}">
+          <a rel="nofollow" href="${link.href}"
+             ${{'class': classes(link.class)}|htmlattr}">
             ${link.title}</a>
         </li>
         # endfor
