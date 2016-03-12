@@ -58,10 +58,11 @@ Arguments:
     #   if item and (item.diffs or item.props or 'comments' in item):
     <li class="entry">
       #   set comments = item.get('comments')
-      <h2 id="${'file%s' % loop.index0 if not no_id}">
+      <h2${{'id': 'file%s' % loop.index0 if not no_id}|htmlattr}>
         # if new.path:
-        <a href="${item.get('href', new.get('href'))}"
-           title="${item.get('title', new.get('title'))}">${new.path}</a>
+        <a${{'href': item.get('href', new.get('href')),
+             'title': item.get('title', new.get('title'))
+             }|htmlattr}>${new.path}</a>
         # else:
         &nbsp;
         # endif
@@ -123,10 +124,10 @@ Arguments:
         #     set toline = item.diffs[0][0].changed.offset+1
         #     if diff.style == 'sidebyside':
         <colgroup class="l">
-          <col class="lineno" /><col class="content" />
+          <col class="lineno"/><col class="content"/>
         </colgroup>
         <colgroup class="r">
-          <col class="lineno" /><col class="content" />
+          <col class="lineno"/><col class="content"/>
         </colgroup>
         <thead>
           <tr>
@@ -150,7 +151,7 @@ Arguments:
         </thead>
         #     elif diff.style == 'inline':
         <colgroup>
-          <col class="lineno" /><col class="lineno" /><col class="content" />
+          <col class="lineno"/><col class="lineno"/><col class="content"/>
         </colgroup>
         <thead>
           <tr>
@@ -168,6 +169,8 @@ Arguments:
               <a title="${new.get('title')}"
                  href="${new.get('href')}#L${toline}"
                  >${shortcol}${new.shortrev}</a>
+	      # else:
+              ${shortcol}${new.shortrev}
               # endif
             </th>
             <td>
@@ -203,7 +206,9 @@ Arguments:
           #     elif block.type == 'add':
           ##     Show only added lines, on the "right side"
           #       for line in block.changed.lines:
-          <tr class="${first_last(loop.index0, block.changed.lines) if diff.style == 'inline'}">
+          <tr${{'class': first_last(loop.index0, block.changed.lines)
+                if diff.style == 'inline'
+               }|htmlattr}>
             #       set to_n = block.changed.offset + loop.index
             #       if diff.style == 'sidebyside':
             <th>&nbsp;</th><td class="l"></td>
@@ -216,7 +221,9 @@ Arguments:
           #     elif block.type == 'rem':
           ##     Show only deleted lines, on the "left side"
           #       for line in block.base.lines:
-          <tr class="${first_last(loop.index0, block.base.lines) if diff.style == 'inline'}">
+          <tr${{'class': first_last(loop.index0, block.base.lines)
+                if diff.style == 'inline'
+               }|htmlattr}>
             #       set from_n = block.base.offset + loop.index
             #       if diff.style == 'sidebyside':
             <th>${from_n}</th><td class="l"><del>${line}</del></td>
@@ -262,14 +269,15 @@ Arguments:
           #       elif diff.style == 'inline':
           ##       First show the "old" lines
           #         for line in block.base.lines:
-          <tr class="${'first' if loop.first}">
+          <tr${{'class': 'first' if loop.first}|htmlattr}>
             <th>${block.base.offset + loop.index}</th><th>&nbsp;</th>{#
             #}<td class="l"><span>${line}</span></td>
           </tr>
           #         endfor
           ##       Then show the "new" lines
           #         for line in block.changed.lines:
-          <tr class="${'last' if loop.index == len(block.changed.lines)}">
+          <tr${{'class': 'last' if loop.index == len(block.changed.lines)
+               }|htmlattr}>
             <th>&nbsp;</th><th>${block.changed.offset + loop.index}</th>{#
             #}<td class="r"><span>${line}</span></td>
           </tr>
