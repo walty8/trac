@@ -11,11 +11,12 @@
 # individuals. For the exact contribution history, see the revision
 # history and logs, available at http://trac.edgewall.org/log/.
 
-# Note that a significant part of the code in this module was inspired
-# or simply copied from the Genshi project
-# (http://genshi.edgewall.org): escape utilities from genshi.core,
-# strip utilities from genshi.util, the tag builder API from
-# genshi.builder, and the HTMLSanitizer from genshi.filters.html.
+# Note that a significant part of the code in this module was taken
+# from the Genshi project (http://genshi.edgewall.org):
+#  - escape utilities from genshi.core,
+#  - strip utilities from genshi.util,
+#  - the tag builder API from genshi.builder,
+#  - the HTMLSanitizer from genshi.filters.html.
 
 from HTMLParser import HTMLParser
 from StringIO import StringIO
@@ -24,10 +25,17 @@ import re
 
 from markupsafe import Markup, escape as escape_quotes
 
-# Imports related to the legacy Genshi template engine should all go
-# through trac.html, e.g.
-#
-#   from trac.html import genshi, Stream
+"""Utilities for producing HTML content.
+
+Imports related to the legacy Genshi template engine should all go
+through this module:
+
+    from trac.util.html import genshi, Stream
+
+If Genshi is not installed, `genshi` and all related symbols will be
+`None`.
+
+"""
 
 try:
     import genshi
@@ -199,10 +207,12 @@ class Fragment(object):
         return Fragment(self, other)
 
     def append(self, arg):
-        if arg: # ignore None, False, [], (), ''
+        global genshi
+        if arg: # ignore most false values (None, False, [], (), ''), except 0!
             if isinstance(arg, (Fragment, basestring, int, float, long)):
                 self.children.append(arg)
             elif genshi and isinstance(arg, Stream):
+                # legacy support for Genshi streams
                 self.children.append(stream_to_unicode(arg))
             else:
                 # support iterators and generators
@@ -211,7 +221,7 @@ class Fragment(object):
                         self.append(elt)
                 except TypeError:
                     self.children.append(arg)
-        elif arg is 0: # but not 0!
+        elif arg is 0:
             self.children.append(u'0')
 
     def as_text(self):
@@ -220,7 +230,10 @@ class Fragment(object):
 
     if genshi:
         def __iter__(self):
-            """Genshi compatibility layer. Will be removed in Trac 1.5.1."""
+            """Genshi compatibility layer.
+
+            :deprecated: this will be removed before Trac 1.4
+            """
             yield TEXT, Markup(self), (None, -1, -1)
 
 
@@ -492,7 +505,7 @@ class TracHTMLSanitizer(object):
         """
         if tag not in self.safe_tags:
             return False
-        if hasattr(tag, 'localname'): # Genshi QName
+        if hasattr(tag, 'localname'): # in Genshi QName
             tag = tag.localname
         if tag == 'input':
             input_type = attrs.get('type', '').lower()
@@ -840,15 +853,11 @@ _invalid_control_chars = ''.join(chr(i) for i in range(32)
 def valid_html_bytes(bytes):
     return bytes.translate(_translate_nop, _invalid_control_chars)
 
-
 if genshi:
-    # Genshi compatibility - this code will be kept for as long as we
-    # still the Genshi template engine besides the Jinja2 one.
-
     def expand_markup(stream, ctxt=None):
         """A Genshi stream filter for expanding `genshi.Markup` events.
 
-        :deprecated:  not used in the current Trac code base
+        :deprecated: will be removed before Trac 1.4
 
         Note: Expansion may not be possible if the fragment is badly
         formed, or partial.
