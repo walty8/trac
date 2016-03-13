@@ -14,9 +14,6 @@
 import os
 import unittest
 
-from genshi.core import Stream
-from genshi.input import HTMLParser, XML
-
 from trac.mimeview.api import Mimeview
 from trac.mimeview.patch import PatchRenderer
 from trac.test import EnvironmentStub, Mock, MockPerm
