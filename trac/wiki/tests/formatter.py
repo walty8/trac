@@ -39,6 +39,16 @@ from trac.wiki.macros import WikiMacroBase
 from trac.wiki.model import WikiPage
 
 
+# WikiProcessor code block tests should always use PlainTextRenderer
+# and not the PygmentsRenderer, as the latter renders quotes as &quot;
+
+from trac.mimeview.api import PlainTextRenderer
+_old_ratio = PlainTextRenderer.get_quality_ratio
+def override_pygments(self, mimetype):
+    return (10 if mimetype == 'text/plain' else _old_ratio(self, mimetype))
+PlainTextRenderer.get_quality_ratio = override_pygments
+
+
 # We need to supply our own macro because the real macros
 # can not be loaded using our 'fake' environment.
 
