@@ -108,7 +108,7 @@
         <strong>${_("Trac detected an internal error:")}</strong>
         <pre>${message}</pre>
       </div>
-      #   if trac_error_rendering is defined and 'TRAC_ADMIN' not in perm:
+      #   if trac_error_rendering is undefined and 'TRAC_ADMIN' not in perm:
       <p>
         #   set trac_admin = _("Trac administrator")
         #   set project_admin
@@ -120,10 +120,9 @@
         #   endset
         #   trans project_admin = project_admin|safe
 
-        There was an internal error in Trac.
-        It is recommended that you notify your local
-        ${project_admin} with the information needed to
-        reproduce the issue.
+        There was an internal error in Trac.  It is recommended that
+        you notify your local ${project_admin} with the information
+        needed to reproduce the issue.
 
         #   endtrans
       </p>
@@ -152,9 +151,9 @@
         <p>
           #   trans create_a_ticket = create_ticket()
 
-          This is probably a local installation issue.
-          You should ${create_a_ticket} a ticket at the admin
-          Trac to report the issue.
+          This is probably a local installation issue.  You should
+          ${create_a_ticket} a ticket at the admin Trac to report the
+          issue.
 
           #   endtrans
         </p>
@@ -165,9 +164,8 @@
       <p>
         #   trans
 
-        If you think this should work and you can reproduce
-        the problem, you should consider creating a bug
-        report.
+        If you think this should work and you can reproduce the
+        problem, you should consider creating a bug report.
 
         #   endtrans
       </p>
@@ -214,8 +212,8 @@
         <p>
           # trans create = create_ticket(tracker)
 
-          Otherwise, please ${create} a new bug report
-          describing the problem and explain how to reproduce it.
+          Otherwise, please ${create} a new bug report describing the
+          problem and explain how to reproduce it.
 
           # endtrans
         </p>
