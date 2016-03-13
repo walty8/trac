@@ -16,9 +16,10 @@
 
 """Content presentation for the web layer.
 
-The Chrome module deals with delivering and shaping content to the end user,
-mostly targeting (X)HTML generation but not exclusively, RSS or other forms of
-web content are also using facilities provided here.
+The Chrome module deals with delivering and shaping content to the end
+user, mostly targeting (X)HTML generation but not exclusively, RSS or
+other forms of web content are also using facilities provided here.
+
 """
 
 import datetime
@@ -36,10 +37,11 @@ except ImportError:
 import time
 
 # Legacy Genshi support
-from genshi.core import Attrs, START
-from genshi.filters import Translator
-from genshi.output import DocType
-from genshi.template import TemplateLoader, MarkupTemplate, NewTextTemplate
+from trac.util.html import genshi, Attrs, START
+if genshi:
+    from genshi.filters import Translator
+    from genshi.output import DocType
+    from genshi.template import TemplateLoader, MarkupTemplate, NewTextTemplate
 
 from jinja2 import FileSystemLoader, TemplateNotFound
 
@@ -593,9 +595,6 @@ class Chrome(Component):
     templates = None
     jenv = None
 
-    # DocType for 'text/html' output
-    html_doctype = DocType.XHTML_STRICT
-
     # A dictionary of default context data for templates
     _default_context_data = {
         'all': all,
@@ -629,12 +628,15 @@ class Chrome(Component):
     # ISystemInfoProvider methods
 
     def get_system_info(self):
-        import genshi
-        info = get_pkginfo(genshi).get('version')
-        if hasattr(genshi, '_speedups'):
-            info += ' (with speedups)'
+        global genshi
+        if genshi:
+            info = get_pkginfo(genshi).get('version')
+            if hasattr(genshi, '_speedups'):
+                info += ' (with speedups)'
+            else:
+                info += ' (without speedups)'
         else:
-            info += ' (without speedups)'
+            info = '(not installed, some old plugins may not work as expected)'
         yield 'Genshi', info
         try:
             import babel
@@ -1051,29 +1053,7 @@ class Chrome(Component):
         d.update(data)
         return d
 
-    def load_template(self, filename, method=None):
-        """Retrieve a Template and optionally preset the template data.
-
-        Also, if the optional `method` argument is set to `'text'`, a
-        `NewTextTemplate` instance will be created instead of a
-        `MarkupTemplate`.
-        """
-        if not self.templates:
-            self.templates = TemplateLoader(
-                self.get_all_templates_dirs(), auto_reload=self.auto_reload,
-                max_cache_size=self.genshi_cache_size,
-                default_encoding="utf-8",
-                variable_lookup='lenient', callback=lambda template:
-                Translator(translation.get_translations()).setup(template))
-
-        if method == 'text':
-            cls = NewTextTemplate
-        else:
-            cls = MarkupTemplate
-        return self.templates.load(filename, cls=cls)
-
-
-    def load_jtemplate(self, filename, method='ignored'):
+    def load_jinja_template(self, filename, method='ignored'):
         """Retrieve a Jinja2 Template.
 
         Also responsible for initializing the Jinja2 main
@@ -1093,133 +1073,38 @@ class Chrome(Component):
                         fragment=False, iterable=False, method=None):
         """Render the `filename` using the `data` for the context.
 
-        The `content_type` argument is used to choose the kind of template
-        used (`NewTextTemplate` if `'text/plain'`, `MarkupTemplate`
-        otherwise), and tweak the rendering process. Doctype for `'text/html'`
-        can be specified by setting the `html_doctype` attribute (default
-        is `XHTML_STRICT`)
+        First attempts to load a Jinja2 template, then if not found, a
+        Genshi template. Only used during the transition period (Trac
+        1.3.x), but will be merged with `render_jinja_template` before
+        Trac 1.4.
 
-        The rendering `method` (xml, xhtml or text) may be specified and is
-        inferred from the `content_type` if not specified.
-
-        When `fragment` is specified, the (filtered) Genshi stream is
-        returned. See also `template_fragment`.
-
-        When `iterable` is specified, the content as an iterable instance
-        which is generated from filtered Genshi stream is returned.
         """
         try:
-            return self.jrender_template(req, filename, data, content_type,
-                                         fragment, iterable, method)
+            return self.render_jinja_template(req, filename, data, content_type,
+                                              fragment, iterable, method)
         except TemplateNotFound:
-            return self.grender_template(req, filename, data, content_type,
-                                         fragment, iterable, method)
-
-    def grender_template(self, req, filename, data, content_type=None,
-                         fragment=False, iterable=False, method=None):
-        """Legacy Genshi rendering (TODO: remove)"""
-        if content_type is None:
-            content_type = 'text/html'
-
-        if method is None:
-            method = {'text/html': 'xhtml',
-                      'text/plain': 'text'}.get(content_type, 'xml')
-
-        if method == "xhtml":
-            # Retrieve post-redirect messages saved in session
-            for type_ in ['warnings', 'notices']:
-                try:
-                    for i in itertools.count():
-                        message = Markup(req.session.pop('chrome.%s.%d'
-                                                         % (type_, i)))
-                        if message not in req.chrome[type_]:
-                            req.chrome[type_].append(message)
-                except KeyError:
-                    pass
-
-        template = self.load_template(filename, method=method)
-
-        # Populate data with request dependent data
-        data = self.populate_data(req, data)
-        data['chrome']['content_type'] = content_type
-        stream = None
-        stream = template.generate(**data)
-        # Filter through ITemplateStreamFilter plugins
-        if self.stream_filters:
-            stream |= self._filter_stream(req, method, filename, stream, data)
-        if fragment:
-            return stream
-
-        if method == 'text':
-            buffer = StringIO()
-            stream.render('text', out=buffer, encoding='utf-8')
-            return buffer.getvalue()
-
-        doctype = None
-        if content_type == 'text/html':
-            doctype = self.html_doctype
-            if req.form_token:
-                stream |= self._add_form_token(req.form_token)
-            if not int(req.session.get('accesskeys', 0)):
-                stream |= self._strip_accesskeys
-
-        links = req.chrome.get('links')
-        scripts = req.chrome.get('scripts')
-        script_data = req.chrome.get('script_data')
-        req.chrome.update({'early_links': links, 'early_scripts': scripts,
-                           'early_script_data': script_data,
-                           'links': {}, 'scripts': [], 'script_data': {}})
-        data.setdefault('chrome', {}).update({
-            'late_links': req.chrome['links'],
-            'late_scripts': req.chrome['scripts'],
-            'late_script_data': req.chrome['script_data'],
-        })
-
-        if iterable:
-            return self.iterable_content(stream, method, doctype=doctype)
-
-        try:
-            buffer = StringIO()
-            stream.render(method, doctype=doctype, out=buffer,
-                          encoding='utf-8')
-            return valid_html_bytes(buffer.getvalue())
-        except Exception as e:
-            # restore what may be needed by the error template
-            req.chrome.update({'early_links': None, 'early_scripts': None,
-                               'early_script_data': None, 'links': links,
-                               'scripts': scripts, 'script_data': script_data})
-            # give some hints when hitting a Genshi unicode error
-            if isinstance(e, UnicodeError):
-                pos = self._stream_location(stream)
-                if pos:
-                    location = "'%s', line %s, char %s" % pos
-                else:
-                    location = '%s %s' % (filename,
-                                          _("(unknown template location)"))
-                raise TracError(_("Genshi %(error)s error while rendering "
-                                  "template %(location)s",
-                                  error=e.__class__.__name__,
-                                  location=location))
+            if genshi:
+                return self.render_genshi_template(
+                    req, filename, data, content_type, fragment, iterable, method)
             raise
 
-    def jrender_template(self, req, filename, data, content_type=None,
-                         fragment=False, iterable=False, method=None):
+    def render_jinja_template(self, req, filename, data, content_type=None,
+                              fragment=False, iterable=False, method=None):
         """Render the `filename` using the `data` for the context.
 
-        The `content_type` argument is used to choose the kind of template
-        used (`NewTextTemplate` if `'text/plain'`, `MarkupTemplate`
-        otherwise), and tweak the rendering process. Doctype for `'text/html'`
-        can be specified by setting the `html_doctype` attribute (default
-        is `XHTML_STRICT`)
+        The `content_type` argument is not used, but simply passed on to the
+        templates (defaults to ``'text/html'``).
 
         The rendering `method` (xml, xhtml or text) may be specified and is
-        inferred from the `content_type` if not specified.
+        inferred from the `content_type` if not specified. And is mostly
+        redundant now with `content_type`.
 
-        When `fragment` is specified, the (filtered) Genshi stream is
-        returned. See also `template_fragment`.
+        When `fragment` is specified, or `method` is `'text'`, we
+        simply delegate the rendering to `generate_template_fragment`.
 
-        When `iterable` is specified, the content as an iterable instance
-        which is generated from filtered Genshi stream is returned.
+        When `iterable` is specified, the content is returned as an
+        iterable instance.
+
         """
         if content_type is None:
             content_type = 'text/html'
@@ -1243,7 +1128,7 @@ class Chrome(Component):
         if fragment or method == 'text':
             return self.generate_template_fragment(req, filename, data, method)
 
-        jtemplate = self.load_jtemplate('j' + filename)
+        jtemplate = self.load_jinja_template('j' + filename)
         # Populate data with request dependent data
         jdata = self.populate_data(req, data, {})
         jdata['chrome']['content_type'] = content_type
@@ -1288,7 +1173,7 @@ class Chrome(Component):
         (UTF-8 bytes or iterable, depending on `use_chunked_encoding`).
 
         """
-        jtemplate = self.load_jtemplate('j' + template)
+        jtemplate = self.load_jinja_template('j' + template)
         jdata = self.populate_data(req, data, {})
         if self.use_chunked_encoding:
             stream = jtemplate.stream(jdata)
@@ -1545,39 +1430,154 @@ class Chrome(Component):
         })
         add_script(req, 'common/js/jquery-ui-i18n.js')
 
-    # Template filters
+    # legacy Genshi support - will be removed before Trac 1.4
 
-    def _add_form_token(self, token):
-        from genshi.builder import tag as gtag
-        elem = gtag.div(
-            gtag.input(type='hidden', name='__FORM_TOKEN', value=token)
-        )
-        def _generate(stream, ctxt=None):
+    if genshi:
+        # DocType for 'text/html' output
+        html_doctype = DocType.XHTML_STRICT
+
+        def load_genshi_template(self, filename, method=None):
+            """Retrieve a Template and optionally preset the template data.
+
+            Also, if the optional `method` argument is set to
+            `'text'`, a `NewTextTemplate` instance will be created
+            instead of a `MarkupTemplate`.
+
+            """
+            if not self.templates:
+                self.templates = TemplateLoader(
+                    self.get_all_templates_dirs(), auto_reload=self.auto_reload,
+                    max_cache_size=self.genshi_cache_size,
+                    default_encoding="utf-8",
+                    variable_lookup='lenient', callback=lambda template:
+                    Translator(translation.get_translations()).setup(template))
+
+            if method == 'text':
+                cls = NewTextTemplate
+            else:
+                cls = MarkupTemplate
+            return self.templates.load(filename, cls=cls)
+
+        def render_genshi_template(self, req, filename, data, content_type=None,
+                                   fragment=False, iterable=False, method=None):
+            """Legacy Genshi rendering (TODO: remove)"""
+            if content_type is None:
+                content_type = 'text/html'
+
+            if method is None:
+                method = {'text/html': 'xhtml',
+                          'text/plain': 'text'}.get(content_type, 'xml')
+
+            if method == "xhtml":
+                # Retrieve post-redirect messages saved in session
+                for type_ in ['warnings', 'notices']:
+                    try:
+                        for i in itertools.count():
+                            message = Markup(req.session.pop('chrome.%s.%d'
+                                                             % (type_, i)))
+                            if message not in req.chrome[type_]:
+                                req.chrome[type_].append(message)
+                    except KeyError:
+                        pass
+
+            template = self.load_genshi_template(filename, method=method)
+
+            # Populate data with request dependent data
+            data = self.populate_data(req, data)
+            data['chrome']['content_type'] = content_type
+            stream = None
+            stream = template.generate(**data)
+            # Filter through ITemplateStreamFilter plugins
+            if self.stream_filters:
+                stream |= self._filter_stream(req, method, filename, stream, data)
+            if fragment:
+                return stream
+
+            if method == 'text':
+                buffer = StringIO()
+                stream.render('text', out=buffer, encoding='utf-8')
+                return buffer.getvalue()
+
+            doctype = None
+            if content_type == 'text/html':
+                doctype = self.html_doctype
+                if req.form_token:
+                    stream |= self._add_form_token(req.form_token)
+                if not int(req.session.get('accesskeys', 0)):
+                    stream |= self._strip_accesskeys
+
+            links = req.chrome.get('links')
+            scripts = req.chrome.get('scripts')
+            script_data = req.chrome.get('script_data')
+            req.chrome.update({'early_links': links, 'early_scripts': scripts,
+                               'early_script_data': script_data,
+                               'links': {}, 'scripts': [], 'script_data': {}})
+            data.setdefault('chrome', {}).update({
+                'late_links': req.chrome['links'],
+                'late_scripts': req.chrome['scripts'],
+                'late_script_data': req.chrome['script_data'],
+            })
+
+            if iterable:
+                return self.iterable_content(stream, method, doctype=doctype)
+
+            try:
+                buffer = StringIO()
+                stream.render(method, doctype=doctype, out=buffer,
+                              encoding='utf-8')
+                return valid_html_bytes(buffer.getvalue())
+            except Exception as e:
+                # restore what may be needed by the error template
+                req.chrome.update({'early_links': None, 'early_scripts': None,
+                                   'early_script_data': None, 'links': links,
+                                   'scripts': scripts, 'script_data': script_data})
+                # give some hints when hitting a Genshi unicode error
+                if isinstance(e, UnicodeError):
+                    pos = self._stream_location(stream)
+                    if pos:
+                        location = "'%s', line %s, char %s" % pos
+                    else:
+                        location = '%s %s' % (filename,
+                                              _("(unknown template location)"))
+                    raise TracError(_("Genshi %(error)s error while rendering "
+                                      "template %(location)s",
+                                      error=e.__class__.__name__,
+                                      location=location))
+                raise
+
+        # Genshi Template filters
+
+        def _add_form_token(self, token):
+            from genshi.builder import tag as gtag
+            elem = gtag.div(
+                gtag.input(type='hidden', name='__FORM_TOKEN', value=token)
+            )
+            def _generate(stream, ctxt=None):
+                for kind, data, pos in stream:
+                    if kind is START and data[0].localname == 'form' \
+                            and data[1].get('method', '').lower() == 'post':
+                        yield kind, data, pos
+                        for event in elem.generate():
+                            yield event
+                    else:
+                        yield kind, data, pos
+            return _generate
+
+        def _strip_accesskeys(self, stream, ctxt=None):
             for kind, data, pos in stream:
-                if kind is START and data[0].localname == 'form' \
-                        and data[1].get('method', '').lower() == 'post':
-                    yield kind, data, pos
-                    for event in elem.generate():
-                        yield event
-                else:
-                    yield kind, data, pos
-        return _generate
+                if kind is START and 'accesskey' in data[1]:
+                    data = data[0], Attrs([(k, v) for k, v in data[1]
+                                           if k != 'accesskey'])
+                yield kind, data, pos
 
-    def _strip_accesskeys(self, stream, ctxt=None):
-        for kind, data, pos in stream:
-            if kind is START and 'accesskey' in data[1]:
-                data = data[0], Attrs([(k, v) for k, v in data[1]
-                                       if k != 'accesskey'])
-            yield kind, data, pos
+        def _filter_stream(self, req, method, filename, stream, data):
+            def inner(stream, ctxt=None):
+                for filter in self.stream_filters:
+                    stream = filter.filter_stream(req, method, filename, stream,
+                                                  data)
+                return stream
+            return inner
 
-    def _filter_stream(self, req, method, filename, stream, data):
-        def inner(stream, ctxt=None):
-            for filter in self.stream_filters:
-                stream = filter.filter_stream(req, method, filename, stream,
-                                              data)
-            return stream
-        return inner
-
-    def _stream_location(self, stream):
-        for kind, data, pos in stream:
-            return pos
+        def _stream_location(self, stream):
+            for kind, data, pos in stream:
+                return pos
