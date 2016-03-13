@@ -299,8 +299,8 @@ class SetOwnerAttributeTestCase(unittest.TestCase):
         self.req = Mock(authname='user1', args={},
                         perm=PermissionCache(self.env, 'user0'))
         self.expected = """\
-to <select name="action_reassign_reassign_owner" \
-id="action_reassign_reassign_owner"><option selected="True" \
+to <select id="action_reassign_reassign_owner" \
+name="action_reassign_reassign_owner"><option selected="True" \
 value="user1">user1</option><option value="user2">user2</option>\
 <option value="user3">user3</option></select>"""
 
