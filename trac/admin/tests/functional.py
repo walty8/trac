@@ -161,7 +161,7 @@ class TestLoggingNone(FunctionalTwillTestCaseSetup):
         tc.find('trac.log')
         tc.formvalue('modlog', 'log_type', 'none')
         tc.submit()
-        tc.find('selected="selected">None</option')
+        tc.find('selected="selected" value="none">None</option')
 
 
 class TestLoggingAuthorization(AuthorizationTestCaseSetup):
@@ -181,7 +181,7 @@ class TestLoggingToFile(FunctionalTwillTestCaseSetup):
         tc.formvalue('modlog', 'log_file', 'trac.log2')
         tc.formvalue('modlog', 'log_level', 'INFO')
         tc.submit()
-        tc.find('selected="selected">File</option')
+        tc.find('selected="selected" value="file">File</option')
         tc.find('id="log_file".*value="trac.log2"')
         tc.find('selected="selected">INFO</option>')
 
@@ -195,7 +195,7 @@ class TestLoggingToFileNormal(FunctionalTwillTestCaseSetup):
         tc.formvalue('modlog', 'log_file', 'trac.log')
         tc.formvalue('modlog', 'log_level', 'DEBUG')
         tc.submit()
-        tc.find('selected="selected">File</option')
+        tc.find('selected="selected" value="file">File</option')
         tc.find('id="log_file".*value="trac.log"')
         tc.find('selected="selected">DEBUG</option>')
 
@@ -249,7 +249,7 @@ class TestAddUserToGroup(FunctionalTwillTestCaseSetup):
             tc.find("The subject someuser was not added to the "
                     "group authenticated because the group has "
                     "TICKET_CHGPROP permission and users cannot "
-                    "grant permissions they don't possess.")
+                    "grant permissions they don&#39;t possess.")
         finally:
             self._tester.login('admin')
             self._tester.go_to_admin("Permissions")

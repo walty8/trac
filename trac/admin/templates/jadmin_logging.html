@@ -47,11 +47,10 @@
           <label>${_("Type:")}<br />
             <select id="log_type" name="log_type">
               # for type in log.types:
-              <option ${{
-                      'value': type.name,
-                      'selected': type.selected,
-                      'disabled': type.disabled
-                      }|htmlattr}>${type.label}</option>
+              <option${{'value': type.name,
+                        'selected': type.selected,
+                        'disabled': type.disabled
+                       }|htmlattr}>${type.label}</option>
               # endfor
             </select>
           </label>
@@ -60,7 +59,7 @@
           <label>${_("Log level:")}<br />
             <select id="log_level" name="log_level">
               # for level in log.levels:
-              <option ${{'selected': level==log.level}|htmlattr}>${
+              <option${{'selected': level==log.level}|htmlattr}>${
                 level}</option>
               # endfor
             </select>
@@ -68,8 +67,8 @@
         </div>
         <div class="field">
           <label>${_("Log file:")}<br />
-            <input type="text" id="log_file" name="log_file" size="48"
-                   value="${log.file}" />
+            <input type="text" id="log_file" name="log_file" value="${log.file}"
+		   size="48"/>
           </label>
           <p class="help">
             # trans dir = log.dir
