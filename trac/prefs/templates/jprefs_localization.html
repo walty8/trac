@@ -28,18 +28,16 @@
         <th><label for="language">${_("Language:")}</label></th>
         <td>
           # set session_language = session.get('language', '').replace('-', '_')
-          <select id="language" name="language"
-                  ${{
-                  'disabled': not languages,
-                  'title': _('Translations are currently unavailable')
-                  if not languages
-                  }|htmlattr}>
+          <select id="language" name="language"${
+                {'disabled': not languages,
+                 'title': _('Translations are currently unavailable')
+                          if not languages
+                }|htmlattr}>
             <option value="">${_("Default language")}</option>
             # for locale, language in languages:
-            <option ${{
-                    'value': locale,
-                    'selected': session_language == locale}|htmlattr}
-                    >${language}</option>
+            <option${{'value': locale,
+                      'selected': session_language == locale
+                     }|htmlattr}>${language}</option>
             # endfor
           </select>
           # if 'TRAC_ADMIN' in req.perm:
@@ -116,13 +114,12 @@
         <td><select id="tz" name="tz">
           <option value="">${_("Default time zone")}</option>
           # for tzname in timezones:
-          <option value="${tzname}"
-                  ## FIXME is not none?
-                  ${{'selected':
-                  session_tzname != None and
-                  session_tzname.startswith('Etc/') and
-                  selected_tz == timezone(tzname) or
-                  session_tzname == tzname}|htmlattr}>${tzname}</option>
+          <option${{'value': tzname,
+                    'selected': session_tzname is not none and
+                                session_tzname.startswith('Etc/') and
+                                selected_tz == timezone(tzname) or
+                                session_tzname == tzname
+                   }|htmlattr}>${tzname}</option>
           # endfor
         </select></td>
       </tr>
@@ -181,13 +178,13 @@
         <td><select id="lc_time" name="lc_time">
           <option value="">${_("Default date format")}</option>
           # if locales and languages:
-          <option value="locale"
-                  ${{'selected': session_lc_time == 'locale'}|htmlattr}>${
-            _("Your language setting")}</option>
+          <option value="locale"${
+                {'selected': session_lc_time == 'locale'
+                }|htmlattr}>${_("Your language setting")}</option>
           # endif
-          <option value="iso8601"
-                  ${{'selected': session_lc_time == 'iso8601'}|htmlattr}>${
-            _("ISO 8601 format")}</option>
+          <option value="iso8601"${
+                {'selected': session_lc_time == 'iso8601'
+                }|htmlattr}>${_("ISO 8601 format")}</option>
         </select></td>
       </tr>
       <tr>
@@ -209,12 +206,12 @@
         <th><label for="dateinfo">${_("Time format:")}</label></th>
         <td><select id="dateinfo" name="dateinfo">
             <option value="">${_("Default format")}</option>
-            <option value="relative"
-                    ${{'selected': session_dateinfo == 'relative'}|htmlattr}>${
-              _("Relative format")}</option>
-            <option value="absolute"
-                    ${{'selected': session_dateinfo == 'absolute'}|htmlattr}>${
-              _("Absolute format")}</option>
+            <option value="relative"${
+                  {'selected': session_dateinfo == 'relative'
+                  }|htmlattr}>${_("Relative format")}</option>
+            <option value="absolute"${
+                  {'selected': session_dateinfo == 'absolute'
+                  }|htmlattr}>${_("Absolute format")}</option>
         </select></td>
       </tr>
       <tr>

@@ -43,10 +43,9 @@
 
       <ul id="tabs">
         # for name, label in panels:
-        <li ${{
-            'id': ('tab_%s' % name) if name,
-            'class': 'active' if name == active_panel,
-            }|htmlattr}>
+        <li${{'id': ('tab_%s' % name) if name,
+              'class': 'active' if name == active_panel,
+             }|htmlattr}>
           # if name == active_panel:
           ${label}
           # else:

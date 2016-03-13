@@ -23,8 +23,8 @@
     <div class="field">
       <input type="hidden" name="accesskeys_cb" value="" />
       <label>
-        <input type="checkbox" name="accesskeys" value="1"
-               ${{'checked': session.get('accesskeys')}|htmlattr}/>
+        <input type="checkbox" name="accesskeys" value="1"${
+             {'checked': session.get('accesskeys')}|htmlattr}/>
         ${_("Enable access keys")}
       </label>
       <p class="hint">
