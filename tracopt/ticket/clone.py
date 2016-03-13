@@ -11,8 +11,6 @@
 # individuals. For the exact contribution history, see the revision
 # history and logs, available at http://trac.edgewall.org/log/.
 
-from genshi.filters import Transformer
-
 from trac.core import Component, implements
 from trac.util.html import tag
 from trac.util.presentation import captioned_button

@@ -11,9 +11,6 @@
 # individuals. For the exact contribution history, see the revision
 # history and logs, available at http://trac.edgewall.org/log/.
 
-from genshi.filters import Transformer
-from genshi.filters.transform import StreamBuffer
-
 from trac.attachment import Attachment
 from trac.core import Component, TracError, implements
 from trac.ticket.model import Ticket
