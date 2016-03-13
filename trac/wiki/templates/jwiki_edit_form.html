@@ -12,7 +12,7 @@ history and logs, available at http://trac.edgewall.org/.
 # import "jmacros.html" as jmacros with context
 
 <form id="edit" class="mod" action="${href.wiki(page.name)}" method="post">
-  <fieldset ${{'class': classes(sidebyside=sidebyside)}|htmlattr}>
+  <fieldset${{'class': classes(sidebyside=sidebyside)}|htmlattr}>
     ${jmacros.form_token_input()}
     <input type="hidden" name="from_editor" value="1" />
     <input type="hidden" name="action" value="edit" />
@@ -24,10 +24,9 @@ history and logs, available at http://trac.edgewall.org/.
       <label for="editrows">${_("Adjust edit area height:")}</label>
       <select size="1" name="editrows" id="editrows" tabindex="43">
         # for rows in range(8, 42, 4):
-        <option value="${rows}"
-                ${{'selected': to_unicode(rows) == edit_rows}|htmlattr}>
-          ${rows}
-        </option>
+        <option${{'value': rows,
+                  'selected': to_unicode(rows) == edit_rows
+                 }|htmlattr}>${rows}</option>
         # endfor
       </select>
       # endif
@@ -36,8 +35,8 @@ history and logs, available at http://trac.edgewall.org/.
                          enters a two-column [edit|preview] mode")}">
         ${_("Edit side-by-side")}
       </label>
-      <input type="checkbox" name="sidebyside" id="sidebyside"
-             ${{'checked': sidebyside}|htmlattr} />
+      <input type="checkbox" name="sidebyside" id="sidebyside" ${
+           {'checked': sidebyside}|htmlattr}/>
     </div>
     <p><textarea id="text"
                  class="${classes('wikitext', 'trac-autofocus',
@@ -89,8 +88,8 @@ ${page.text}</textarea>
     </div>
     # if show_readonly_checkbox and 'WIKI_ADMIN' in perm(page.resource):
     <div id="changeinfo2" class="options">
-      <label><input type="checkbox" name="readonly" id="readonly"
-                    ${{'checked': page.readonly}|htmlattr}/>
+      <label><input type="checkbox" name="readonly" id="readonly"${
+		  {'checked': page.readonly}|htmlattr}/>
         ${_("Page is read-only")}
       </label>
     </div>

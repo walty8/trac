@@ -19,10 +19,10 @@
 <form method="get" action="${alist.attach_href}" id="attachfile">
   <div>
     <input type="hidden" name="action" value="new" />
-    <input type="submit" id="attachfilebutton"
-           value="${add_button_title or
+    <input type="submit" id="attachfilebutton" value="${
+                  add_button_title or
                   (_("Attach another file") if alist.attachments else
-                  _("Attach file"))}"/>
+                   _("Attach file"))}"/>
   </div>
 </form>
 # endif
