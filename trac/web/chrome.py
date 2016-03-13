@@ -1066,6 +1066,7 @@ class Chrome(Component):
             )
             self.jenv.globals.update(self._default_context_data.copy())
             self.jenv.globals.update(translation.functions)
+            self.jenv.globals.update(unicode=to_unicode)
             presentation.jinja2_update(self.jenv)
         return self.jenv.get_template(filename)
 
