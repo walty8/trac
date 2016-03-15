@@ -908,21 +908,7 @@ class Chrome(Component):
             logo = {'link': self.logo_link, 'alt': self.logo_alt}
         return logo
 
-    def populate_data(self, req, data, base=None):
-        d = base
-        if d is None: # Genshi
-            d = self._default_context_data.copy()
-            d.update({
-                'classes': presentation.classes,
-                'first_last': presentation.first_last,
-                'group': presentation.group,
-                'istext': presentation.istext,
-                'paginate': presentation.paginate,
-                'separated': presentation.separated,
-                'styles': presentation.styles,
-                'to_json': presentation.to_json,
-            })
-            d.update(translation.functions)
+    def populate_data(self, req, data, d):
         d['trac'] = {
             'version': self.env.trac_version,
             'homepage': 'http://trac.edgewall.org/',  # FIXME: use setup data
@@ -1459,6 +1445,27 @@ class Chrome(Component):
                 cls = MarkupTemplate
             return self.templates.load(filename, cls=cls)
 
+        def get_genshi_data(self):
+            def classes(*args, **kwargs):
+                s = presentation.classes(*args, **kwargs)
+                return s or None
+            def styles(*args, **kwargs):
+                s = presentation.styles(*args, **kwargs)
+                return s or None
+            d = self._default_context_data.copy()
+            d.update({
+                'classes': classes,
+                'first_last': presentation.first_last,
+                'group': presentation.group,
+                'istext': presentation.istext,
+                'paginate': presentation.paginate,
+                'separated': presentation.separated,
+                'styles': styles,
+                'to_json': presentation.to_json,
+            })
+            d.update(translation.functions)
+            return d
+
         def render_genshi_template(self, req, filename, data, content_type=None,
                                    fragment=False, iterable=False, method=None):
             """Legacy Genshi rendering (TODO: remove)"""
@@ -1484,7 +1491,7 @@ class Chrome(Component):
             template = self.load_genshi_template(filename, method=method)
 
             # Populate data with request dependent data
-            data = self.populate_data(req, data)
+            data = self.populate_data(req, data, self.get_genshi_data())
             data['chrome']['content_type'] = content_type
             stream = None
             stream = template.generate(**data)
