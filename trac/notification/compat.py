@@ -47,7 +47,9 @@ class Notify(object):
                                                               method='text')
         # FIXME: actually, we would need a different
         #        PermissionCache for each recipient
-        self.data = Chrome(self.env).populate_data(None, {'CRLF': CRLF})
+        chrome = Chrome(self.env)
+        self.data = chrome.populate_data(None, {'CRLF': CRLF},
+                                         chrome.get_genshi_data())
 
     def notify(self, resid):
         torcpts, ccrcpts = self.get_recipients(resid)

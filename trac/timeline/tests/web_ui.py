@@ -42,12 +42,14 @@ class PrettyDateinfoTestCase(unittest.TestCase):
         self.env.reset_db()
 
     def _format_chrome(self, d, format, dateonly):
-        data = Chrome(self.env).populate_data(self.req, {})
+        chrome = Chrome(self.env)
+        data = chrome.populate_data(self.req, {}, chrome.get_genshi_data())
         return plaintext(data['pretty_dateinfo'](d, format=format,
                                                  dateonly=dateonly))
 
     def _format_timeline(self, d, format, dateonly):
-        data = Chrome(self.env).populate_data(self.req, {})
+        chrome = Chrome(self.env)
+        data = chrome.populate_data(self.req, {}, chrome.get_genshi_data())
         TimelineModule(self.env) \
             .post_process_request(self.req, 'timeline.html', data, None)
         return plaintext(data['pretty_dateinfo'](d, format=format,
