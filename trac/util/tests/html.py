@@ -19,10 +19,25 @@ import trac.tests.compat
 from trac.core import TracError
 from trac.util import html
 from trac.util.html import (
-    HTML, Element, FormTokenInjector, Fragment, TracHTMLSanitizer,
-    genshi, find_element, to_fragment, tag
+    Element, FormTokenInjector, Fragment, HTML, Markup, TracHTMLSanitizer,
+    escape, find_element, genshi, tag, to_fragment
 )
 from trac.util.translation import gettext, tgettext
+
+class EscapeFragmentTestCase(unittest.TestCase):
+    def test_escape_element(self):
+        self.assertEqual(Markup(u'<b class="em&#34;ph&#34;">"1 &lt; 2"</b>'),
+                         escape(tag.b('"1 < 2"', class_='em"ph"')))
+        self.assertEqual(Markup(u'<b class="em&#34;ph&#34;">"1 &lt; 2"</b>'),
+                         escape(tag.b('"1 < 2"', class_='em"ph"'),
+                                quotes=False))
+
+    def test_escape_fragment(self):
+        self.assertEqual(Markup(u'<b class="em&#34;ph&#34;">"1 &lt; 2"</b>'),
+                         escape(tag(tag.b('"1 < 2"', class_='em"ph"'))))
+        self.assertEqual(Markup(u'<b class="em&#34;ph&#34;">"1 &lt; 2"</b>'),
+                         escape(tag(tag.b('"1 < 2"', class_='em"ph"')),
+                                    quotes=False))
 
 
 class FormTokenInjectorTestCase(unittest.TestCase):
@@ -285,6 +300,7 @@ class ToFragmentTestCase(unittest.TestCase):
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(doctest.DocTestSuite(html))
+    suite.addTest(unittest.makeSuite(EscapeFragmentTestCase))
     suite.addTest(unittest.makeSuite(FormTokenInjectorTestCase))
     suite.addTest(unittest.makeSuite(TracHTMLSanitizerTestCase))
     if genshi:

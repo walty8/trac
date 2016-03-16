@@ -66,8 +66,16 @@ def escape(str, quotes=True):
     """Create a Markup instance from a string and escape special characters
     it may contain (<, >, & and \").
 
+    :param text: the string to escape; if not a string, it is assumed that
+                 the input can be converted to a string
+    :param quotes: if ``True``, double quote characters are escaped in
+                   addition to the other special characters
+
     >>> escape('"1 < 2"')
     Markup(u'&#34;1 &lt; 2&#34;')
+
+    >>> escape(['"1 < 2"'])
+    Markup(u"['&#34;1 &lt; 2&#34;']")
 
     If the `quotes` parameter is set to `False`, the \" character is left
     as is. Escaping quotes is generally only required for strings that are
@@ -76,12 +84,33 @@ def escape(str, quotes=True):
     >>> escape('"1 < 2"', quotes=False)
     Markup(u'"1 &lt; 2"')
 
-    :param text: the text to escape
-    :param quotes: if ``True``, double quote characters are escaped in
-                   addition to the other special characters
+    >>> escape(['"1 < 2"'], quotes=False)
+    Markup(u'[\\'"1 &lt; 2"\\']')
+
+    However, `escape` behaves slightly differently with `Markup` and
+    `Fragment` behave instances, as they are passed through
+    unmodified.
+
+    >>> escape(Markup('"1 < 2 &#39;"'))
+    Markup(u'"1 < 2 &#39;"')
+
+    >>> escape(Markup('"1 < 2 &#39;"'), quotes=False)
+    Markup(u'"1 < 2 &#39;"')
+
+    >>> escape(tag.b('"1 < 2"'))
+    Markup(u'<b>"1 &lt; 2"</b>')
+
+    >>> escape(tag.b('"1 < 2"'), quotes=False)
+    Markup(u'<b>"1 &lt; 2"</b>')
+
     :return: the escaped `Markup` string
     :rtype: `Markup`
+
     """
+    if isinstance(str, Markup):
+        return str
+    if isinstance(str, Fragment):
+        return Markup(str)
     e = escape_quotes(str)
     if quotes:
         if '&#39;' not in e:
@@ -292,9 +321,6 @@ class Element(Fragment):
         else:
             elt += u' />'
         return elt
-
-    def __html__(self):
-        return Markup(unicode(self))
 
 
 class ElementFactory(object):
