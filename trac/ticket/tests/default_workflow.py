@@ -300,7 +300,7 @@ class SetOwnerAttributeTestCase(unittest.TestCase):
                         perm=PermissionCache(self.env, 'user0'))
         self.expected = """\
 to <select id="action_reassign_reassign_owner" \
-name="action_reassign_reassign_owner"><option selected="True" \
+name="action_reassign_reassign_owner"><option selected="selected" \
 value="user1">user1</option><option value="user2">user2</option>\
 <option value="user3">user3</option></select>"""
 

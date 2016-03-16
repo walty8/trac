@@ -29,7 +29,7 @@ from jinja2._compat import iteritems
 
 from trac.core import TracError
 from .datefmt import to_utimestamp
-from .html import Fragment
+from .html import Fragment, html_attribute
 from .text import javascript_quote
 
 __all__ = ['captioned_button', 'classes', 'first_last', 'group', 'istext',
@@ -69,22 +69,6 @@ def jinja2_update(jenv):
         styles=styles,
         to_json=to_json,
     )
-
-
-NO_YES = ('no', 'yes')
-OFF_ON = ('off', 'on')
-FALSE_TRUE = ('false', 'true')
-
-HTML_ATTRS = dict(
-    async=None, autofocus=None, autoplay=None, checked=None, controls=None,
-    default=None, defer=None, disabled=None, formnovalidate=None, hidden=None,
-    ismap=None, loop=None, multiple=None, muted=None, novalidate=None,
-    open=None, readonly=None, required=None, reversed=None, scoped=None,
-    seamless=None, selected=None,
-    contenteditable=FALSE_TRUE, draggable=FALSE_TRUE, spellcheck=FALSE_TRUE,
-    translate=NO_YES,
-    autocomplete=OFF_ON,
-)
 
 
 # -- Jinja2 custom filters
@@ -150,14 +134,11 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
                 val = styles(*val) or None
             else:
                 val = styles(val) or None
-        elif key in HTML_ATTRS:
-            values = HTML_ATTRS[key]
-            if values is None:
-                val = key if val else None
-            else:
-                val = values[bool(val)]
+        else:
+            val = html_attribute(key, val)
         if val is not None and not isinstance(val, Undefined):
-            attrs.append(u'%s="%s"' % (escape_quotes(key), escape_quotes(val)))
+            attrs.append(u'%s="%s"' % (escape_quotes(key),
+                                       escape_quotes(val)))
     rv = u' '.join(attrs)
     if autospace and rv:
         rv = u' ' + rv

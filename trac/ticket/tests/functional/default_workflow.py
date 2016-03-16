@@ -66,7 +66,7 @@ class SetOwnerOperation(FunctionalTwillTestCaseSetup):
             self._tester.go_to_ticket(ticket_id)
             tc.find('The owner will be changed from '
                     '<span class="trac-author">lammy</span>')
-            tc.notfind('<option value="anonymous" selected="selected">'
+            tc.notfind('<option selected="selected" value="anonymous">'
                        'anonymous</option>')
 
         finally:

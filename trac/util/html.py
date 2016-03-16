@@ -213,6 +213,44 @@ def striptags(text):
 
 # -- Simplified genshi.builder API
 
+
+NO_YES = ('no', 'yes')
+OFF_ON = ('off', 'on')
+FALSE_TRUE = ('false', 'true')
+
+HTML_ATTRS = dict(
+    async=None, autofocus=None, autoplay=None, checked=None, controls=None,
+    default=None, defer=None, disabled=None, formnovalidate=None, hidden=None,
+    ismap=None, loop=None, multiple=None, muted=None, novalidate=None,
+    open=None, readonly=None, required=None, reversed=None, scoped=None,
+    seamless=None, selected=None,
+    contenteditable=FALSE_TRUE, draggable=FALSE_TRUE, spellcheck=FALSE_TRUE,
+    translate=NO_YES,
+    autocomplete=OFF_ON,
+)
+
+def html_attribute(key, val):
+    """Returns the actual value for the attribute ``key``, for the given
+    ``value``.
+
+    This follows the rules described in the HTML5_ spec (Double-quoted
+    attribute value syntax).
+
+    .. _HTML5: https://www.w3.org/TR/html-markup/global-attributes.html#global-attributes
+
+    """
+    try:
+        values = HTML_ATTRS[key]
+        if values is None:
+            val = key if val else None
+        else:
+            val = values[bool(val)]
+        if val is not None:
+            return val
+    except KeyError:
+        return val
+
+
 class Fragment(object):
     """A fragment represents a sequence of strings or elements."""
 
@@ -311,11 +349,14 @@ class Element(Fragment):
     def __unicode__(self):
         elt = u'<' + self.tag
         if self.attrib:
-            #elt += u''.join(' %s="%s"' % kv for kv in self.attrib.iteritems())
-            # Note that sorting the attrs somehow reduces the impact on the
-            # unit-tests, so we do that for now
-            elt += u''.join(' %s="%s"' % (k, self.attrib[k])
-                            for k in sorted(self.attrib.keys()))
+            # Sorting the attributes makes the unit-tests more robust
+            attrs = []
+            for k in sorted(self.attrib.keys()):
+                v = html_attribute(k, self.attrib[k])
+                if v:
+                    attrs.append(' %s="%s"' % (k, v))
+            if attrs:
+                elt += u''.join(attrs)
         if self.children or self.tag not in self.VOID_ELEMENTS:
             elt += u'>' + Fragment.__unicode__(self) + u'</' + self.tag + u'>'
         else:
