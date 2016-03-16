@@ -108,10 +108,12 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
 
     .. sourcecode:: html+jinja
 
-        <ul{{ {'class': {'my': 1, 'list': True, 'empty': False},
-               'missing': none, 'checked': 1, 'selected': False,
-               'autocomplete': True, 'id': 'list-%d'|format(variable)
-              }|htmlattr }}>
+        <ul${{'class': {'my': 1, 'list': True, 'empty': False},
+              'missing': none, 'checked': 1, 'selected': False,
+              'autocomplete': True, 'id': 'list-%d'|format(variable),
+              'style': {'border-radius': '3px' if rounded,
+                        'background': '#f7f7f7'}
+             }|htmlattr}>
         ...
         </ul>
 
@@ -119,8 +121,8 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
 
     .. sourcecode:: html
 
-        <ul class="my list" id="list-42" checked="checked" selected=""
-            autocomplete="on">
+        <ul class="my list" id="list-42" checked="checked" autocomplete="on"
+            style="border-radius: 3px; background: #f7f7f7">
         ...
         </ul>
 
@@ -146,6 +148,8 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
         elif key == 'style':
             if isinstance(val, list):
                 val = styles(*val) or None
+            else:
+                val = styles(val) or None
         elif key in HTML_ATTRS:
             values = HTML_ATTRS[key]
             if values is None:
@@ -153,8 +157,7 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
             else:
                 val = values[bool(val)]
         if val is not None and not isinstance(val, Undefined):
-            val = escape_quotes(val)
-            attrs.append(u'%s="%s"' % (escape_quotes(key), val))
+            attrs.append(u'%s="%s"' % (escape_quotes(key), escape_quotes(val)))
     rv = u' '.join(attrs)
     if autospace and rv:
         rv = u' ' + rv
