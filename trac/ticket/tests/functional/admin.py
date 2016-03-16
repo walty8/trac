@@ -24,6 +24,7 @@ from trac.tests.functional import FunctionalTwillTestCaseSetup, b, \
                                   internal_error, tc
 from trac.util.datefmt import datetime_now, format_date, format_datetime, \
                               localtz, utc
+from trac.util.html import escape
 
 
 class AdminEnumDefaultTestCaseSetup(FunctionalTwillTestCaseSetup):
@@ -693,7 +694,7 @@ class TestAdminResolutionDuplicates(FunctionalTwillTestCaseSetup):
         name = "DuplicateResolution"
         self._tester.create_resolution(name)
         self._tester.create_resolution(name)
-        tc.find('Resolution value "%s" already exists' % name)
+        tc.find(escape('Resolution value "%s" already exists' % name))
 
 
 class TestAdminResolutionDefault(AdminEnumDefaultTestCaseSetup):
@@ -723,7 +724,7 @@ class TestAdminSeverityDuplicates(FunctionalTwillTestCaseSetup):
         name = "DuplicateSeverity"
         self._tester.create_severity(name)
         self._tester.create_severity(name)
-        tc.find('Severity value "%s" already exists' % name)
+        tc.find(escape('Severity value "%s" already exists' % name))
 
 
 class TestAdminSeverityDefault(AdminEnumDefaultTestCaseSetup):
@@ -753,7 +754,7 @@ class TestAdminTypeDuplicates(FunctionalTwillTestCaseSetup):
         name = "DuplicateType"
         self._tester.create_type(name)
         self._tester.create_type(name)
-        tc.find('Type value "%s" already exists' % name)
+        tc.find(escape('Type value "%s" already exists' % name))
 
 
 class TestAdminTypeDefault(AdminEnumDefaultTestCaseSetup):
@@ -787,7 +788,7 @@ class TestAdminVersionDuplicates(FunctionalTwillTestCaseSetup):
         tc.formvalue('addversion', 'name', name)
         tc.submit()
         tc.notfind(internal_error)
-        tc.find('Version "%s" already exists.' % name)
+        tc.find(escape('Version "%s" already exists.' % name))
 
 
 class TestAdminVersionDetail(FunctionalTwillTestCaseSetup):

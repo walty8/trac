@@ -65,8 +65,8 @@ history and logs, available at http://trac.edgewall.org/.
                   <tr>
                     <th scope="row"><label>${name}</label></th>
                     <td class="filter">
-                      <input type="text" name="${name}"
-                             ${{'value': value}|htmlattr} size="42" />
+                      <input type="text" size="42"${
+                           {'name': name, 'value': value}|htmlattr}/>
                     </td>
                   </tr>
                 </tbody>
@@ -152,11 +152,10 @@ history and logs, available at http://trac.edgewall.org/.
           #     for header_group in header_groups:
           <tr class="trac-columns">
             #     for header in header_group if not header.hidden:
-            <th ${{
-                'colspan': '100' if loop.last,
-                'class': 'asc' if header.asc else 'desc' if
-                header.asc is not none
-                }|htmlattr}>
+            <th${{'colspan': '100' if loop.last,
+                  'class': 'asc' if header.asc else
+                           'desc' if header.asc is not none
+                 }|htmlattr}>
               <a href="${report_href(sort=header.col, asc=not header.asc)}">
                 ${header.title}
               </a>
@@ -185,24 +184,23 @@ history and logs, available at http://trac.edgewall.org/.
           #   for cell_group in row.cell_groups:
           #     set fullrow = len(cell_group) == 1
           #     set td_attrs = {'class': 'fullrow', 'colspan': 100} if fullrow else {}
-          <tr ${{
-              'class': [
-              ('color' + row.__color__ + '-' if '__color__' in row else '') +
-              ('odd' if row.__idx__ % 2 else 'even'),
-              row.__class__ if '__class__' in row
-              ],
-              'style': styles(
-              row.__style__ if '__style__' in row,
-              'border: none; padding: 0' if fullrow,
-              background=row.__bgcolor__ if '__bgcolor__' in row,
-              color=row.__fgcolor__ if '__fgcolor__' in row
-              )}|htmlattr}>
+          <tr${{'class': [
+                ('color' + row.__color__ + '-' if '__color__' in row else '') +
+                 ('odd' if row.__idx__ % 2 else 'even'),
+                row.__class__ if '__class__' in row
+                ],
+                'style':
+                   styles(row.__style__ if '__style__' in row,
+                          'border: none; padding: 0' if fullrow,
+                          background=row.__bgcolor__ if '__bgcolor__' in row,
+                          color=row.__fgcolor__ if '__fgcolor__' in row)
+               }|htmlattr}>
 
             #   for cell in cell_group:
             #     if not cell.header.hidden:
             #       set col = cell.header.col.strip('_')
             #       if col == 'report':
-            <td class="${col}" ${td_attrs|htmlattr}>
+            <td class="${col}"${td_attrs|htmlattr}>
               <a title="${_("View report")}"
                  href="${href.report(cell.value)}">{${cell.value}}</a>
               {% if fullrow %}<hr />{% endif %}
@@ -210,7 +208,8 @@ history and logs, available at http://trac.edgewall.org/.
             #       elif col in ('ticket', 'id'):
             <td class="ticket" ${td_attrs|htmlattr}>
               <a title="${_("View %(realm)s", realm=row.resource.realm)}"
-                 href="${url_of(row.resource)}">${shortname_of(row.resource)}</a>
+                 href="${url_of(row.resource)}">${
+                shortname_of(row.resource)}</a>
               {% if fullrow %}<hr />{% endif %}
             </td>
             #       elif col == 'summary' and row.id:
@@ -237,8 +236,9 @@ history and logs, available at http://trac.edgewall.org/.
 
             #       elif col == 'datetime':
             <td class="date" ${td_attrs|htmlattr}>${
-              format_datetime(from_utimestamp(long(cell.value))) if cell.value != ''
-              else '--'}
+              format_datetime(from_utimestamp(long(cell.value)))
+                if cell.value != ''
+                else '--'}
               {% if fullrow %}<hr />{% endif %}
             </td>
 

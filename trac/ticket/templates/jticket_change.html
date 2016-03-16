@@ -43,7 +43,7 @@
 <a href="#comment:${cnum}" class="${cls}">${prefix}${cnum}</a>
 #   endmacro
 
-<h3 class="change" ${{'id': 'comment:%s' % cnum if 'cnum' in change}|htmlattr}>
+<h3 class="change"${{'id': 'comment:%s' % cnum if 'cnum' in change}|htmlattr}>
   <span class="threading">
     # set change_replies = replies.get(cnum, []) if 'cnum' in change else []
     # if 'cnum' in change:
@@ -138,10 +138,10 @@
         # elif 'rendered' in field:
         ${field.rendered}
         # elif field.old and field.new:
-        <span class="trac-field-old">${field.old}</span> &rarr;
+        <span class="trac-field-old">${field.old}</span> →
         <span class="trac-field-new">${field.new}</span>
         # elif not field.old and field.new:
-        &rarr; <span class="trac-field-new">${field.new}</span>
+        → <span class="trac-field-new">${field.new}</span>
         # else:
         <span class="trac-field-deleted">${field.old}</span>
         #   if preview and field.by == 'user':
@@ -190,8 +190,8 @@ ${edited_comment if edited_comment is not none else change.comment
 ## Comment display
 
 #   if cnum == cnum_edit:
-<div class="comment searchable ticketdraft"
-     ${{'style': 'display: none' if not text}|htmlattr}>
+<div class="comment searchable ticketdraft"${
+   {'style': 'display: none' if not text}|htmlattr}>
   #   set text = edited_comment if edited_comment is not none else change.comment
   ${wiki_to_html(context, text, escape_newlines=preserve_newlines)}
 </div>
@@ -206,9 +206,9 @@ ${edited_comment if edited_comment is not none else change.comment
 </div>
 #   endif
 #   if not show_editor and len(change.comment_history) is greaterthan(1):
-<div ${{'class': {
-     'trac-lastedit': true,
-     'trac-shade': comment_version != max_version}}|htmlattr}>
+<div${{'class': {
+       'trac-lastedit': true,
+       'trac-shade': comment_version != max_version}}|htmlattr}>
   #   with
   #     set date = pretty_dateinfo(change.comment_history[comment_version].date)
   #     set author = authorinfo(change.comment_history[comment_version].author)
@@ -229,17 +229,17 @@ ${edited_comment if edited_comment is not none else change.comment
 
   #   if comment_version is greaterthan(0):
   (<a href="${href.ticket(ticket.id, cnum_hist=cnum,
-            cversion=comment_version - 1)}#comment:${cnum}">${
+                          cversion=comment_version - 1)}#comment:${cnum}">${
     _("previous")}</a>)
   #   endif
   #   if comment_version is lessthan(max_version):
   (<a href="${href.ticket(ticket.id, cnum_hist=cnum,
-            cversion=comment_version + 1)}#comment:${cnum}">${
+                          cversion=comment_version + 1)}#comment:${cnum}">${
     _("next")}</a>)
   #   endif
   #   if comment_version is greaterthan(0):
   (<a href="${href.ticket(ticket.id, action='comment-diff', cnum=cnum,
-            version=comment_version)}">${
+                          version=comment_version)}">${
     _("diff")}</a>)
   #   endif
 </div>

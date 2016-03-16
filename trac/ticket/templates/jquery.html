@@ -74,7 +74,7 @@
             #   set clause_num = loop.index0
             <tbody>
               # set clause_pre = '%d_' % loop.index0
-              <tr ${{'style': {'display': 'none' if loop.first}}|htmlattr}>
+              <tr${{'style': {'display': 'none' if loop.first}}|htmlattr}>
                 <td>
                   <div class="trac-clause-lsep">&nbsp;<hr /></div>
                   <div class="trac-clause-msep">${_("Or")}</div>
@@ -97,7 +97,7 @@
                           <div class="inlinebuttons">
                             <input type="submit"
                                    name="rm_filter_${n_field_name}_${loop.index0}"
-                                   value="&ndash;" />
+                                   value="&ndash;"/>
                           </div>
                         </td>
                         #   if loop.first:
@@ -108,10 +108,10 @@
                         <td class="mode">
                           <select name="${n_field_name}_mode">
                             #   for mode in modes[field.type]:
-                            <option value="${mode.value}"
-                                    ${{'selected':
-                                    mode.value == constraint.mode}|htmlattr}
-                                    >${mode.name}</option>
+                            <option${
+                               {'value': mode.value,
+                                'selected': mode.value == constraint.mode
+                               }|htmlattr}>${mode.name}</option>
                             #   endfor
                           </select>
                         </td>
@@ -122,27 +122,28 @@
                                      }"><label>${_("or")}</label></th>
                         #   endif
 
-                        <td class="filter"
-                            ${{'colspan':
-                            2 if field.type in ('radio', 'checkbox', 'time')
-                            }|htmlattr}>
+                        <td class="filter"${
+                          {'colspan':
+                             2 if field.type in ('radio', 'checkbox', 'time')
+                          }|htmlattr}>
 
                           # if field.type == 'select':
                           <select name="${n_field_name}">
 
                             # macro render_options(field_name, options, option_labels=none)
                             #   for option in options:
-                            <option ${{'selected': option == constraint_value}
-                                    |htmlattr}
-                                    value="${option}">${
-                              option_labels and option_labels[loop.index0] or
+                            <option${{'value': option,
+                                      'selected': option == constraint_value
+                                     }|htmlattr}>${
+                              option_labels[loop.index0] if option_labels else
                               option
                               }</option>
                             #   endfor
                             # endmacro
 
                             <option></option>
-                            ${render_options(field.name, field.options, field.option_labels)}
+                            ${render_options(field.name, field.options,
+                                             field.option_labels)}
                             # for ogroup in field.optgroups if ogroup.options:
                             <optgroup label="${ogroup.label}">
                               ${render_options(field.name, ogroup.options)}
@@ -153,34 +154,38 @@
                           # elif field.type == 'radio':
                           #   for option in field.options:
                           <input type="checkbox"
-                                 id="_${n_field_name}_${option}"
-                                 name="${n_field_name}"
-                                 value="${option}"
-                                 ${{'checked':
-                                 (constraint['mode'] == '') is equalto
-                                 (option in constraint['values'])}|htmlattr} />
+                                 id="_${n_field_name}_${option}"${
+                               {'name': n_field_name,
+                                'value': option,
+                                'checked':
+                                    (constraint['mode'] == '') is equalto
+                                    (option in constraint['values'])
+                               }|htmlattr}/>
                           <label for="_${n_field_name}_${option}"
-                                 class="control">${option or 'none'}</label>
+                                 class="control">${option or _('none')}</label>
                           #   endfor
 
                           # elif field.type == 'checkbox':
                           <input type="radio" id="_${n_field_name}_on"
-                                 name="${n_field_name}" value="1"
-                                 ${{'checked':
-                                 constraint.mode != '!' or
-                                 constraint_value == '1'}|htmlattr} />
-                          <label for="_${n_field_name}_on"
-                                 class="control">${_("yes")}</label>
+                                 value="1"${
+                               {'name': n_field_name,
+                                'checked': constraint.mode != '!' or
+                                           constraint_value == '1'
+                               }|htmlattr}/>
+                          <label for="_${n_field_name}_on" class="control">${
+                            _("yes")}</label>
                           <input type="radio" id="_${n_field_name}_off"
-                                 name="${n_field_name}" value="0"
-                                 ${{'checked':
-                                 constraint.mode == '!' or
-                                 constraint_value != '1'}|htmlattr} />
-                          <label for="_${n_field_name}_off"
-                                 class="control">${_("no")}</label>
+                                 value="0"${
+                               {'name': n_field_name,
+                                'checked': constraint.mode == '!' or
+                                           constraint_value != '1'
+                               }|htmlattr}/>
+                          <label for="_${n_field_name}_off" class="control">${
+                            _("no")}</label>
 
                           # elif field.type in ('text', 'textarea', 'id'):
-                          <input type="text" name="${n_field_name}" value="${constraint_value}" size="42" />
+                          <input type="text" name="${n_field_name}"
+                                 value="${constraint_value}" size="42"/>
 
                           # elif field.type == 'time':
                           #   set start, end = '..' in constraint_value and constraint_value.split('..', 1) or (constraint_value, '')
@@ -220,19 +225,18 @@
                             <option></option>
                             # for field_name in field_names:
                             #   set field = fields[field_name]
-                            <option value="${field_name}"
-                                    ${{'disabled':
-                                    (field.type in ('radio', 'checkbox', 'id') and
-                                    field_name in constraints and
-                                    len(constraints[field_name]))
-                                    }|htmlattr}>${
-                              field.label
-                              }</option>
+                            <option${
+                              {'value': field_name,
+                               'disabled':
+                                 (field.type in ('radio', 'checkbox', 'id') and
+                                 field_name in constraints and
+                                 len(constraints[field_name]))
+                               }|htmlattr}>${field.label}</option>
                             # endfor
                           </select>
                           <div class="inlinebuttons">
                             <input type="submit" name="add_${clause_num}"
-                                   value="+" />
+                                   value="+"/>
                           </div>
                         </td>
                         # if loop.last:
@@ -271,9 +275,10 @@
           <div>
             # for column in all_columns:
             <label>
-              <input type="checkbox" name="col" value="${column}"
-                     ${{'checked': col|select('equalto', column)|list|length
-                     }|htmlattr} />
+              <input type="checkbox" name="col"${
+                   {'value': column,
+                    'checked': col|select('equalto', column)|list|length
+                   }|htmlattr}/>
               ${fields.get(column, {'label': column or 'none'}).label}
             </label>
             # endfor
@@ -287,13 +292,14 @@
             # for field_name in field_names:
             #   set field = fields[field_name]
             #   if field.type in ('select', 'radio') or field_name in ('owner', 'reporter'):
-            <option ${{'selected': field_name == query.group}|htmlattr}
-                    value="${field_name}">${field.label}</option>
+            <option${{'selected': field_name == query.group,
+                      'value': field_name
+                     }|htmlattr}>${field.label}</option>
             #   endif
             # endfor
           </select>
-          <input type="checkbox" name="groupdesc" id="groupdesc"
-                 ${{'checked': query.groupdesc}|htmlattr} />
+          <input type="checkbox" name="groupdesc" id="groupdesc"${
+               {'checked': query.groupdesc}|htmlattr}/>
           <label for="groupdesc">descending</label>
         </p>
 
@@ -303,9 +309,10 @@
 
           ${_("Show under each result:")}
           # for column in all_textareas:
-          <label><input type="checkbox" name="row" value="${column}"
-                        ${{'checked': row|select('equalto', column)|list|length
-                        }|htmlattr} />
+          <label><input type="checkbox" name="row"${
+                      {'value': column,
+                       'checked': row|select('equalto', column)|list|length
+                      }|htmlattr}/>
             ${fields.get(column, {'label': column or 'none'}).label}</label>
           # endfor
         </p>
@@ -373,8 +380,8 @@
             <input type="hidden" name="action" value="delete" />
             <input type="submit"
                    title="${
-                          _("Delete report {%(id)s} corresponding to this query",
-                   id=report_resource.id)}"
+                       _("Delete report {%(id)s} corresponding to this query",
+                         id=report_resource.id)}"
                    value="${_("Delete query")}" />
           </div>
         </form>

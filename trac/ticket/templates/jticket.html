@@ -177,7 +177,7 @@
       #     endwith
       #   endif
 
-      <div ${{'style': 'display: none' if not changes}|htmlattr}>
+      <div${{'style': 'display: none' if not changes}|htmlattr}>
         <div style="position: relative">
           <form id="prefs" method="get" action="${href.prefs()}"
                 style="position: absolute; right: 0">
@@ -260,10 +260,11 @@
                   <th><label for="field-summary">${
                       _("Summary:")}</label></th>
                   <td class="fullrow" colspan="3">
-                    <input type="text" id="field-summary" name="field_summary"
-                           ${{'class': 'trac-autofocus' if not ticket.exists and
-                           not preview_mode}|htmlattr}
-                           value="${ticket.summary or ''}" />
+                    <input type="text" id="field-summary" name="field_summary"${
+                         {'class': 'trac-autofocus' if not ticket.exists and
+                                   not preview_mode,
+                          'value': ticket.summary or ''
+                         }|htmlattr}/>
                   </td>
                 </tr>
                 # endif
@@ -286,10 +287,13 @@
                            value="${ticket.reporter}" />
                     # if not only_for_admin and ticket.reporter == 'anonymous':
                     <p class="hint">
-                      # trans href = href.prefs()
+                      # set preferences
+                      <a href="${href.prefs()}" class="trac-target-new">${
+                        _("Preferences")}</a>
+                      # endset
+                      # trans prefs = preferences|safe
 
-                      E-mail address and name can be saved in the
-                      <a href="${href}" class="trac-target-new">Preferences</a>
+                      E-mail address and name can be saved in the ${prefs}
 
                       # endtrans
                     </p>
@@ -303,7 +307,8 @@
                       _("Description:")}</label></th>
                   <td class="fullrow" colspan="3">
                     <fieldset>
-                      <label for="field-description" id="field-description-help">
+                      <label for="field-description"
+                             id="field-description-help">
                         # trans href = href.wiki('WikiFormatting')
 
                         You may use <a tabindex="42"
@@ -311,7 +316,8 @@
 
                         # endtrans
                       </label>
-                      <textarea id="field-description" name="field_description"
+                      <textarea id="field-description"
+                                name="field_description"
                                 class="wikitext trac-fullwidth trac-resizable"
                                 rows="10" cols="68">${
                         ticket.description or ''}</textarea>
@@ -342,24 +348,28 @@
                   </th>
                   #     endif
                   #     if loop.first or not fullrow:
-                  <td class="${classes('col%d' % loop.index, fullrow=fullrow)}"
-                      ${{'colspan': 3 if fullrow}|htmlattr}>
+                  <td class="${classes('col%d' % loop.index,
+                                       fullrow=fullrow)}"${
+                    {'colspan': 3 if fullrow}|htmlattr}>
                     #     if field:
                     #       if field.type == 'select':
-                    <select id="field-${field.name}" name="field_${field.name}">
+                    <select id="field-${field.name}"
+                             name="field_${field.name}">
                       #       if field.optional:
                       <option></option>
                       #       endif
                       #       for option in field.options:
-                      <option ${{'selected': value == option}|htmlattr}
-                              value="${option}">${option}</option>
+                      <option${{'selected': value == option,
+                                'value': option
+                               }|htmlattr}>${option}</option>
                       #       endfor
                       #       for optgroup in field.optgroups:
                       #         if optgroup.options:
                       <optgroup label="${optgroup.label}">
                         #         for option in optgroup.options:
-                        <option ${{'selected': value == option}|htmlattr}
-                                value="${option}">${option}</option>
+                        <option${{'selected': value == option,
+                                  'value': option
+                                 }|htmlattr}>${option}</option>
                         #         endfor
                       </optgroup>
                       #         endif
@@ -376,18 +386,19 @@
                     #       elif field.type == 'checkbox':
                     <span>
                       <input type="checkbox" id="field-${field.name}"
-                             name="field_${field.name}"
-                             ${{'checked': value == '1'}|htmlattr} value="1"
-                             /> {# jinjacheck: "ID field- already defined" OK #}
+                             name="field_${field.name}" value="1"${
+                           {'checked': value == '1'}|htmlattr}/>
+                      ## jinjacheck: "ID field- already defined" OK
                       <input type="hidden" name="field_checkbox_${field.name}"
                              value="1" />
                     </span>
                     #       elif field.type == 'radio':
                     #         for option in field.options:
                     <label>
-                      <input type="radio" name="field_${field.name}"
-                             value="${option}"
-                             ${{'checked': value == option}|htmlattr} />
+                      <input type="radio" name="field_${field.name}"${
+                            {'checked': value == option,
+                             'value': option
+                            }|htmlattr}/>
                       ${option}
                     </label>
                     #         endfor
@@ -395,8 +406,8 @@
                     <input type="text" id="field-${field.name}"
                            title="${field.format_hint}"
                            name="field_${field.name}" value="${field.edit}"
-                           class="trac-${field.format}picker"
-                           /> {# jinjacheck: "ID field- already defined" OK #}
+                           class="trac-${field.format}picker"/>
+                    ## jinjacheck: "ID field- already defined" OK
                     #       else:
                     ##        # Special case for Cc: field
                     #         if field.name == 'cc':
@@ -415,12 +426,12 @@
                       </em>
                       #           else:
                       <label for="field-cc"><em>${field.cc_entry}</em></label>
-                      <input type="checkbox" id="field-cc" name="cc_update"
-                             title="${_("This checkbox allows you to add or
-                                         remove yourself from the CC list.")}"
-                             ${{'disabled': field.cc_action is none,
-                             'checked': field.cc_update
-                             }|htmlattr} />
+                      <input type="checkbox" id="field-cc" name="cc_update"${
+                           {'title': _("This checkbox allows you to add or
+                                        remove yourself from the CC list."),
+                            'disabled': field.cc_action is none,
+                            'checked': field.cc_update
+                           }|htmlattr} />
                       #           endif
                       #         elif field.cc_action is none:
                       ##          # Unauthenticated user without TICKET_EDIT_CC
@@ -431,16 +442,17 @@
                              title="${_("Space or comma delimited email
                                          addresses and usernames are
                                          accepted.")}"
-                             name="field_${field.name}" value="${value or ''}"
-                             /> {# jinjacheck: "ID field- already defined" OK #}
+                             name="field_${field.name}"
+                             value="${value or ''}"/>
+                      ## jinjacheck: "ID field- already defined" OK
                       #         endif
                     </span>
                     #         else:
                     ##          # All the other text input fields
                     <input type="text" id="field-${field.name}"
-                           name="field_${field.name}"
-                           ${{'value': value}|htmlattr}
-                           /> {# jinjacheck: "ID field- already defined" OK #}
+                           name="field_${field.name}"${
+                         {'value': value}|htmlattr}/>
+                    ## jinjacheck: "ID field- already defined" OK
                     #         endif
                     #       endif
                     #     endif
@@ -470,10 +482,9 @@
              class="${classes('field', 'trac-scroll' if preview_mode)}">
           <h3 class="foldable" id="edit">${_("Add Comment")}</h3>
           <div>
-            <div id="trac-edit-warning" class="warning system-message"
-                 ${{'style':
-                 'display: none;' if start_time == ticket['changetime']
-                 }|htmlattr}>
+            <div id="trac-edit-warning" class="warning system-message" ${
+               {'style': 'display: none;' if start_time == ticket['changetime']
+               }|htmlattr}>
               # trans
 
               This ticket has been modified since you started
@@ -526,7 +537,8 @@
               </label>
               <textarea id="comment" name="comment"
                         class="${classes('wikitext', 'trac-fullwidth',
-                               'trac-resizable', 'trac-autofocus' if replyto)}"
+                                         'trac-resizable',
+                                         'trac-autofocus' if replyto)}"
                         rows="10" cols="78">${
                 comment or ''}</textarea>
             </fieldset>
@@ -539,8 +551,8 @@
         # if not ticket.exists and ('ATTACHMENT_CREATE' in perm(ticket.resource.child('attachment'))):
         <p>
           <label>
-            <input type="checkbox" name="attachment"
-                   ${{'checked': 'attachment' in req.args}|htmlattr} />
+            <input type="checkbox" name="attachment"${
+                 {'checked': 'attachment' in req.args}|htmlattr}/>
             # trans
 
             I have files to attach to this ticket
@@ -566,24 +578,24 @@
                  value="${to_utimestamp(start_time)}" />
           <input type="hidden" name="view_time"
                  value="${to_utimestamp(ticket['changetime'])}" />
-          <input type="hidden" name="replyto" ${{'value': replyto}|htmlattr} />
+          <input type="hidden" name="replyto"${{'value': replyto}|htmlattr}/>
           # endif
           <input type="submit" name="preview" value="${_('Preview')}"
                  accesskey="r" />&nbsp;
           <input type="submit" name="submit"
                  value="${_('Submit changes') if ticket.exists else
-                        _('Create ticket')}"
+                          _('Create ticket')}"
                  class="trac-disable-on-submit" />
         </div>
 
         ## Preview of ticket changes
 
         # if ticket.exists and can_append:
-        <div id="ticketchange" class="ticketdraft"
-             ${{'style': 'display: none' if not
-             (change_preview.fields or change_preview.comment) or
-             cnum_edit is not none
-             }|htmlattr}>
+        <div id="ticketchange" class="ticketdraft"${
+           {'style': 'display: none' if not
+               (change_preview.fields or change_preview.comment) or
+               cnum_edit is not none
+           }|htmlattr}>
           # with change = change_preview, preview = True
           #   include "jticket_change.html"
           # endwith

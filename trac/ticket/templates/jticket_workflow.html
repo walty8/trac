@@ -36,8 +36,10 @@ Arguments:
   <legend>Action</legend>
   # for key, label, controls, hints in action_controls:
   <div>
-    <input type="radio" id="action_${key}" name="action" value="${key}"
-           ${{'checked': key == action}|htmlattr} />
+    <input type="radio" id="action_${key}" name="action"${
+         {'value': key,
+          'checked': key == action
+         }|htmlattr}/>
     <label for="action_${key}">${label}</label>
     ${controls}
     # for hint in hints:
