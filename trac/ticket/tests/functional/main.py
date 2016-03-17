@@ -30,9 +30,9 @@ from trac.util.text import to_utf8
 
 
 def find_field_deleted(name, find=True):
-    markup = ('<td>[ \t\n]+'
+    markup = ('<td>[ \n]+'
               '<span class="trac-field-deleted">%s</span>'
-              '[ \t\n]+</td>' % name)
+              '[ \n]+</td>' % name)
     if find:
         tc.find(markup)
     else:
@@ -41,7 +41,7 @@ def find_field_deleted(name, find=True):
 
 def find_field_change(old_name, new_name, find=True):
     markup = ('<span class="trac-field-old">%s</span>'
-              '[ \t\n]+→[ \t\n]+'
+              '[ \n]+→[ \n]+'
               '<span class="trac-field-new">%s</span>'
               % (old_name, new_name))
     if find:
@@ -100,7 +100,7 @@ class TestTicketAddAttachment(FunctionalTwillTestCaseSetup):
 
         self._tester.go_to_ticket(id)
         tc.find("Attach another file")
-        tc.find('Attachments <span class="trac-count">\(1\)</span>')
+        tc.find('Attachments[ \n]+<span class="trac-count">\(1\)</span>')
         tc.find(filename)
         tc.find('Download all attachments as:\s+<a rel="nofollow" '
                 'href="/zip-attachment/ticket/%s/">.zip</a>' % id)
@@ -286,11 +286,11 @@ class TestTicketHistory(FunctionalTwillTestCaseSetup):
         tc.find(r"\bSubmit changes\b")
         url = b.get_url()
         tc.go(url + '?version=0')
-        tc.find('at <[^>]*>*Initial Version')
+        tc.find('at +<[^>]*>*Initial Version')
         tc.find(summary)
         tc.notfind(comment)
         tc.go(url + '?version=1')
-        tc.find('at <[^>]*>*Version 1')
+        tc.find('at[ \n]+<[^>]*>*Version 1')
         tc.find(summary)
         tc.find(comment)
         tc.notfind(r'<a [^>]+>\bModify\b</a>')
@@ -307,7 +307,7 @@ class TestTicketHistoryDiff(FunctionalTwillTestCaseSetup):
         self._tester.create_ticket()
         tc.formvalue('propertyform', 'description', random_sentence(6))
         tc.submit('submit')
-        tc.find('Description:</th>[ \t\n]+<td>[ \t\n]+'
+        tc.find('Description:</th>[ \n]+<td>[ \n]+'
                 'modified \\(<[^>]*>diff', 's')
         tc.follow('diff')
         tc.find('Changes\\s*between\\s*<[^>]*>Initial Version<[^>]*>\\s*and'
@@ -692,25 +692,31 @@ UNION ALL SELECT 'attachment', 'file.ext', 'ticket', '42'
 UNION ALL SELECT 'attachment', 'file.ext', 'milestone', '42'
 UNION ALL SELECT 'attachment', 'file.ext', 'wiki', 'WikiStart'
 """, '')
-        tc.find('<a title="View ticket" href="[^"]*?/ticket/42">#42</a>')
-        tc.find('<a title="View report" href="[^"]*?/report/42">report:42</a>')
-        tc.find('<a title="View milestone" href="[^"]*?/milestone/42">42</a>')
-        tc.find('<a title="View wiki" href="[^"]*?/wiki/WikiStart">'
+        tc.find('<a title="View ticket"[ \n]+'
+                'href="[^"]*?/ticket/42">#42</a>')
+        tc.find('<a title="View report"[ \n]+'
+                'href="[^"]*?/report/42">report:42</a>')
+        tc.find('<a title="View milestone"[ \n]+'
+                'href="[^"]*?/milestone/42">42</a>')
+        tc.find('<a title="View wiki"[ \n]+'
+                'href="[^"]*?/wiki/WikiStart">'
                 'WikiStart</a>')
-        tc.find('<a title="View changeset" href="[^"]*?/changeset/42/trunk">'
+        tc.find('<a title="View changeset"[ \n]+'
+                'href="[^"]*?/changeset/42/trunk">'
                 'Changeset 42/trunk</a>')
-        tc.find('<a title="View changeset" '
+        tc.find('<a title="View changeset"[ \n]+'
                 'href="[^"]*?/changeset/42/trunk/repo">'
                 'Changeset 42/trunk in repo</a>')
-        tc.find('<a title="View changeset" href="[^"]*?/changeset/43/tags">'
+        tc.find('<a title="View changeset"[ \n]+'
+                'href="[^"]*?/changeset/43/tags">'
                 'Changeset 43/tags</a>')
-        tc.find('<a title="View attachment" '
+        tc.find('<a title="View attachment"[ \n]+'
                 'href="[^"]*?/attachment/ticket/42/file[.]ext">'
                 'file[.]ext [(]Ticket #42[)]</a>')
-        tc.find('<a title="View attachment" '
+        tc.find('<a title="View attachment"[ \n]+'
                 'href="[^"]*?/attachment/milestone/42/file[.]ext">'
                 'file[.]ext [(]Milestone 42[)]</a>')
-        tc.find('<a title="View attachment" '
+        tc.find('<a title="View attachment"[ \n]+'
                 'href="[^"]*?/attachment/wiki/WikiStart/file[.]ext">'
                 'file[.]ext [(]WikiStart[)]</a>')
 
@@ -740,9 +746,9 @@ class TestReportDynamicVariables(FunctionalTwillTestCaseSetup):
            "Tickets assigned to $USER for component $COMPONENT"
         )
         self._tester.go_to_report(reportnum, fields)
-        tc.find("admin's tickets for component component1")
+        tc.find("admin&#39;s tickets for component component1")
         tc.find("Tickets assigned to admin for component component1")
-        tc.find('<a title="View ticket" href="/ticket/%s">%s</a>' %
+        tc.find('<a title="View ticket"[ \n]+href="/ticket/%s">%s</a>' %
                 (ticket_id, summary))
 
 
@@ -856,8 +862,8 @@ class TestMilestoneDelete(FunctionalTwillTestCaseSetup):
             if tid is not None:
                 tc.find(retarget_notice)
                 self._tester.go_to_ticket(tid)
-                tc.find('Changed[ \t\n]+<a .*>\d+ seconds? ago</a>'
-                        '[ \t\n]+by <span class="trac-author-user">'
+                tc.find('Changed[ \n]+<a .*>\d+ seconds? ago</a>'
+                        '[ \n]+by <span class="trac-author-user">'
                         'admin</span>')
                 if retarget_to is not None:
                     tc.find('<a class="milestone" href="/milestone/%(name)s" '
@@ -866,7 +872,7 @@ class TestMilestoneDelete(FunctionalTwillTestCaseSetup):
                     find_field_change(name, retarget_to)
                 else:
                     tc.find('<th id="h_milestone" class="missing">'
-                            '[ \t\n]*Milestone:[ \t\n]*</th>')
+                            '[ \n]*Milestone:[ \n]*</th>')
                     find_field_deleted(name)
                 tc.find("Ticket retargeted after milestone deleted")
             else:
@@ -952,7 +958,7 @@ class TestMilestoneRename(FunctionalTwillTestCaseSetup):
         tc.find("Your changes have been saved.")
         tc.find(r"<h1>Milestone %s</h1>" % new_name)
         self._tester.go_to_ticket(tid)
-        tc.find('Changed[ \t\n]+<a .*>\d+ seconds? ago</a>[ \t\n]+'
+        tc.find('Changed[ \n]+<a .*>\d+ seconds? ago</a>[ \n]+'
                 'by <span class="trac-author-user">admin</span>')
         tc.find('<a class="milestone" href="/milestone/%(name)s" '
                 'title="No date set">%(name)s</a>' % {'name': new_name})
@@ -989,7 +995,7 @@ class RegressionTestTicket4447(FunctionalTwillTestCaseSetup):
         ticketid = self._tester.create_ticket("Hello World")
         self._tester.add_comment(ticketid)
         tc.notfind('<strong class="trac-field-newfield">Another Custom Field'
-                   '</strong>[ \t\n]+<em></em>[ \t\n]+deleted')
+                   '</strong>[ \n]+<em></em>[ \n]+deleted')
         tc.notfind('set to')
 
 
@@ -1077,7 +1083,7 @@ class RegressionTestTicket5394a(FunctionalTwillTestCaseSetup):
 
         self._tester.create_ticket("regression test 5394a")
 
-        options = 'id="action_reassign_reassign_owner">' + \
+        options = 'name="action_reassign_reassign_owner">' + \
             ''.join(['<option[^>]*>%s</option>' % user for user in
                      sorted(test_users + ['admin', 'joe', 'user'])])
         tc.find(to_utf8(options), 's')
@@ -1209,15 +1215,15 @@ class RegressionTestTicket5602(FunctionalTwillTestCaseSetup):
         tc.follow(milestone)
 
         tc.follow("closed:")
-        tc.find("Resolution:[ \t\n]+fixed")
+        tc.find("Resolution:[ \n]+fixed")
 
         tc.back()
         tc.follow("active:")
-        tc.find("Status:[ \t\n]+new")
-        tc.find("Status:[ \t\n]+assigned")
-        tc.find("Status:[ \t\n]+accepted")
-        tc.notfind("Status:[ \t\n]+closed")
-        tc.find("Status:[ \t\n]+reopened")
+        tc.find("Status:[ \n]+new")
+        tc.find("Status:[ \n]+assigned")
+        tc.find("Status:[ \n]+accepted")
+        tc.notfind("Status:[ \n]+closed")
+        tc.find("Status:[ \n]+reopened")
 
 
 class RegressionTestTicket5687(FunctionalTwillTestCaseSetup):
@@ -1369,7 +1375,7 @@ class RegressionTestTicket6912b(FunctionalTwillTestCaseSetup):
         except twill.utils.ClientForm.ItemNotFoundError as e:
             raise twill.errors.TwillAssertionError(e)
         tc.submit('save', formname='edit')
-        tc.find('RegressionTestTicket6912b</a>[ \n\t]*</td>[ \n\t]*'
+        tc.find('RegressionTestTicket6912b</a>[ \n]*</td>[ \n]*'
                 '<td class="owner"></td>', 's')
 
 
@@ -1388,30 +1394,30 @@ class RegressionTestTicket7821group(FunctionalTwillTestCaseSetup):
             self._tester.create_ticket('RegressionTestTicket7821 group')
             self._tester.go_to_query()
             # $USER
-            tc.find('<input type="text" name="0_cc" value="admin"'
-                    ' size="[0-9]+" />')
+            tc.find('<input type="text" name="0_cc"[ \n]+value="admin"'
+                    ' size="[0-9]+"/>')
             # col
-            tc.find('<input type="checkbox" name="col" value="summary"'
-                    ' checked="checked" />')
-            tc.find('<input type="checkbox" name="col" value="owner" />')
-            tc.find('<input type="checkbox" name="col" value="status"'
-                    ' checked="checked" />')
-            tc.find('<input type="checkbox" name="col" value="cc"'
-                    ' checked="checked" />')
+            tc.find('<input type="checkbox" name="col" checked="checked"'
+                    ' value="summary"/>')
+            tc.find('<input type="checkbox" name="col" value="owner"/>')
+            tc.find('<input type="checkbox" name="col" checked="checked"'
+                    ' value="status"/>')
+            tc.find('<input type="checkbox" name="col" checked="checked"'
+                    ' value="cc"/>')
             # group
             tc.find('<option selected="selected" value="status">Status'
                     '</option>')
             # groupdesc
             tc.find('<input type="checkbox" name="groupdesc" id="groupdesc"'
-                    ' checked="checked" />')
+                    ' checked="checked"/>')
             # max
             tc.find('<input type="text" name="max" id="max" size="[0-9]*?"'
-                    ' value="42" />')
+                    '[ \n]+value="42"/>')
             # col in results
-            tc.find('<a title="Sort by Ticket [(]ascending[)]" ')
-            tc.find('<a title="Sort by Summary [(]ascending[)]" ')
-            tc.find('<a title="Sort by Status [(]ascending[)]" ')
-            tc.find('<a title="Sort by Cc [(]ascending[)]" ')
+            tc.find('<a title="Sort by Ticket [(]ascending[)]"[ \n]+href')
+            tc.find('<a title="Sort by Summary [(]ascending[)]"[ \n]+href')
+            tc.find('<a title="Sort by Status [(]ascending[)]"[ \n]+href')
+            tc.find('<a title="Sort by Cc [(]ascending[)]"[ \n]+href')
             tc.notfind('<a title="Sort by Owner "')
         finally:
             env.config.set('query', 'default_query', saved_default_query)
@@ -1432,17 +1438,17 @@ class RegressionTestTicket7821var(FunctionalTwillTestCaseSetup):
             self._tester.create_ticket('RegressionTestTicket7821 var')
             self._tester.go_to_query()
             # $USER in default_query
-            tc.find('<input type="text" name="0_owner" value="admin"'
-                    ' size="[0-9]+" />')
-            tc.find('<input type="text" name="0_cc" value="admin"'
-                    ' size="[0-9]+" />')
+            tc.find('<input type="text" name="0_owner"[ \n]+value="admin"'
+                    ' size="[0-9]+"/>')
+            tc.find('<input type="text" name="0_cc"[ \n]+value="admin"'
+                    ' size="[0-9]+"/>')
             # query:owner=$USER&or&cc~=$USER
             tc.go(self._tester.url + \
                   '/intertrac/query:owner=$USER&or&cc~=$USER')
-            tc.find('<input type="text" name="0_owner" value="admin"'
-                    ' size="[0-9]+" />')
-            tc.find('<input type="text" name="1_cc" value="admin"'
-                    ' size="[0-9]+" />')
+            tc.find('<input type="text" name="0_owner"[ \n]+value="admin"'
+                    ' size="[0-9]+"/>')
+            tc.find('<input type="text" name="1_cc"[ \n]+value="admin"'
+                    ' size="[0-9]+"/>')
         finally:
             env.config.set('query', 'default_query', saved_default_query)
             env.config.set('ticket', 'restrict_owner', saved_restrict_owner)
@@ -1513,8 +1519,8 @@ class RegressionTestTicket9981(FunctionalTwillTestCaseSetup):
         comment = '[comment:1:ticket:%s]' % tid1
         self._tester.add_comment(tid2, comment)
         self._tester.go_to_ticket(tid2)
-        tc.find('<a class="closed ticket"[ \t\n]+'
-                'href="/ticket/%(num)s#comment:1"[ \t\n]+'
+        tc.find('<a class="closed ticket"[ \n]+'
+                'href="/ticket/%(num)s#comment:1"[ \n]+'
                 'title="Comment 1 for Ticket #%(num)s"' % {'num': tid1})
 
 
@@ -1595,11 +1601,11 @@ class RegressionTestTicket11028(FunctionalTwillTestCaseSetup):
         try:
             # Check that a milestone is found on the roadmap,
             # even for anonymous
-            tc.find('<a href="/milestone/milestone1">[ \n\t]*'
-                    'Milestone: <em>milestone1</em>[ \n\t]*</a>')
+            tc.find('<a href="/milestone/milestone1">[ \n]*'
+                    'Milestone: <em>milestone1</em>[ \n]*</a>')
             self._tester.logout()
-            tc.find('<a href="/milestone/milestone1">[ \n\t]*'
-                    'Milestone: <em>milestone1</em>[ \n\t]*</a>')
+            tc.find('<a href="/milestone/milestone1">[ \n]*'
+                    'Milestone: <em>milestone1</em>[ \n]*</a>')
 
             # Check that no milestones are found on the roadmap when
             # MILESTONE_VIEW is revoked
@@ -1642,22 +1648,22 @@ class RegressionTestTicket11176(FunctionalTwillTestCaseSetup):
         try:
             # Check that permissions are enforced on the report list page
             tc.find(r'<a title="View report" '
-                    r'href="/report/1">[ \n\t]*<em>\{1\}</em>')
+                    r'href="/report/1">[ \n]*<em>\{1\}</em>')
             tc.find(r'<a title="View report" '
-                    r'href="/report/2">[ \n\t]*<em>\{2\}</em>')
+                    r'href="/report/2">[ \n]*<em>\{2\}</em>')
             for report_num in range(3, 9):
                 tc.notfind(r'<a title="View report" '
-                           r'href="/report/%(num)s">[ \n\t]*'
+                           r'href="/report/%(num)s">[ \n]*'
                            r'<em>\{%(num)s\}</em>' % {'num': report_num})
             # Check that permissions are enforced on the report pages
             tc.go(self._tester.url + '/report/1')
-            tc.find(r'<h1>\{1\} Active Tickets[ \n\t]*'
+            tc.find(r'<h1>\{1\} Active Tickets[ \n]*'
                     r'(<span class="numrows">\(\d+ matches\)</span>)?'
-                    r'[ \n\t]*</h1>')
+                    r'[ \n]*</h1>')
             tc.go(self._tester.url + '/report/2')
-            tc.find(r'<h1>\{2\} Active Tickets by Version[ \n\t]*'
+            tc.find(r'<h1>\{2\} Active Tickets by Version[ \n]*'
                     r'(<span class="numrows">\(\d+ matches\)</span>)?'
-                    r'[ \n\t]*</h1>')
+                    r'[ \n]*</h1>')
             for report_num in range(3, 9):
                 tc.go(self._tester.url + '/report/%d' % report_num)
                 tc.find(r'<h1>Error: Forbidden</h1>')
@@ -1698,7 +1704,7 @@ class RegressionTestTicket11996(FunctionalTwillTestCaseSetup):
             self._tester.go_to_ticket()
             tc.find('<option selected="selected" value="milestone3">')
             self._tester.create_ticket(info={'milestone': ''})
-            tc.find('<td headers="h_milestone">[ \t\n]*</td>')
+            tc.find('<td headers="h_milestone">[ \n]*</td>')
             tc.notfind('<option value="milestone3" selected="selected">')
         finally:
             self._testenv.set_config('ticket', 'default_milestone', milestone)
