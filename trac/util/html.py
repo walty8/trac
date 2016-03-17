@@ -288,7 +288,7 @@ class Fragment(object):
                         self.append(elt)
                 except TypeError:
                     self.children.append(arg)
-        elif arg is 0:
+        elif arg == 0:
             self.children.append(u'0')
 
     def as_text(self):

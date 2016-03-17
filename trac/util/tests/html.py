@@ -39,6 +39,11 @@ class EscapeFragmentTestCase(unittest.TestCase):
                          escape(tag(tag.b('"1 < 2"', class_='em"ph"')),
                                     quotes=False))
 
+class FragmentTestCase(unittest.TestCase):
+    def test_zeros(self):
+        self.assertEqual(Markup(u'0<b>0</b> and <b>0</b>'),
+                         Markup(tag(0, tag.b(0L), ' and ', tag.b(0.0))))
+
 
 class FormTokenInjectorTestCase(unittest.TestCase):
     def test_no_form(self):
@@ -301,6 +306,7 @@ def suite():
     suite = unittest.TestSuite()
     suite.addTest(doctest.DocTestSuite(html))
     suite.addTest(unittest.makeSuite(EscapeFragmentTestCase))
+    suite.addTest(unittest.makeSuite(FragmentTestCase))
     suite.addTest(unittest.makeSuite(FormTokenInjectorTestCase))
     suite.addTest(unittest.makeSuite(TracHTMLSanitizerTestCase))
     if genshi:
