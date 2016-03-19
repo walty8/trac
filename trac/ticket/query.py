@@ -34,7 +34,7 @@ from trac.util import Ranges, as_bool
 from trac.util.datefmt import (datetime_now, from_utimestamp,
                                format_date_or_datetime, parse_date,
                                to_timestamp, to_utimestamp, utc, user_time)
-from trac.util.html import tag
+from trac.util.html import Markup, tag
 from trac.util.presentation import Paginator
 from trac.util.text import empty, shorten_line, quote_query_string
 from trac.util.translation import _, cleandoc_, ngettext, tag_
@@ -1442,8 +1442,8 @@ class TicketQueryMacro(WikiMacroBase):
                     'legend': True,
                 }
                 return tag.div(
-                    chrome.render_template(req, 'progress_bar.html', data,
-                                           None, fragment=True),
+                    Markup(chrome.render_template(req, 'progress_bar.html',
+                                                  data, None, fragment=True)),
                     class_='trac-progress')
 
             def per_group_stats_data(gstat, group_name):

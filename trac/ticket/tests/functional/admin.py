@@ -114,7 +114,7 @@ class TestAdminComponentDefault(FunctionalTwillTestCaseSetup):
         tc.submit('clear', formname='component_table')
         tc.notfind('type="radio" name="default" value=".+" checked="checked"')
         self._tester.create_ticket()
-        tc.find('<th id="h_component" class="missing">\s*Component:\s*</th>'
+        tc.find('<th class="missing" id="h_component">\s*Component:\s*</th>'
                 '\s*<td headers="h_component">\s*</td>')
         self._testenv.remove_config('ticket', 'allowed_empty_fields')
 
@@ -382,7 +382,7 @@ class TestAdminMilestoneRemove(FunctionalTwillTestCaseSetup):
         tc.url(milestone_url + '$')
         tc.notfind(name)
         self._tester.go_to_ticket(tid)
-        tc.find('<th id="h_milestone" class="missing">'
+        tc.find('<th class="missing" id="h_milestone">'
                 '[ \t\n]*Milestone:[ \t\n]*</th>')
         tc.find('<th class="trac-field-milestone">Milestone:</th>[ \t\n]+'
                 '<td>[ \t\n]+'
@@ -433,7 +433,7 @@ class TestAdminMilestoneDefaults(FunctionalTwillTestCaseSetup):
             tc.notfind('type="radio" name="retarget_default" '
                        'value=".+" checked="checked"')
             self._tester.go_to_ticket(tid)
-            tc.find('<th id="h_milestone" class="missing">[ \t\n]+'
+            tc.find('<th class="missing" id="h_milestone">[ \t\n]+'
                     'Milestone:[ \t\n]+</th>[ \t\n]+'
                     '(?!<td headers="h_milestone">)')
             self._tester.go_to_milestone(mid2)
@@ -505,7 +505,7 @@ class TestAdminMilestoneDefaults(FunctionalTwillTestCaseSetup):
                    'checked="checked"')
         # verify no default on the newticket page.
         tc.go(self._tester.url + '/newticket')
-        tc.find('<th id="h_milestone" class="missing">[ \t\n]+'
+        tc.find('<th class="missing" id="h_milestone">[ \t\n]+'
                 'Milestone:[ \t\n]+</th>[ \t\n]+'
                 '(?!<td headers="h_milestone">)')
         # verify none selected on the confirm delete page.
@@ -908,7 +908,7 @@ class TestAdminVersionDefault(FunctionalTwillTestCaseSetup):
         tc.submit('clear', formname='version_table')
         tc.notfind('type="radio" name="default" value=".+" checked="checked"')
         self._tester.create_ticket()
-        tc.find('<th id="h_version" class="missing">[ \t\n]+'
+        tc.find('<th class="missing" id="h_version">[ \t\n]+'
                 'Version:[ \t\n]+</th>[ \t\n]+'
                 '(?!<td headers="h_version">)')
 

@@ -1094,12 +1094,12 @@ QUERY_TEST_CASES = u"""
 ------------------------------
 <p>
 </p><div class="trac-progress">
-
-  <table xmlns="http://www.w3.org/1999/xhtml" class="progress">
+  <table class="progress">
     <tr>
       <td class="closed" style="width: 33%">
         <a href="/query?status=closed&amp;group=resolution&amp;max=0&amp;order=time" title="1/3 closed"></a>
-      </td><td class="open" style="width: 67%">
+      </td>
+      <td class="open" style="width: 67%">
         <a href="/query?status=assigned&amp;status=new&amp;status=accepted&amp;status=reopened&amp;max=0&amp;order=id" title="2/3 active"></a>
       </td>
     </tr>
@@ -1113,7 +1113,8 @@ QUERY_TEST_CASES = u"""
     </span>
     <span class="interval">
       - <a href="/query?status=closed&amp;group=resolution&amp;max=0&amp;order=time">closed: 1</a>
-    </span><span class="interval">
+    </span>
+    <span class="interval">
       - <a href="/query?status=assigned&amp;status=new&amp;status=accepted&amp;status=reopened&amp;max=0&amp;order=id">active: 2</a>
     </span>
   </p>
@@ -1125,12 +1126,12 @@ QUERY_TEST_CASES = u"""
 ------------------------------
 <p>
 </p><div class="trac-progress">
-
-  <table xmlns="http://www.w3.org/1999/xhtml" class="progress">
+  <table class="progress">
     <tr>
       <td class="closed" style="display: none">
         <a href="/query?status=closed&amp;reporter=santa&amp;group=resolution&amp;max=0&amp;order=time" title="0/1 closed"></a>
-      </td><td class="open" style="width: 100%">
+      </td>
+      <td class="open" style="width: 100%">
         <a href="/query?status=assigned&amp;status=new&amp;status=accepted&amp;status=reopened&amp;reporter=santa&amp;max=0&amp;order=id" title="1/1 active"></a>
       </td>
     </tr>
@@ -1144,7 +1145,8 @@ QUERY_TEST_CASES = u"""
     </span>
     <span class="interval">
       - <a href="/query?status=closed&amp;reporter=santa&amp;group=resolution&amp;max=0&amp;order=time">closed: 0</a>
-    </span><span class="interval">
+    </span>
+    <span class="interval">
       - <a href="/query?status=assigned&amp;status=new&amp;status=accepted&amp;status=reopened&amp;reporter=santa&amp;max=0&amp;order=id">active: 1</a>
     </span>
   </p>
@@ -1156,12 +1158,12 @@ QUERY_TEST_CASES = u"""
 ------------------------------
 <p>
 </p><div class="trac-progress">
-
-  <table xmlns="http://www.w3.org/1999/xhtml" class="progress">
+  <table class="progress">
     <tr>
       <td class="closed" style="width: 50%">
         <a href="/query?status=closed&amp;reporter=santa&amp;or&amp;owner=santa&amp;status=closed&amp;group=resolution&amp;max=0&amp;order=time" title="1/2 closed"></a>
-      </td><td class="open" style="width: 50%">
+      </td>
+      <td class="open" style="width: 50%">
         <a href="/query?status=assigned&amp;status=new&amp;status=accepted&amp;status=reopened&amp;reporter=santa&amp;or&amp;owner=santa&amp;status=assigned&amp;status=new&amp;status=accepted&amp;status=reopened&amp;max=0&amp;order=id" title="1/2 active"></a>
       </td>
     </tr>
@@ -1175,7 +1177,8 @@ QUERY_TEST_CASES = u"""
     </span>
     <span class="interval">
       - <a href="/query?status=closed&amp;reporter=santa&amp;or&amp;owner=santa&amp;status=closed&amp;group=resolution&amp;max=0&amp;order=time">closed: 1</a>
-    </span><span class="interval">
+    </span>
+    <span class="interval">
       - <a href="/query?status=assigned&amp;status=new&amp;status=accepted&amp;status=reopened&amp;reporter=santa&amp;or&amp;owner=santa&amp;status=assigned&amp;status=new&amp;status=accepted&amp;status=reopened&amp;max=0&amp;order=id">active: 1</a>
     </span>
   </p>

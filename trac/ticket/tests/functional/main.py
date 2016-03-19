@@ -412,7 +412,7 @@ class TestTicketQueryLinksQueryModuleDisabled(FunctionalTwillTestCaseSetup):
                 if field != 'milestone':
                     links = r', '.join(r'<a[^>]+href="/query.*>%s</a>'
                                        % v.strip() for v in value.split(','))
-                    tc.find(r'<td headers="h_%s"( class="searchable")?>'
+                    tc.find(r'<td( class="searchable")? headers="h_%s">'
                             r'\s*%s\s*</td>' % (field, links))
                 else:
                     tc.find(milestone_cell)
@@ -420,7 +420,7 @@ class TestTicketQueryLinksQueryModuleDisabled(FunctionalTwillTestCaseSetup):
             self._tester.go_to_ticket(tid)
             for field, value in props.iteritems():
                 if field != 'milestone':
-                    tc.find(r'<td headers="h_%s"( class="searchable")?>'
+                    tc.find(r'<td( class="searchable")? headers="h_%s">'
                             r'\s*%s\s*</td>' % (field, value))
                 else:
                     tc.find(milestone_cell)
@@ -464,7 +464,7 @@ class TestTicketCustomFieldTextNoFormat(FunctionalTwillTestCaseSetup):
 
         val = "%s %s" % (random_unique_camel(), random_word())
         self._tester.create_ticket(info={'newfield': val})
-        tc.find('<td headers="h_newfield"[^>]*>\s*%s\s*</td>' % val)
+        tc.find('<td headers="h_newfield">\s*%s\s*</td>' % val)
 
 
 class TestTicketCustomFieldTextAreaNoFormat(FunctionalTwillTestCaseSetup):
@@ -481,7 +481,7 @@ class TestTicketCustomFieldTextAreaNoFormat(FunctionalTwillTestCaseSetup):
 
         val = "%s %s" % (random_unique_camel(), random_word())
         self._tester.create_ticket(info={'newfield': val})
-        tc.find('<td headers="h_newfield"[^>]*>\s*%s\s*</td>' % val)
+        tc.find('<td colspan="3" headers="h_newfield">\s*%s\s*</td>' % val)
 
 
 class TestTicketCustomFieldTextWikiFormat(FunctionalTwillTestCaseSetup):
@@ -502,7 +502,7 @@ class TestTicketCustomFieldTextWikiFormat(FunctionalTwillTestCaseSetup):
         val = "%s %s" % (word1, word2)
         self._tester.create_ticket(info={'newfield': val})
         wiki = '<a [^>]*>%s\??</a> %s' % (word1, word2)
-        tc.find('<td headers="h_newfield"[^>]*>\s*%s\s*</td>' % wiki)
+        tc.find('<td headers="h_newfield">\s*%s\s*</td>' % wiki)
 
 
 class TestTicketCustomFieldTextAreaWikiFormat(FunctionalTwillTestCaseSetup):
@@ -522,7 +522,7 @@ class TestTicketCustomFieldTextAreaWikiFormat(FunctionalTwillTestCaseSetup):
         val = "%s %s" % (word1, word2)
         self._tester.create_ticket(info={'newfield': val})
         wiki = '<p>\s*<a [^>]*>%s\??</a> %s<br />\s*</p>' % (word1, word2)
-        tc.find('<td headers="h_newfield"[^>]*>\s*%s\s*</td>' % wiki)
+        tc.find('<td colspan="3" headers="h_newfield">\s*%s\s*</td>' % wiki)
 
 
 class TestTicketCustomFieldTextReferenceFormat(FunctionalTwillTestCaseSetup):
@@ -545,7 +545,7 @@ class TestTicketCustomFieldTextReferenceFormat(FunctionalTwillTestCaseSetup):
         self._tester.create_ticket(info={'newfield': val})
         query = 'status=!closed&amp;newfield=%s\+%s' % (word1, word2)
         querylink = '<a href="/query\?%s">%s</a>' % (query, val)
-        tc.find('<td headers="h_newfield"[^>]*>\s*%s\s*</td>' % querylink)
+        tc.find('<td headers="h_newfield">\s*%s\s*</td>' % querylink)
 
 
 class TestTicketCustomFieldTextListFormat(FunctionalTwillTestCaseSetup):
@@ -571,7 +571,7 @@ class TestTicketCustomFieldTextListFormat(FunctionalTwillTestCaseSetup):
         querylink1 = '<a href="/query\?%s">%s</a>' % (query1, word1)
         querylink2 = '<a href="/query\?%s">%s</a>' % (query2, word2)
         querylinks = '%s %s' % (querylink1, querylink2)
-        tc.find('<td headers="h_newfield"[^>]*>\s*%s\s*</td>' % querylinks)
+        tc.find('<td headers="h_newfield">\s*%s\s*</td>' % querylinks)
 
 
 class RegressionTestTicket10828(FunctionalTwillTestCaseSetup):
@@ -621,7 +621,7 @@ class RegressionTestTicket10828(FunctionalTwillTestCaseSetup):
         querylink2 = '<a href="/query\?%s">%s</a>' % (query2, word2)
         querylink3 = '<a href="/query\?%s">%s</a>' % (query3, word3)
         querylinks = '%s %s, %s' % (querylink1, querylink2, querylink3)
-        tc.find('<td headers="h_newfield"[^>]*>\s*%s\s*</td>' % querylinks)
+        tc.find('<td headers="h_newfield">\s*%s\s*</td>' % querylinks)
 
 
 class TestTicketTimeline(FunctionalTwillTestCaseSetup):
@@ -871,7 +871,7 @@ class TestMilestoneDelete(FunctionalTwillTestCaseSetup):
                             % {'name': retarget_to})
                     find_field_change(name, retarget_to)
                 else:
-                    tc.find('<th id="h_milestone" class="missing">'
+                    tc.find('<th class="missing" id="h_milestone">'
                             '[ \n]*Milestone:[ \n]*</th>')
                     find_field_deleted(name)
                 tc.find("Ticket retargeted after milestone deleted")

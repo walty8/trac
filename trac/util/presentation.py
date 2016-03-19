@@ -121,9 +121,8 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
     # Note: at some point, switch to
     #       https://www.w3.org/TR/html-markup/syntax.html#syntax-attr-empty
     attrs = []
-    if isinstance(d, dict):
-        d = iteritems(d)
-    for key, val in d:
+    for key in sorted(d):
+        val = d[key]
         if key == 'class':
             if isinstance(val, dict):
                 val = classes(**val) or None

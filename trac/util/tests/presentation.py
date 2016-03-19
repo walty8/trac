@@ -23,19 +23,17 @@ from trac.util import presentation
 
 class FiltersTestCase(unittest.TestCase):
     def test_htmlattr(self):
-        def split_attrs(attrs):
-            return sorted(re.split(r' ([-\w]+=\"[^"]+)"', attrs))
         self.assertEqual(
-            split_attrs(' class="my list" id="list-42" checked="checked"'
-                        ' autocomplete="on"'
-                        ' style="border-radius: 3px; background: #f7f7f7"'),
-            split_attrs(presentation.htmlattr_filter(
+            (' autocomplete="on" checked="checked" class="my list"'
+             ' id="list-42"'
+             ' style="border-radius: 3px; background: #f7f7f7"'),
+            presentation.htmlattr_filter(
                 Mock(autoescape=False),
                 {'class': {'my': 1, 'list': True, 'empty': False},
                  'missing': None, 'checked': 1, 'selected': False,
                  'autocomplete': True, 'id': 'list-%d' % 42,
                  'style': {'border-radius': '3px',
-                           'background': '#f7f7f7'}})))
+                           'background': '#f7f7f7'}}))
 
 class ToJsonTestCase(unittest.TestCase):
 
