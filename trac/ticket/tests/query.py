@@ -1190,21 +1190,19 @@ QUERY_TEST_CASES = u"""
 ------------------------------
 <p>
 </p><div class="trac-groupprogress">
-  <table xmlns="http://www.w3.org/1999/xhtml" summary="Ticket completion status for each project">
+  <table summary="Ticket completion status for each project">
     <tr>
       <th scope="row">
         <i><a href="/query?project=&amp;max=0&amp;order=id">(none)</a></i>
-
-
       </th>
       <td>
-
 
   <table class="progress" style="width: 40%">
     <tr>
       <td class="closed" style="display: none">
         <a href="/query?project=&amp;status=closed&amp;group=resolution&amp;max=0&amp;order=time" title="0/1 closed"></a>
-      </td><td class="open" style="width: 100%">
+      </td>
+      <td class="open" style="width: 100%">
         <a href="/query?project=&amp;status=assigned&amp;status=new&amp;status=accepted&amp;status=reopened&amp;max=0&amp;order=id" title="1/1 active"></a>
       </td>
     </tr>
@@ -1212,23 +1210,20 @@ QUERY_TEST_CASES = u"""
 
   <p class="percent">0 / 1</p>
 
-
-
       </td>
-    </tr><tr>
+    </tr>
+    <tr>
       <th scope="row">
-
-
         <a href="/query?project=xmas&amp;max=0&amp;order=id">xmas</a>
       </th>
       <td>
-
 
   <table class="progress" style="width: 80%">
     <tr>
       <td class="closed" style="width: 50%">
         <a href="/query?project=xmas&amp;status=closed&amp;group=resolution&amp;max=0&amp;order=time" title="1/2 closed"></a>
-      </td><td class="open" style="width: 50%">
+      </td>
+      <td class="open" style="width: 50%">
         <a href="/query?project=xmas&amp;status=assigned&amp;status=new&amp;status=accepted&amp;status=reopened&amp;max=0&amp;order=id" title="1/2 active"></a>
       </td>
     </tr>
@@ -1236,12 +1231,9 @@ QUERY_TEST_CASES = u"""
 
   <p class="percent">1 / 2</p>
 
-
-
       </td>
     </tr>
-  </table>
-</div><p>
+  </table></div><p>
 </p>
 ------------------------------
 ============================== TicketQuery(reporter=santa, format=progress, group=project)
@@ -1249,21 +1241,19 @@ QUERY_TEST_CASES = u"""
 ------------------------------
 <p>
 </p><div class="trac-groupprogress">
-  <table xmlns="http://www.w3.org/1999/xhtml" summary="Ticket completion status for each project">
+  <table summary="Ticket completion status for each project">
     <tr>
       <th scope="row">
-
-
         <a href="/query?project=xmas&amp;reporter=santa&amp;max=0&amp;order=id">xmas</a>
       </th>
       <td>
-
 
   <table class="progress" style="width: 80%">
     <tr>
       <td class="closed" style="display: none">
         <a href="/query?project=xmas&amp;status=closed&amp;reporter=santa&amp;group=resolution&amp;max=0&amp;order=time" title="0/1 closed"></a>
-      </td><td class="open" style="width: 100%">
+      </td>
+      <td class="open" style="width: 100%">
         <a href="/query?project=xmas&amp;status=assigned&amp;status=new&amp;status=accepted&amp;status=reopened&amp;reporter=santa&amp;max=0&amp;order=id" title="1/1 active"></a>
       </td>
     </tr>
@@ -1271,12 +1261,9 @@ QUERY_TEST_CASES = u"""
 
   <p class="percent">0 / 1</p>
 
-
-
       </td>
     </tr>
-  </table>
-</div><p>
+  </table></div><p>
 </p>
 ------------------------------
 ============================== TicketQuery(reporter=santa&or&owner=santa, format=progress, group=project)
@@ -1284,21 +1271,19 @@ QUERY_TEST_CASES = u"""
 ------------------------------
 <p>
 </p><div class="trac-groupprogress">
-  <table xmlns="http://www.w3.org/1999/xhtml" summary="Ticket completion status for each project">
+  <table summary="Ticket completion status for each project">
     <tr>
       <th scope="row">
-
-
         <a href="/query?project=xmas&amp;reporter=santa&amp;or&amp;owner=santa&amp;project=xmas&amp;max=0&amp;order=id">xmas</a>
       </th>
       <td>
-
 
   <table class="progress" style="width: 80%">
     <tr>
       <td class="closed" style="width: 50%">
         <a href="/query?project=xmas&amp;status=closed&amp;reporter=santa&amp;or&amp;owner=santa&amp;project=xmas&amp;status=closed&amp;group=resolution&amp;max=0&amp;order=time" title="1/2 closed"></a>
-      </td><td class="open" style="width: 50%">
+      </td>
+      <td class="open" style="width: 50%">
         <a href="/query?project=xmas&amp;status=assigned&amp;status=new&amp;status=accepted&amp;status=reopened&amp;reporter=santa&amp;or&amp;owner=santa&amp;project=xmas&amp;status=assigned&amp;status=new&amp;status=accepted&amp;status=reopened&amp;max=0&amp;order=id" title="1/2 active"></a>
       </td>
     </tr>
@@ -1306,12 +1291,9 @@ QUERY_TEST_CASES = u"""
 
   <p class="percent">1 / 2</p>
 
-
-
       </td>
     </tr>
-  </table>
-</div><p>
+  </table></div><p>
 </p>
 ------------------------------
 """

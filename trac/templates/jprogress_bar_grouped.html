@@ -1,4 +1,4 @@
-<!--!  Copyright (C) 2011-2014 Edgewall Software
+{# Copyright (C) 2011-2014 Edgewall Software
 
   This software is licensed as described in the file COPYING, which
   you should have received as part of this distribution. The terms
@@ -7,38 +7,41 @@
   This software consists of voluntary contributions made by many
   individuals. For the exact contribution history, see the revision
   history and logs, available at http://trac.edgewall.org/.
-
-Display a table of progress bars for ticket groups
-
+#}
+## Display a table of progress bars for ticket groups
+{#
 Arguments:
  - groups: a list of group data dicts
  - grouped_by: ticket field by which tickets are grouped
  - summary: table summary text
--->
-<html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:py="http://genshi.edgewall.org/"
-      xmlns:xi="http://www.w3.org/2001/XInclude"
-      xmlns:i18n="http://genshi.edgewall.org/i18n"
-      py:strip="">
-  <table summary="${value_of('summary', None)}">
-    <tr py:for="group in groups" py:with="obfuscated = format_author(group.name) != group.name;">
-      <th scope="row" py:choose="">
-        <i py:when="not group.name"><a href="${group.stats_href}">(none)</a></i>
-        <a py:when="grouped_by in ['owner', 'reporter']"
-           py:strip="obfuscated"
-           href="${group.stats_href}">${authorinfo(group.name)}</a>
-        <a py:otherwise="" href="${group.stats_href}">${group.name}</a>
+#}
+  <table${{'summary': summary if summary is defined}|htmlattr}>
+    # for group in groups:
+    #   set obfuscated = format_author(group.name) != format_author(group.name, show_email=false)
+    <tr>
+      <th scope="row">
+        # if not group.name:
+        <i><a href="${group.stats_href}">(none)</a></i>
+        # elif grouped_by in ('owner', 'reporter'):
+        #   if obfuscated:
+        ${authorinfo(group.name)}
+        #   else:
+        <a href="${group.stats_href}">${authorinfo(group.name)}</a>
+        #   endif
+        # else:
+        <a href="${group.stats_href}">${group.name}</a>
+        # endif
       </th>
       <td>
-        <xi:include href="progress_bar.html"
-                    py:with="stats = group.stats;
-                             interval_hrefs = (group.interval_hrefs, None)
-                                              [bool(grouped_by in ['owner', 'reporter']
-                                                    and group.name and obfuscated)];
-                             percent = '%d / %d' % (group.stats.done_count, group.stats.count);
-                             legend=False;
-                             style='width: %d%%' % (group.percent_of_max_total * 0.8)"/>
+        # with
+        #   set stats = group.stats
+        #   set interval_hrefs = group.interval_hrefs if not (grouped_by in ('owner', 'reporter') and group.name and obfuscated)
+        #   set percent = '%d / %d' % (group.stats.done_count, group.stats.count)
+        #   set legend = false
+        #   set style = 'width: %d%%' % (group.percent_of_max_total * 0.8)
+        #   include "jprogress_bar.html"
+        # endwith
       </td>
     </tr>
+    # endfor
   </table>
-</html>

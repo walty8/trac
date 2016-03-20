@@ -1112,12 +1112,14 @@ class Chrome(Component):
                 except KeyError:
                     pass
 
-        if fragment or method == 'text':
-            return self.generate_template_fragment(req, filename, data, method)
-
         jtemplate = self.load_jinja_template('j' + filename)
         # Populate data with request dependent data
         jdata = self.populate_data(req, data, {})
+
+        if fragment or method == 'text':
+            rendered = jtemplate.render(jdata)
+            return rendered if method == 'text' else Markup(rendered)
+
         jdata['chrome']['content_type'] = content_type
 
         doctype = None

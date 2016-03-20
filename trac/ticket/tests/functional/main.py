@@ -788,7 +788,7 @@ class TestMilestoneAddAttachment(FunctionalTwillTestCaseSetup):
 
         self._tester.go_to_milestone(name)
         tc.find("Attach another file")
-        tc.find('Attachments <span class="trac-count">\(1\)</span>')
+        tc.find('Attachments[ \n]+<span class="trac-count">\(1\)</span>')
         tc.find(filename)
         tc.find('Download all attachments as:\s+<a rel="nofollow" '
                 'href="/zip-attachment/milestone/%s/">.zip</a>' % name)
