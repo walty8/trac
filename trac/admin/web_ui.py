@@ -22,7 +22,7 @@ import shutil
 
 from trac.admin.api import IAdminPanelProvider
 from trac.core import *
-from trac.loader import get_plugin_info, get_plugins_dir
+from trac.loader import get_plugin_info
 from trac.log import LOG_LEVELS
 from trac.perm import PermissionSystem, IPermissionRequestor
 from trac.util.datefmt import all_timezones, pytz
@@ -597,7 +597,7 @@ class PluginAdminPanel(Component):
 
         data = {
             'plugins': plugins, 'show': req.args.get('show'),
-            'readonly': not os.access(get_plugins_dir(self.env),
+            'readonly': not os.access(self.env.get_plugins_dir(),
                                       os.F_OK + os.W_OK),
             'safe_wiki_to_html': safe_wiki_to_html,
         }
