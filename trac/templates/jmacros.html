@@ -13,21 +13,27 @@
 
 {# Usage:
 
-   # import "jmacros.html" as jmacros with context
+     # import "jmacros.html" as jmacros with context
+
+   Note that this import is not necessary in templates that extend the
+   "jlayout.html" template, as the latter contains that import.
+   However, in secondary templates included from a template extending
+   "jlayout.html", jmacros is no longer accessible and the import
+   statement has to be written again.
 
 #}
 
 
 {# Creates an <input> form field containing the CSRF protection token.
 
- all form with method POST should include this field.
+   All form with method POST should include this field.
 
-Example:
+   Example:
 
-   <form id="query" method="post" action="${href.query()}">
-   ${jmacros.form_token_input()}
-   ...
-   </form>
+     <form id="query" method="post" action="${href.query()}">
+     ${jmacros.form_token_input()}
+     ...
+     </form>
 #}
 # macro form_token_input()
 <input type="hidden" name="__FORM_TOKEN" value="${form_token}" />
