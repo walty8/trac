@@ -1,26 +1,26 @@
-#!${executable}
-# -*- coding: utf-8 -*-
-#
-# Copyright (C) 2003-2009 Edgewall Software
-# Copyright (C) 2003-2004 Jonas Borgström <jonas@edgewall.com>
-# All rights reserved.
-#
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution. The terms
-# are also available at http://trac.edgewall.org/wiki/TracLicense.
-#
-# This software consists of voluntary contributions made by many
-# individuals. For the exact contribution history, see the revision
-# history and logs, available at http://trac.edgewall.org/log/.
-#
-# Author: Jonas Borgström <jonas@edgewall.com>
+{##}#!${executable}
+{##}# -*- coding: utf-8 -*-
+{##}#
+{##}# Copyright (C) 2003-2009 Edgewall Software
+{##}# Copyright (C) 2003-2004 Jonas Borgström <jonas@edgewall.com>
+{##}# All rights reserved.
+{##}#
+{##}# This software is licensed as described in the file COPYING, which
+{##}# you should have received as part of this distribution. The terms
+{##}# are also available at http://trac.edgewall.org/wiki/TracLicense.
+{##}#
+{##}# This software consists of voluntary contributions made by many
+{##}# individuals. For the exact contribution history, see the revision
+{##}# history and logs, available at http://trac.edgewall.org/log/.
+{##}#
+{##}# Author: Jonas Borgström <jonas@edgewall.com>
 
 from __future__ import print_function
 
 try:
     import os
     import pkg_resources
-    if 'TRAC_ENV' not in os.environ and \\
+    if 'TRAC_ENV' not in os.environ and \
        'TRAC_ENV_PARENT_DIR' not in os.environ:
         os.environ['TRAC_ENV'] = ${repr(env.path)}
     if 'PYTHON_EGG_CACHE' not in os.environ:
