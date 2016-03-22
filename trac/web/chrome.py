@@ -658,25 +658,33 @@ class Chrome(Component):
             if not os.path.exists(templates_dir):
                 os.mkdir(templates_dir)
 
-            site_path = os.path.join(templates_dir, 'site.html.sample')
-            with open(site_path, 'w') as fileobj:
-                fileobj.write("""\
-<html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:xi="http://www.w3.org/2001/XInclude"
-      xmlns:py="http://genshi.edgewall.org/"
-      py:strip="">
-  <!--!
-    This file allows customizing the appearance of the Trac installation.
-    Add your customizations here and rename the file to site.html. Note that
-    it will take precedence over a global site.html placed in the directory
-    specified by [inherit] templates_dir.
+            def write_sample_template(filename, kind, example=''):
+                site_path = os.path.join(templates_dir, filename + '.sample')
+                with open(site_path, 'w') as fileobj:
+                    fileobj.write("""\
+{#  This file allows customizing the appearance of the Trac installation.
+
+    Add your customizations to the %s here
+    and rename the file to %s.
+
+    Note that it will take precedence over a global %s placed
+    in the directory specified by [inherit] templates_dir.
 
     More information about site appearance customization can be found here:
 
       http://trac.edgewall.org/wiki/TracInterfaceCustomization#SiteAppearance
-  -->
-</html>
+#}
+%s
+"""                               % (kind, filename, filename, example))
+
+            write_sample_template('site_head.html',
+                                  'the end of the HTML <head>', """
+<link rel="stylesheet" type="text/css" href="${href.chrome('site/style.css')}"/>
 """)
+            write_sample_template('site_header.html',
+                                  'the start of the HTML <body> content')
+            write_sample_template('site_footer.html',
+                                  'the end of the HTML <body> content')
 
     def environment_needs_upgrade(self):
         return False
