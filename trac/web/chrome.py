@@ -1047,11 +1047,17 @@ class Chrome(Component):
         d.update(data)
         return d
 
-    def load_jinja_template(self, filename, method='ignored'):
-        """Retrieve a Jinja2 Template.
+    def _load_jinja_template(self, filename):
+        """Retrieves the Jinja2 `Template` corresponding to the given name.
 
-        Also responsible for initializing the Jinja2 main
+        Also responsible for initializing the main Jinja2
         `Environment` on first use.
+
+        .. note::
+
+        This method will be renamed to `load_template` once we remove
+        the Genshi compatibility layer.
+
         """
         if not self.jenv:
             self.jenv = jinja2env(
@@ -1066,39 +1072,50 @@ class Chrome(Component):
 
     def render_template(self, req, filename, data, content_type=None,
                         fragment=False, iterable=False, method=None):
-        """Render the `filename` using the `data` for the context.
+        """Renders the `filename` template using `data` for the context.
 
         First attempts to load a Jinja2 template, then if not found, a
-        Genshi template. Only used during the transition period (Trac
-        1.3.x), but will be merged with `render_jinja_template` before
-        Trac 1.4.
+        Genshi template.
+
+        .. note::
+
+        This method will only try to load a Genshi template during the
+        transition period (Trac 1.3.x). Before Trac 1.4, this method
+        will be merged with `_render_jinja_template`.
 
         """
         try:
-            return self.render_jinja_template(req, filename, data, content_type,
-                                              fragment, iterable, method)
+            return self._render_jinja_template(req, filename, data,
+                                               content_type, fragment,
+                                               iterable, method)
         except TemplateNotFound:
             if genshi:
-                return self.render_genshi_template(
-                    req, filename, data, content_type, fragment, iterable, method)
+                return self.render_genshi_template(req, filename, data,
+                                                   content_type, fragment,
+                                                   iterable, method)
             raise
 
-    def render_jinja_template(self, req, filename, data, content_type=None,
-                              fragment=False, iterable=False, method=None):
+    def _render_jinja_template(self, req, filename, data, content_type=None,
+                               fragment=False, iterable=False, method=None):
         """Render the `filename` using the `data` for the context.
 
-        The `content_type` argument is not used, but simply passed on to the
-        templates (defaults to ``'text/html'``).
+        The `content_type` argument is passed on to the templates
+        (defaults to ``'text/html'``).
 
-        The rendering `method` (xml, xhtml or text) may be specified and is
-        inferred from the `content_type` if not specified. And is mostly
-        redundant now with `content_type`.
+        The rendering `method` (``'xml'``, ``'xhtml'`` or ``'text'``)
+        may be specified directly or can be inferred from the
+        `content_type`.  Note however that Jinja2's autoescape mode
+        gets activated based solely on the `filename` *extension* (see
+        `jinja2env`).
 
-        When `fragment` is specified, or `method` is `'text'`, we
-        simply delegate the rendering to `generate_template_fragment`.
+        When `fragment` is specified, or `method` is ``'text'``, we
+        generate some content which does not need all of the chrome
+        related data, typically HTML fragments, XML or plain text.
+        Unless `iterable` is set, see `render_template_as_string` for
+        the return value.
 
         When `iterable` is specified, the content is returned as an
-        iterable instance.
+        iterable of UTF-8 encoded bytes.
 
         """
         if content_type is None:
@@ -1120,13 +1137,14 @@ class Chrome(Component):
                 except KeyError:
                     pass
 
-        jtemplate = self.load_jinja_template('j' + filename)
-        # Populate data with request dependent data
-        jdata = self.populate_data(req, data, {})
+        jtemplate, jdata = self.prepare_template(filename, data, req)
 
         if fragment or method == 'text':
-            rendered = jtemplate.render(jdata)
-            return rendered if method == 'text' else Markup(rendered)
+            if iterable:
+                return self.generate_template_stream(jtemplate, jdata, method,
+                                                     True)
+            else:
+                return self.render_template_as_string(jtemplate, jdata, method)
 
         jdata['chrome']['content_type'] = content_type
 
@@ -1147,13 +1165,8 @@ class Chrome(Component):
         })
 
         try:
-            if iterable:
-                stream = jtemplate.stream(jdata)
-                stream.enable_buffering(75) # buffer_size
-                return self.jiterable_content(stream, method)
-            else:
-                return valid_html_bytes(jtemplate.render(jdata).encode('utf-8'))
-
+            return self.generate_template_stream(jtemplate, jdata, method,
+                                                 iterable)
         except Exception as e:
             # restore what may be needed by the error template
             req.chrome.update({'early_links': None, 'early_scripts': None,
@@ -1161,26 +1174,71 @@ class Chrome(Component):
                                'scripts': scripts, 'script_data': script_data})
             raise
 
+    def generate_template_fragment(self, req, filename, data, method='html'):
+        """Produce content from given template, with minimal data overhead.
 
-    def generate_template_fragment(self, req, template, data, method='html'):
-        """Produce content from given template, with minimal overhead.
+        Use this when the chrome content used for a full themed HTML
+        page generation is not needed (note: doesn't do that for now).
 
-        Use this when the chrome content is not needed.
-        The generated output is suitable to use by `Request.send`
-        (UTF-8 bytes or iterable, depending on `use_chunked_encoding`).
+        The generated output is suitable to pass directly to
+        `Request.send`, see `generate_template_stream` for details.
 
         """
-        jtemplate = self.load_jinja_template('j' + template)
-        jdata = self.populate_data(req, data, {})
-        if self.use_chunked_encoding:
+        jtemplate, jdata = self.prepare_template(filename, data, req)
+        return self.generate_template_stream(jtemplate, jdata, method)
+
+    def prepare_template(self, filename, data, req=None):
+        """Prepares the rendering of a template.
+
+        :param filename: the name of a Jinja2 template, which must be
+                         found in one of the template directories (see
+                         `get_templates_dirs`)
+        :param data: user specified data dictionary, used to override
+                     the default context set from the request *req*
+                     (see `populate_data`)
+        :param req: a `Request` instance (optional)
+        :rtype: a pair of Jinja2 `Template` and a `dict`.
+        """
+        jtemplate = self._load_jinja_template('j' + filename)
+        jdata = self.populate_data(req, data, {}) if req else data
+        return jtemplate, jdata
+
+    def generate_template_stream(self, jtemplate, jdata, method='',
+                                 iterable=None):
+        """Returns the rendered template in a form that can be "sent".
+
+        It will be either a single UTF-8 encoded `str` object, or an
+        iterable made of chunks of the above.
+
+        :param method: if not ``'text'``, the generated bytes will be
+                       sanitized (see `valid_html_bytes`)
+
+        :param iterable: determine whether the output should be
+                         generated in chunks or as a single `str`; if
+                         `None`, the `use_chunked_encoding` property
+                         will be used to determine this instead
+        :rtype: `str` or an iterable of `str`, depending on *iterable*
+
+        """
+        if iterable or iterable is None and self.use_chunked_encoding:
             stream = jtemplate.stream(jdata)
             stream.enable_buffering(75) # buffer_size
-            return jiterable_content(stream, method)
+            return self._jiterable_content(stream, method)
         else:
             bytes = jtemplate.render(jdata).encode('utf-8')
             if method != 'text':
                 bytes = valid_html_bytes(bytes)
             return bytes
+
+    def render_template_as_string(self, jtemplate, jdata, method='html'):
+        """Renders the template as an unicode string.
+
+        :rtype: `unicode` if *method* is ``'text'``, `Markup`
+                otherwise.
+
+        """
+        string = jtemplate.render(jdata)
+        return string if method == 'text' else Markup(string)
 
     def get_interface_customization_files(self):
         """Returns a dictionary containing the lists of files present in the
@@ -1211,38 +1269,17 @@ class Chrome(Component):
             }
         return files
 
-    def iterable_content(self, stream, method, **kwargs):
-        """Generate an iterable object which iterates `str` instances
-        from the given stream instance.
-
-        :param method: the serialization method; can be either "xml",
-                       "xhtml", "html", "text", or a custom serializer
-                       class
-        """
-        try:
-            if method == 'text':
-                for chunk in stream.serialize(method, **kwargs):
-                    yield chunk.encode('utf-8')
-            else:
-                for chunk in stream.serialize(method, **kwargs):
-                    yield valid_html_bytes(chunk.encode('utf-8'))
-        except Exception as e:
-            pos = self._stream_location(stream)
-            if pos:
-                location = "'%s', line %s, char %s" % pos
-            else:
-                location = '(unknown template location)'
-            self.log.error('Genshi %s error while rendering template %s%s',
-                           e.__class__.__name__, location,
-                           exception_to_unicode(e, traceback=True))
-
-    def jiterable_content(self, stream, method):
+    def _jiterable_content(self, stream, method):
         """Generate an iterable object which iterates `str` instances
         from the given generator.
 
         :param method: the serialization method; can be either "xml",
                        "xhtml", "html", "text", or a custom serializer
                        class
+
+        .. note:: will be renamed to ``iterable_content`` once we
+                  remove the Genshi compatibility layer.
+
         """
         try:
             if method == 'text':
@@ -1433,11 +1470,11 @@ class Chrome(Component):
         # DocType for 'text/html' output
         html_doctype = DocType.XHTML_STRICT
 
-        def load_genshi_template(self, filename, method=None):
+        def load_template(self, filename, method=None):
             """Retrieve a Template and optionally preset the template data.
 
             Also, if the optional `method` argument is set to
-            `'text'`, a `NewTextTemplate` instance will be created
+            ``'text'``, a `NewTextTemplate` instance will be created
             instead of a `MarkupTemplate`.
 
             """
@@ -1498,7 +1535,7 @@ class Chrome(Component):
                     except KeyError:
                         pass
 
-            template = self.load_genshi_template(filename, method=method)
+            template = self.load_template(filename, method=method)
 
             # Populate data with request dependent data
             data = self.populate_data(req, data, self.get_genshi_data())
@@ -1562,6 +1599,31 @@ class Chrome(Component):
                                       error=e.__class__.__name__,
                                       location=location))
                 raise
+
+        def iterable_content(self, stream, method, **kwargs):
+            """Generate an iterable object which iterates `str` instances
+            from the given stream instance.
+
+            :param method: the serialization method; can be either "xml",
+                           "xhtml", "html", "text", or a custom serializer
+                           class
+            """
+            try:
+                if method == 'text':
+                    for chunk in stream.serialize(method, **kwargs):
+                        yield chunk.encode('utf-8')
+                else:
+                    for chunk in stream.serialize(method, **kwargs):
+                        yield valid_html_bytes(chunk.encode('utf-8'))
+            except Exception as e:
+                pos = self._stream_location(stream)
+                if pos:
+                    location = "'%s', line %s, char %s" % pos
+                else:
+                    location = '(unknown template location)'
+                self.log.error('Genshi %s error while rendering template %s%s',
+                               e.__class__.__name__, location,
+                               exception_to_unicode(e, traceback=True))
 
         # Genshi Template filters
 

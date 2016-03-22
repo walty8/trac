@@ -44,10 +44,10 @@ del Empty # shouldn't be used outside of Trac core
 # -- Jinja2
 
 def jinja2env(**kwargs):
-    """Creates a Jinja2 environment set with Trac conventions.
+    """Creates a Jinja2 environment configured with Trac conventions.
 
-    All default parameters can be overriden, but what *has* to be
-    specified is the ``loader`` parameter.
+    All default parameters can optionally be overriden, but what *has*
+    to be provided by the caller is the ``loader`` parameter.
 
     """
     def autoescape_extensions(exts, template):

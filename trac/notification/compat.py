@@ -43,8 +43,8 @@ class Notify(object):
         self.config = env.config
 
         from trac.web.chrome import Chrome
-        self.template = Chrome(self.env).load_genshi_template(self.template_name,
-                                                              method='text')
+        self.template = Chrome(self.env).load_template(self.template_name,
+                                                       method='text')
         # FIXME: actually, we would need a different
         #        PermissionCache for each recipient
         chrome = Chrome(self.env)
