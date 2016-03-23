@@ -122,10 +122,10 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
     #       https://www.w3.org/TR/html-markup/syntax.html#syntax-attr-empty
     attrs = []
     for key in sorted(d):
-        val = html_attribute(key, d[key])
-        if val is not None and not isinstance(val, Undefined):
-            attrs.append(u'%s="%s"' % (escape_quotes(key),
-                                       escape_quotes(val)))
+        val = d[key]
+        val = html_attribute(key, None if isinstance(val, Undefined) else val)
+        if val is not None :
+            attrs.append(u'%s="%s"' % (key, val))
     rv = u' '.join(attrs)
     if autospace and rv:
         rv = u' ' + rv

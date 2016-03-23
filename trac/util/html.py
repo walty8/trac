@@ -242,9 +242,9 @@ def html_attribute(key, val):
     attributes in a special way, as it processes them through
     `classes` and `styles`.
 
-    :rtype: typically a `str` or `unicode` object, but it can also be
-            `None` to indicate that the attribute should be omitted
-            from the output
+    :rtype: a `Markup` object containing the escaped attribute value,
+            but it can also be `None` to indicate that the attribute
+            should be omitted from the output
 
     """
     if key == 'class':
@@ -264,7 +264,7 @@ def html_attribute(key, val):
                 val = key if val else None
             else:
                 val = values[bool(val)]
-    return val
+    return None if val is None else escape(val)
 
 def classes(*args, **kwargs):
     """Helper function for dynamically assembling a list of CSS class names
@@ -326,7 +326,7 @@ def styles(*args, **kwargs):
         else:
             styles.append(arg)
     d.update(kwargs)
-    styles.extend('%s: %s' % (k, v) for k, v in d.items() if v)
+    styles.extend('%s: %s' % (k, v) for k, v in d.iteritems() if v)
     return u'; '.join(styles)
 
 
@@ -383,19 +383,19 @@ class Fragment(object):
             yield TEXT, Markup(self), (None, -1, -1)
 
 
-class Element(Fragment):
-    """An element represents an HTML element, with a tag name, attributes
+class XMLElement(Fragment):
+    """An element represents an XML element, with a tag name, attributes
     and content.
 
     """
 
-    VOID_ELEMENTS = set(('area', 'base', 'br', 'col', 'command', 'embed', 'hr',
-                         'img', 'input', 'keygen', 'link', 'meta', 'param',
-                         'source', 'track', 'wbr'))
-
     __slot__ = ('tag', 'attrib')
 
     attrib = {}
+
+    VOID_ELEMENTS = ()
+
+    CLOSE_TAG = u'/>'
 
     def __init__(self, tag, *args, **kwargs):
         Fragment.__init__(self, *args)
@@ -403,15 +403,19 @@ class Element(Fragment):
         if kwargs:
             self.attrib = self._dict_from_kwargs(kwargs)
 
+    def _attr_value(self, k, v):
+        return v
+
     def _dict_from_kwargs(self, kwargs):
-        # TODO: share more logic with htmlattr_filter
-        try:
-            c = kwargs.pop('class_')
-            kwargs['class'] = c
-        except KeyError:
-            pass
-        return dict((k, escape(v)) for k, v in kwargs.iteritems()
-                    if v is not None)
+        attrs = []
+        for k, v in kwargs.iteritems():
+            if v is not None:
+                if k[-1:] == '_':
+                    k = k[:-1]
+                v = self._attr_value(k, v)
+                if v is not None:
+                    attrs.append((k, escape(v)))
+        return dict(attrs)
 
     def __call__(self, *args, **kwargs):
         if kwargs:
@@ -431,26 +435,58 @@ class Element(Fragment):
             # Sorting the attributes makes the unit-tests more robust
             attrs = []
             for k in sorted(self.attrib.keys()):
-                v = html_attribute(k, self.attrib[k])
+                v = self.attrib[k]
                 if v:
                     attrs.append(' %s="%s"' % (k, v))
             if attrs:
                 elt += u''.join(attrs)
-        if self.children or self.tag not in self.VOID_ELEMENTS:
+        if self.children or (self.VOID_ELEMENTS and
+                             self.tag not in self.VOID_ELEMENTS):
             elt += u'>' + Fragment.__unicode__(self) + u'</' + self.tag + u'>'
         else:
-            elt += u' />'
+            elt += self.CLOSE_TAG
         return elt
 
 
-class ElementFactory(object):
-    """A fragment factory can be used to build fragments and element of a
-    given tag name.
+class Element(XMLElement):
+    """An element represents an HTML element, with a tag name, attributes
+    and content.
+
+    Some elements and attributes are rendered specially, according to the
+    HTML5 specification (or going there...)
+
     """
+
+    VOID_ELEMENTS = set(('area', 'base', 'br', 'col', 'command', 'embed', 'hr',
+                         'img', 'input', 'keygen', 'link', 'meta', 'param',
+                         'source', 'track', 'wbr'))
+    CLOSE_TAG = u' />'
+
     __slot__ = ()
+
+    def _attr_value(self, k, v):
+        return html_attribute(k, v)
+
+
+class XMLElementFactory(object):
+    """An XML element factory can be used to build Fragments and
+    XMLElements for arbitrary tag names.
+
+    """
 
     def __call__(self, *args):
         return Fragment(*args)
+
+    def __getattr__(self, tag):
+        return XMLElement(tag)
+
+xml = XMLElementFactory()
+
+class ElementFactory(XMLElementFactory):
+    """An element factory can be used to build Fragments and Elements for
+    arbitrary tag names.
+
+    """
 
     def __getattr__(self, tag):
         return Element(tag)

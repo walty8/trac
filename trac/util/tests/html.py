@@ -20,7 +20,7 @@ from trac.core import TracError
 from trac.util import html
 from trac.util.html import (
     Element, FormTokenInjector, Fragment, HTML, Markup, TracHTMLSanitizer,
-    escape, find_element, genshi, tag, to_fragment
+    escape, find_element, genshi, tag, to_fragment, xml
 )
 from trac.util.translation import gettext, tgettext
 
@@ -44,6 +44,30 @@ class FragmentTestCase(unittest.TestCase):
         self.assertEqual(Markup(u'0<b>0</b> and <b>0</b>'),
                          Markup(tag(0, tag.b(0L), ' and ', tag.b(0.0))))
 
+
+class XMLElementTestCase(unittest.TestCase):
+    def test_xml(self):
+        self.assertEqual(Markup(u'0<a>0</a> and <b>0</b> and <c/> and'
+                                ' <d class="[\'a\', \'\', \'b\']"'
+                                ' more_="[\'a\']"/>'),
+                         Markup(xml(0, xml.a(0L), ' and ', xml.b(0.0),
+                                    ' and ', xml.c(None), ' and ',
+                                    xml.d('', class_=['a', '', 'b'],
+                                          more__=['a']))))
+
+class ElementTestCase(unittest.TestCase):
+    def test_tag(self):
+        self.assertEqual(Markup(u'0<a>0</a> and <b>0</b> and <c></c>'
+                                u' and <d class="a b" more_="[\'a\']"></d>'),
+                         Markup(tag(0, tag.a(0L, href=''), ' and ', tag.b(0.0),
+                                    ' and ', tag.c(None), ' and ',
+                                    tag.d('', class_=['a', '', 'b'],
+                                          more__=['a']))))
+
+class FragmentTestCase(unittest.TestCase):
+    def test_zeros(self):
+        self.assertEqual(Markup(u'0<b>0</b> and <b>0</b>'),
+                         Markup(tag(0, tag.b(0L), ' and ', tag.b(0.0))))
 
 class FormTokenInjectorTestCase(unittest.TestCase):
     def test_no_form(self):
@@ -307,6 +331,8 @@ def suite():
     suite.addTest(doctest.DocTestSuite(html))
     suite.addTest(unittest.makeSuite(EscapeFragmentTestCase))
     suite.addTest(unittest.makeSuite(FragmentTestCase))
+    suite.addTest(unittest.makeSuite(XMLElementTestCase))
+    suite.addTest(unittest.makeSuite(ElementTestCase))
     suite.addTest(unittest.makeSuite(FormTokenInjectorTestCase))
     suite.addTest(unittest.makeSuite(TracHTMLSanitizerTestCase))
     if genshi:
