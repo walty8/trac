@@ -29,7 +29,7 @@ from jinja2._compat import iteritems
 
 from trac.core import TracError
 from .datefmt import to_utimestamp
-from .html import Fragment, html_attribute
+from .html import Fragment, classes, html_attribute, styles
 from .text import javascript_quote
 
 __all__ = ['captioned_button', 'classes', 'first_last', 'group', 'istext',
@@ -122,19 +122,7 @@ def htmlattr_filter(_eval_ctx, d, autospace=True):
     #       https://www.w3.org/TR/html-markup/syntax.html#syntax-attr-empty
     attrs = []
     for key in sorted(d):
-        val = d[key]
-        if key == 'class':
-            if isinstance(val, dict):
-                val = classes(**val) or None
-            elif isinstance(val, list):
-                val = classes(*val) or None
-        elif key == 'style':
-            if isinstance(val, list):
-                val = styles(*val) or None
-            else:
-                val = styles(val) or None
-        else:
-            val = html_attribute(key, val)
+        val = html_attribute(key, d[key])
         if val is not None and not isinstance(val, Undefined):
             attrs.append(u'%s="%s"' % (escape_quotes(key),
                                        escape_quotes(val)))
@@ -203,70 +191,6 @@ def captioned_button(req, symbol, text):
     """Return symbol and text or only symbol, according to user preferences."""
     return symbol if req.session.get('ui.use_symbols') \
         else u'%s %s' % (symbol, text)
-
-def classes(*args, **kwargs):
-    """Helper function for dynamically assembling a list of CSS class names
-    in templates.
-
-    Any positional arguments are added to the list of class names. All
-    positional arguments must be strings:
-
-    >>> classes('foo', 'bar')
-    u'foo bar'
-
-    In addition, the names of any supplied keyword arguments are added if they
-    have a truth value:
-
-    >>> classes('foo', bar=True)
-    u'foo bar'
-    >>> classes('foo', bar=False)
-    u'foo'
-
-    If none of the arguments are added to the list, this function returns
-    `''`:
-
-    >>> classes(bar=False)
-    u''
-    """
-    classes = list(filter(None, args)) + [k for k, v in kwargs.items() if v]
-    return u' '.join(classes)
-
-
-def styles(*args, **kwargs):
-    """Helper function for dynamically assembling a list of CSS style name
-    and values in templates.
-
-    Any positional arguments are added to the list of styles. All
-    positional arguments must be strings or dicts:
-
-    >>> styles('foo: bar', 'fu: baz', {'bottom-right': '1em'})
-    u'foo: bar; fu: baz; bottom-right: 1em'
-
-    In addition, the names of any supplied keyword arguments are added
-    if they have a string value:
-
-    >>> styles(foo='bar', fu='baz')
-    u'foo: bar; fu: baz'
-    >>> styles(foo='bar', bar=False)
-    u'foo: bar'
-
-    If none of the arguments are added to the list, this function returns
-    `''`:
-
-    >>> styles(bar=False)
-    u''
-    """
-    args = list(filter(None, args))
-    d = {}
-    styles = []
-    for arg in args:
-        if isinstance(arg, dict):
-            d.update(arg)
-        else:
-            styles.append(arg)
-    d.update(kwargs)
-    styles.extend('%s: %s' % (k, v) for k, v in d.items() if v)
-    return u'; '.join(styles)
 
 
 def first_last(idx, seq):

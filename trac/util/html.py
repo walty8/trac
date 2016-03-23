@@ -218,7 +218,7 @@ NO_YES = ('no', 'yes')
 OFF_ON = ('off', 'on')
 FALSE_TRUE = ('false', 'true')
 
-HTML_ATTRS = dict(
+SPECIAL_HTML_ATTRS = dict(
     async=None, autofocus=None, autoplay=None, checked=None, controls=None,
     default=None, defer=None, disabled=None, formnovalidate=None, hidden=None,
     ismap=None, loop=None, multiple=None, muted=None, novalidate=None,
@@ -238,17 +238,96 @@ def html_attribute(key, val):
 
     .. _HTML5: https://www.w3.org/TR/html-markup/global-attributes.html#global-attributes
 
+    In addition, it treats the ``'class'`` and the ``'style'``
+    attributes in a special way, as it processes them through
+    `classes` and `styles`.
+
+    :rtype: typically a `str` or `unicode` object, but it can also be
+            `None` to indicate that the attribute should be omitted
+            from the output
+
     """
-    try:
-        values = HTML_ATTRS[key]
-        if values is None:
-            val = key if val else None
+    if key == 'class':
+        if isinstance(val, dict):
+            val = classes(**val) or None
+        elif isinstance(val, list):
+            val = classes(*val) or None
+    elif key == 'style':
+        if isinstance(val, list):
+            val = styles(*val) or None
         else:
-            val = values[bool(val)]
-        if val is not None:
-            return val
-    except KeyError:
-        return val
+            val = styles(val) or None
+    else:
+        if key in SPECIAL_HTML_ATTRS:
+            values = SPECIAL_HTML_ATTRS[key]
+            if values is None:
+                val = key if val else None
+            else:
+                val = values[bool(val)]
+    return val
+
+def classes(*args, **kwargs):
+    """Helper function for dynamically assembling a list of CSS class names
+    in templates.
+
+    Any positional arguments are added to the list of class names. All
+    positional arguments must be strings:
+
+    >>> classes('foo', 'bar')
+    u'foo bar'
+
+    In addition, the names of any supplied keyword arguments are added if they
+    have a truth value:
+
+    >>> classes('foo', bar=True)
+    u'foo bar'
+    >>> classes('foo', bar=False)
+    u'foo'
+
+    If none of the arguments are added to the list, this function returns
+    `''`:
+
+    >>> classes(bar=False)
+    u''
+    """
+    classes = list(filter(None, args)) + [k for k, v in kwargs.items() if v]
+    return u' '.join(classes)
+
+def styles(*args, **kwargs):
+    """Helper function for dynamically assembling a list of CSS style name
+    and values in templates.
+
+    Any positional arguments are added to the list of styles. All
+    positional arguments must be strings or dicts:
+
+    >>> styles('foo: bar', 'fu: baz', {'bottom-right': '1em'})
+    u'foo: bar; fu: baz; bottom-right: 1em'
+
+    In addition, the names of any supplied keyword arguments are added
+    if they have a string value:
+
+    >>> styles(foo='bar', fu='baz')
+    u'foo: bar; fu: baz'
+    >>> styles(foo='bar', bar=False)
+    u'foo: bar'
+
+    If none of the arguments are added to the list, this function returns
+    `''`:
+
+    >>> styles(bar=False)
+    u''
+    """
+    args = list(filter(None, args))
+    d = {}
+    styles = []
+    for arg in args:
+        if isinstance(arg, dict):
+            d.update(arg)
+        else:
+            styles.append(arg)
+    d.update(kwargs)
+    styles.extend('%s: %s' % (k, v) for k, v in d.items() if v)
+    return u'; '.join(styles)
 
 
 class Fragment(object):
