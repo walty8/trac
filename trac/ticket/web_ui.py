@@ -1581,7 +1581,7 @@ class TicketModule(Component):
             if name in ('summary', 'reporter', 'description', 'owner',
                         'status', 'resolution', 'time', 'changetime'):
                 field['skip'] = True
-            elif name == 'milestone':
+            elif name == 'milestone' and not field.get('custom'):
                 milestones = [Milestone(self.env, opt)
                               for opt in field['options']]
                 milestones = [m for m in milestones
