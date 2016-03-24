@@ -1200,7 +1200,7 @@ class Chrome(Component):
         :rtype: a pair of Jinja2 `Template` and a `dict`.
         """
         jtemplate = self._load_jinja_template('j' + filename)
-        jdata = self.populate_data(req, data, {}) if req else data
+        jdata = self.populate_data(req, data, {})
         return jtemplate, jdata
 
     def generate_template_stream(self, jtemplate, jdata, method='',

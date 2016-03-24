@@ -42,15 +42,6 @@ class Notify(object):
         self.env = env
         self.config = env.config
 
-        from trac.web.chrome import Chrome
-        self.template = Chrome(self.env).load_template(self.template_name,
-                                                       method='text')
-        # FIXME: actually, we would need a different
-        #        PermissionCache for each recipient
-        chrome = Chrome(self.env)
-        self.data = chrome.populate_data(None, {'CRLF': CRLF},
-                                         chrome.get_genshi_data())
-
     def notify(self, resid):
         torcpts, ccrcpts = self.get_recipients(resid)
         self.begin_send()
@@ -108,6 +99,7 @@ class NotifyEmail(Notify):
 
         notify_sys = NotificationSystem(self.env)
         self._charset = create_charset(notify_sys.mime_encoding)
+        self.data = {'CRLF': CRLF}
 
     def notify(self, resid, subject, author=None):
         self.subject = subject
@@ -171,11 +163,15 @@ class NotifyEmail(Notify):
         return self.format_header(key, value)
 
     def _format_body(self):
-        stream = self.template.generate(**self.data)
         # don't translate the e-mail stream
         t = deactivate()
         try:
-            return stream.render('text', encoding='utf-8')
+            from trac.web.chrome import Chrome
+            cr = Chrome(self.env)
+            template, data = cr.prepare_template(
+                self.template_name, self.data)
+            return cr.render_template_as_string(
+                template, data, method='text').encode('utf-8')
         finally:
             reactivate(t)
 
