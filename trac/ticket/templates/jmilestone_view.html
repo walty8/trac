@@ -18,18 +18,20 @@
       ${ super() }
       # endblock title
     </title>
-
-    # if 'MILESTONE_MODIFY' in perm(milestone.resource):
+    # block head
+    ${ super() }
+    #   if 'MILESTONE_MODIFY' in perm(milestone.resource):
     <link rel="alternate" type="application/x-wiki"
           title="${_("Edit this milestone")}"
           href="${href.milestone(milestone.name, action='edit')}" />
-    # endif
+    #   endif
     <script type="text/javascript">
       jQuery(document).ready(function($) {
         $("#content").find("h1,h2,h3,h4,h5,h6").addAnchor("Link to this section");
         $(".foldable").enableFolding(true, true);
       });
     </script>
+    # endblock head
   </head>
 
   <body>
