@@ -19,8 +19,6 @@
 import re
 from contextlib import contextmanager
 
-from genshi.template.text import NewTextTemplate
-
 from trac.attachment import IAttachmentChangeListener
 from trac.core import *
 from trac.config import *
@@ -36,8 +34,9 @@ from trac.ticket.api import TicketSystem
 from trac.ticket.model import Ticket
 from trac.util.datefmt import (datetime_now, format_date_or_datetime,
                                get_timezone, utc)
-from trac.util.text import exception_to_unicode, obfuscate_email_address, \
-                           shorten_line, text_width, wrap
+from trac.util.text import (exception_to_unicode, jinja2env,
+                            obfuscate_email_address, shorten_line,
+                            text_width, wrap)
 from trac.util.translation import _, deactivate, reactivate
 from trac.web.chrome import Chrome
 
@@ -64,7 +63,7 @@ class TicketNotificationSystem(Component):
         pass
 
     ticket_subject_template = Option('notification', 'ticket_subject_template',
-                                     '$prefix #$ticket.id: $summary',
+                                     '${prefix} #${ticket.id}: ${summary}',
         """A Genshi text template snippet used to get the notification
         subject.
 
@@ -73,7 +72,7 @@ class TicketNotificationSystem(Component):
         """)
 
     batch_subject_template = Option('notification', 'batch_subject_template',
-                                    '$prefix Batch modify: $tickets_descr',
+                                    '${prefix} Batch modify: ${tickets_descr}',
         """Like `ticket_subject_template` but for batch modifications.
         (''since 1.0'')""")
 
@@ -805,7 +804,7 @@ class TicketNotifyEmail(NotifyEmail):
 
     def format_subj(self, summary, newticket=True):
         template = self.config.get('notification', 'ticket_subject_template')
-        template = NewTextTemplate(template.encode('utf8'))
+        template = jinja2env().from_string(template)
 
         prefix = self.config.get('notification', 'smtp_subject_prefix')
         if prefix == '__default__':
@@ -818,7 +817,7 @@ class TicketNotifyEmail(NotifyEmail):
             'env': self.env,
         }
 
-        subj = template.generate(**data).render('text', encoding=None).strip()
+        subj = template.render(**data).strip()
         if not newticket:
             subj = "Re: " + subj
         return subj
@@ -958,7 +957,7 @@ class BatchTicketNotifyEmail(NotifyEmail):
 
     def format_subj(self, tickets_descr):
         template = self.config.get('notification', 'batch_subject_template')
-        template = NewTextTemplate(template.encode('utf8'))
+        template = jinja2env().from_string(template)
 
         prefix = self.config.get('notification', 'smtp_subject_prefix')
         if prefix == '__default__':
@@ -969,7 +968,7 @@ class BatchTicketNotifyEmail(NotifyEmail):
             'tickets_descr': tickets_descr,
             'env': self.env,
         }
-        subj = template.generate(**data).render('text', encoding=None).strip()
+        subj = template.render(**data).strip()
         return shorten_line(subj)
 
     def get_recipients(self, tktids):

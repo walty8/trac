@@ -49,8 +49,16 @@ def jinja2env(**kwargs):
     All default parameters can optionally be overriden, but what *has*
     to be provided by the caller is the ``loader`` parameter.
 
+    Note that inlined templates created by calling `from_string` on
+    the environment will have the ``autoescape`` setting set to
+    `False`.  Don't forget to use the ``|escape`` (``|e``) filter as
+    appropriate.
+
+    :rtype: `jinja.Environment`
+
     """
-    def autoescape_extensions(exts, template):
+    exts = ('html', 'rss', 'xml')
+    def autoescape_extensions(template):
         return template and template.rsplit('.', 1)[1] in exts
     defaults = dict(
         variable_start_string='${',
@@ -60,7 +68,7 @@ def jinja2env(**kwargs):
         trim_blocks=True,
         lstrip_blocks=True,
         extensions=['jinja2.ext.i18n', 'jinja2.ext.with_'],
-        autoescape=partial(autoescape_extensions, ('html', 'rss', 'xml')),
+        autoescape=autoescape_extensions,
     )
     defaults.update(kwargs)
     jenv = jinja2.Environment(**defaults)
