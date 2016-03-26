@@ -44,15 +44,11 @@ del Empty # shouldn't be used outside of Trac core
 # -- Jinja2
 
 def jinja2env(**kwargs):
-    """Creates a Jinja2 environment configured with Trac conventions.
+    """Creates a Jinja2 ``Environment`` configured with Trac conventions.
 
-    All default parameters can optionally be overriden, but what *has*
-    to be provided by the caller is the ``loader`` parameter.
-
-    Note that inlined templates created by calling `from_string` on
-    the environment will have the ``autoescape`` setting set to
-    `False`.  Don't forget to use the ``|escape`` (``|e``) filter as
-    appropriate.
+    All default parameters can optionally be overriden. The ``loader``
+    parameter is not set by default, so unless it is set by the
+    caller, only inline templates can be created from the environment.
 
     :rtype: `jinja.Environment`
 
@@ -76,6 +72,16 @@ def jinja2env(**kwargs):
         len=len,
     )
     return jenv
+
+def jinja2template(template, text=False):
+    """Creates a Jinja2 ``Template`` from inlined source.
+
+    :param template: the template content
+    :param text: if set to `False`, the input strings will be
+                 auto-escaped
+
+    """
+    return jinja2env(autoescape=lambda _: not text).from_string(template)
 
 
 # -- Unicode

@@ -34,7 +34,7 @@ from trac.ticket.api import TicketSystem
 from trac.ticket.model import Ticket
 from trac.util.datefmt import (datetime_now, format_date_or_datetime,
                                get_timezone, utc)
-from trac.util.text import (exception_to_unicode, jinja2env,
+from trac.util.text import (exception_to_unicode, jinja2template,
                             obfuscate_email_address, shorten_line,
                             text_width, wrap)
 from trac.util.translation import _, deactivate, reactivate
@@ -804,7 +804,7 @@ class TicketNotifyEmail(NotifyEmail):
 
     def format_subj(self, summary, newticket=True):
         template = self.config.get('notification', 'ticket_subject_template')
-        template = jinja2env().from_string(template)
+        template = jinja2template(template, text=True)
 
         prefix = self.config.get('notification', 'smtp_subject_prefix')
         if prefix == '__default__':
@@ -957,7 +957,7 @@ class BatchTicketNotifyEmail(NotifyEmail):
 
     def format_subj(self, tickets_descr):
         template = self.config.get('notification', 'batch_subject_template')
-        template = jinja2env().from_string(template)
+        template = jinja2template(template, text=True)
 
         prefix = self.config.get('notification', 'smtp_subject_prefix')
         if prefix == '__default__':

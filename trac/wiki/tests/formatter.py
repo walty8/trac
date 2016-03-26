@@ -96,8 +96,8 @@ class DivCodeStreamMacro(WikiMacroBase):
             tmpl = MarkupTemplate(template)
             return tmpl.generate(args=content)
         else:
-            from trac.util.text import jinja2env
-            tmpl = jinja2env().from_string(template.strip())
+            from trac.util.text import jinja2template
+            tmpl = jinja2template(template.strip())
             return tmpl.render(args=content)
 
 class NoneMacro(WikiMacroBase):
