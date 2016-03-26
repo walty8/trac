@@ -84,16 +84,21 @@ class DivCodeElementMacro(WikiMacroBase):
     def expand_macro(self, formatter, name, content):
         return html.div('Hello World, args = ', content, class_="code")
 
-if genshi:
-    class DivCodeStreamMacro(WikiMacroBase):
-        """A dummy macro returning a Genshi Stream, used by the unit test."""
+class DivCodeStreamMacro(WikiMacroBase):
+    """A dummy macro returning a Genshi Stream, used by the unit test."""
 
-        def expand_macro(self, formatter, name, content):
+    def expand_macro(self, formatter, name, content):
+        template = """
+            <div>Hello World, args = ${args}</div>
+            """
+        if genshi:
             from genshi.template import MarkupTemplate
-            tmpl = MarkupTemplate("""
-            <div>Hello World, args = $args</div>
-            """)
+            tmpl = MarkupTemplate(template)
             return tmpl.generate(args=content)
+        else:
+            from trac.util.text import jinja2env
+            tmpl = jinja2env().from_string(template.strip())
+            return tmpl.render(args=content)
 
 class NoneMacro(WikiMacroBase):
     """A dummy macro returning `None`, used by the unit test."""
@@ -169,13 +174,10 @@ class WikiTestCase(unittest.TestCase):
         self.context = context
 
     def _create_env(self):
-        global genshi
         all_test_components = [
                 HelloWorldMacro, DivHelloWorldMacro, TableHelloWorldMacro,
-                DivCodeMacro, DivCodeElementMacro,
+                DivCodeMacro, DivCodeElementMacro, DivCodeStreamMacro,
                 NoneMacro, WikiProcessorSampleMacro, SampleResolver]
-        if genshi:
-            all_test_components.append(DivCodeStreamMacro)
         env = EnvironmentStub(enable=['trac.*'] + all_test_components)
         # -- macros support
         env.path = ''

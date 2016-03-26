@@ -33,8 +33,6 @@ import sys
 
 from jinja2 import FileSystemLoader
 
-from genshi.output import DocType
-
 from trac import __version__ as TRAC_VERSION
 from trac.config import BoolOption, ChoiceOption, ConfigurationError, \
                         ExtensionOption, Option, OrderedExtensionsOption

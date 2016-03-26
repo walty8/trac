@@ -37,8 +37,9 @@ except ImportError:
 import time
 
 # Legacy Genshi support
-from trac.util.html import genshi, Attrs, START
+from trac.util.html import genshi
 if genshi:
+    from genshi.core import Attrs, START
     from genshi.filters import Translator
     from genshi.output import DocType
     from genshi.template import TemplateLoader, MarkupTemplate, NewTextTemplate
@@ -429,7 +430,10 @@ class Chrome(Component):
         """The maximum number of templates that the template loader will cache
         in memory. You may want to choose a higher value if your site uses a
         larger number of templates, and you have enough memory to spare, or
-        you can reduce it if you are short on memory.""")
+        you can reduce it if you are short on memory.
+
+        (''deprecated, will be removed for Trac 1.4'')
+        """)
 
     htdocs_location = Option('trac', 'htdocs_location', '',
         """Base URL for serving the core static resources below
@@ -629,6 +633,7 @@ class Chrome(Component):
 
     def get_system_info(self):
         global genshi
+        # Optional and legacy Genshi
         if genshi:
             info = get_pkginfo(genshi).get('version')
             if hasattr(genshi, '_speedups'):
@@ -638,6 +643,11 @@ class Chrome(Component):
         else:
             info = '(not installed, some old plugins may not work as expected)'
         yield 'Genshi', info
+        # Mantadory Jinja2
+        import jinja2
+        info = get_pkginfo(jinja2).get('version')
+        yield 'Jinja2', info
+        # Optional Babel
         try:
             import babel
         except ImportError:
@@ -916,7 +926,19 @@ class Chrome(Component):
             logo = {'link': self.logo_link, 'alt': self.logo_alt}
         return logo
 
-    def populate_data(self, req, data, d):
+    def populate_data(self, req=None, data=None, d=None):
+        """Fills a dictionary with the standard set of fields expected
+        by templates.
+
+        :param req: a `Request` object; if `None`, no request related fields
+                    will be set
+        :param data: user-provided `dict`, which can be used to override
+                     the defaults; if `None`, the defaults will be returned
+        :param d: `dict` which is populated with the defaults; if `None`,
+                  an empty `dict` will be used
+        """
+        if d is None:
+            d = {}
         d['trac'] = {
             'version': self.env.trac_version,
             'homepage': 'http://trac.edgewall.org/',  # FIXME: use setup data
@@ -1044,7 +1066,8 @@ class Chrome(Component):
         })
 
         # Finally merge in the page-specific data
-        d.update(data)
+        if data:
+            d.update(data)
         return d
 
     def _load_jinja_template(self, filename):
@@ -1200,7 +1223,7 @@ class Chrome(Component):
         :rtype: a pair of Jinja2 `Template` and a `dict`.
         """
         jtemplate = self._load_jinja_template('j' + filename)
-        jdata = self.populate_data(req, data, {})
+        jdata = self.populate_data(req, data)
         return jtemplate, jdata
 
     def generate_template_stream(self, jtemplate, jdata, method='',
