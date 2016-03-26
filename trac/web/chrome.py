@@ -41,6 +41,7 @@ from trac.util.html import genshi
 if genshi:
     from genshi.core import Attrs, START
     from genshi.filters import Translator
+    from genshi.input import HTML
     from genshi.output import DocType
     from genshi.template import TemplateLoader, MarkupTemplate, NewTextTemplate
 
@@ -403,7 +404,7 @@ class Chrome(Component):
 
     navigation_contributors = ExtensionPoint(INavigationContributor)
     template_providers = ExtensionPoint(ITemplateProvider)
-    stream_filters = ExtensionPoint(ITemplateStreamFilter)
+    stream_filters = ExtensionPoint(ITemplateStreamFilter) # TODO: delete 1.4
 
     shared_templates_dir = PathOption('inherit', 'templates_dir', '',
         """Path to the //shared templates directory//.
@@ -1162,6 +1163,13 @@ class Chrome(Component):
 
         jtemplate, jdata = self.prepare_template(filename, data, req)
 
+        # Hack for supporting Genshi stream filters (remove for Trac 1.4)
+        if self._check_for_stream_filters(req, method, filename, jdata):
+            page = self.render_template_as_string(jtemplate, jdata, method)
+            return self._filter_jinja_page(req, page, method, filename,
+                                           content_type, jdata,
+                                           fragment, iterable)
+
         if fragment or method == 'text':
             if iterable:
                 return self.generate_template_stream(jtemplate, jdata, method,
@@ -1567,14 +1575,9 @@ class Chrome(Component):
             stream = template.generate(**data)
             # Filter through ITemplateStreamFilter plugins
             if self.stream_filters:
-                stream |= self._filter_stream(req, method, filename, stream, data)
+                stream |= self._filter_stream(req, method, filename, data)
             if fragment:
                 return stream
-
-            if method == 'text':
-                buffer = StringIO()
-                stream.render('text', out=buffer, encoding='utf-8')
-                return buffer.getvalue()
 
             doctype = None
             if content_type == 'text/html':
@@ -1583,6 +1586,16 @@ class Chrome(Component):
                     stream |= self._add_form_token(req.form_token)
                 if not int(req.session.get('accesskeys', 0)):
                     stream |= self._strip_accesskeys
+
+            return self._send_genshi_content(req, stream, filename, method,
+                                             doctype, data, iterable)
+
+        def _send_genshi_content(self, req, stream, filename, method, doctype,
+                                 data, iterable):
+            if method == 'text':
+                buffer = StringIO()
+                stream.render('text', out=buffer, encoding='utf-8')
+                return buffer.getvalue()
 
             links = req.chrome.get('links')
             scripts = req.chrome.get('scripts')
@@ -1608,7 +1621,8 @@ class Chrome(Component):
                 # restore what may be needed by the error template
                 req.chrome.update({'early_links': None, 'early_scripts': None,
                                    'early_script_data': None, 'links': links,
-                                   'scripts': scripts, 'script_data': script_data})
+                                   'scripts': scripts,
+                                   'script_data': script_data})
                 # give some hints when hitting a Genshi unicode error
                 if isinstance(e, UnicodeError):
                     pos = self._stream_location(stream)
@@ -1673,14 +1687,43 @@ class Chrome(Component):
                                            if k != 'accesskey'])
                 yield kind, data, pos
 
-        def _filter_stream(self, req, method, filename, stream, data):
+        def _filter_stream(self, req, method, filename, data):
             def inner(stream, ctxt=None):
                 for filter in self.stream_filters:
-                    stream = filter.filter_stream(req, method, filename, stream,
-                                                  data)
+                    stream = filter.filter_stream(req, method, filename,
+                                                  stream, data)
                 return stream
             return inner
 
         def _stream_location(self, stream):
             for kind, data, pos in stream:
                 return pos
+
+        def _check_for_stream_filters(self, req, method, filename, data):
+            class FakeStream(object):
+                def __or__(self, x):
+                    raise GenshiStreamFilterUsed()
+            class GenshiStreamFilterUsed(Exception):
+                pass
+            stream = FakeStream()
+            for filter in self.stream_filters:
+                try:
+                    stream = filter.filter_stream(req, method, filename,
+                                                  stream, data)
+                except GenshiStreamFilterUsed:
+                    name = filter.__class__.__name__
+                    self.log.warning("Component %s relies on deprecated Genshi"
+                                     " stream filtering", name)
+                    return True
+            return False
+
+        def _filter_jinja_page(self, req, content, method, filename,
+                               content_type, data, fragment, iterable):
+            doctype = self.html_doctype if content_type == 'text/html' else None
+            stream = HTML(content)
+            stream |= self._filter_stream(req, method, filename, data)
+            if fragment:
+                return stream
+            else:
+                return self._send_genshi_content(req, stream, filename, method,
+                                                 doctype, data, iterable)
