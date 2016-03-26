@@ -36,15 +36,14 @@
           href="${href.wiki(page.name, action='edit',
                 version=page.version if is_not_latest)}"
           title="${_("Revert page to this version") if is_not_latest else
-                                                  _("Edit this page")}"/>
+                   _("Edit this page")}"/>
     #   endif
     <script type="text/javascript">
       jQuery(document).ready(function($) {
         $("#content").find("h1,h2,h3,h4,h5,h6")
           .addAnchor(_("Link to this section"));
         $("#content").find(".wikianchor").each(function() {
-        $(this).addAnchor(babel.format(_("Link to #%(id)s"), {
-                                       id: $(this).attr('id')}));
+        $(this).addAnchor(babel.format(j_("Link to #%(id)s"), {id: this.id}));
         });
         $(".foldable").enableFolding(true, true);
       });
@@ -68,7 +67,7 @@
             #   set version = page.version
             #   set author = authorinfo(page.author)
             #   set date = pretty_dateinfo(page.time)
-            #   set hef = href.wiki(page.name, action='diff', version=page.version)
+            #   set hef = href.wiki(page.name, action='diff', version=version)
             #   trans version, author, date, href
 
             Version ${version} (modified by ${author}, ${date})
@@ -170,40 +169,43 @@
           </div>
         </form>
 
-        #   if page.exists:
-        #     with alist = attachments
-        #       include "jattach_file_form.html"
-        #     endwith
+        #     if page.exists:
+        #       with alist = attachments
+        #         include "jattach_file_form.html"
+        #       endwith
+        #     endif
         #   endif
-        # endif
 
-        # if page.exists and rename_perm:
+        #   if page.exists and rename_perm:
         <form method="get" action="${href.wiki(page.name)}" id="rename">
           <div>
-            <input type="hidden" name="action" value="rename" />
-            <input type="submit" value="${_('Rename page')}" />
+            <input type="hidden" name="action" value="rename"/>
+            <input type="submit" value="${_('Rename page')}"/>
           </div>
         </form>
-        # endif
-        # if page.exists and delete_perm:
+        #   endif
+        #   if page.exists and delete_perm:
         <form method="get" action="${href.wiki(page.name)}" id="delete">
           <div>
-            <input type="hidden" name="action" value="delete" />
-            <input type="hidden" name="version" value="${page.version}" />
+            <input type="hidden" name="action" value="delete"/>
+            <input type="hidden" name="version" value="${page.version}"/>
             # if page.version == latest_version:
-            <input type="submit" name="delete_version" value="${_('Delete this version')}" />
+            <input type="submit" name="delete_version"
+                   value="${_('Delete this version')}"/>
             # endif
-            <input type="submit" value="${_('Delete page')}" />
+            <input type="submit" value="${_('Delete page')}"/>
           </div>
         </form>
-        # endif
+        #   endif
       </div>
-      # endif
+      #   endif
       # endwith
 
       # if not page.exists and higher:
       <div class="wikipage searchable">
-        <p>You could also create the same page higher in the hierarchy:</p>
+        <p>
+          ${_("You could also create the same page higher in the hierarchy:")}
+        </p>
         <ul>
           # for markup in higher:
           <li>${markup}</li>
@@ -214,7 +216,14 @@
 
       # if not page.exists and related:
       <div class="wikipage searchable">
-        <p>${_("The following pages have a name similar to this page, and may be related:")}</p>
+        <p>
+          # trans
+
+          The following pages have a name similar to this page, and
+          may be related:
+
+          # endtrans
+        </p>
         <ul>
           # for markup in related:
           <li>${markup}</li>
