@@ -26,7 +26,8 @@ import os
 import re
 from tokenize import generate_tokens, COMMENT, NAME, OP, STRING
 
-from jinja2.ext import babel_extract as extract_jinja2
+from jinja2.ext import babel_extract
+
 try:
     import nogenshi
     from genshi.filters.i18n import extract as extract_html_genshi
@@ -39,6 +40,33 @@ from distutils.cmd import Command
 from distutils.command.build import build as _build
 from distutils.errors import DistutilsOptionError
 from setuptools.command.install_lib import install_lib as _install_lib
+
+
+def extract_jinja2(*args, **kwargs):
+    """Extracts translatable texts from templates.
+
+    It filters the output of `jinja2.ext.babel_extract` in order to
+    simplify white-space found translatable texts collected via the
+    ``gettext`` function, which is what the ``trans`` directives do.
+
+    We assume the template function ``gettext`` will do the same
+    before trying to fetch the translation from the catalog.
+
+    """
+    for lineno, func, message, comments in babel_extract(*args, **kwargs):
+        if func == 'gettext':
+            message = simplify_message(message)
+        yield lineno, func, message, comments
+
+def simplify_message(message):
+    tuple_len = len(message) if isinstance(message, tuple) else 0
+    if tuple_len:
+        message = message[0]
+    message = ' '.join(message.split())
+    if tuple_len:
+        message = (message,) + (None,) * (tuple_len - 1)
+    return message
+
 
 class ScriptExtractor(HTMLParser):
     def __init__(self, out):

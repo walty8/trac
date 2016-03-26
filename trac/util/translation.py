@@ -406,11 +406,17 @@ except ImportError: # fall back on 0.11 behavior, i18n functions are no-ops
 
 # For template engines:
 
+def s_gettext(message, **kwargs):
+    """A version suitable for trans blocks in Template, which also
+    squeezes white-space.
+    """
+    return gettext(' '.join(message.split()), **kwargs)
+
 functions = {
     '_': gettext,
     'dgettext': dgettext,
     'dngettext': dngettext,
-    'gettext': gettext,
+    'gettext': s_gettext,
     'ngettext': ngettext,
     'tag_': tag_,
 }
