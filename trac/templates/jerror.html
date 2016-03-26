@@ -74,14 +74,14 @@
     <div>
       # macro create_ticket(url=None)
       <input type="hidden" name="reporter" value="${get_reporter_id(req)}" />
-      # if url == trac.homepage.strip('/'):
+      #   if url == trac.homepage.strip('/'):
       <input type="hidden" name="version"
              value="${trac.version.split('-', 1)[0] if 'dev' in trac.version
                     else trac.version}" />
-      # endif
-      # for arg, value in tracker_args.iteritems():
+      #   endif
+      #   for arg, value in tracker_args.iteritems():
       <input type="hidden" name="${arg}" value="${value}" />
-      # endfor
+      #   endfor
       <input type="hidden" name="summary" value="${message}" />
       <textarea name="description" rows="3" cols="10">
         ${description_en if url else description}</textarea>
@@ -289,7 +289,7 @@
           File "${file}", line ${line}, in ${function}
           #     endtrans
           #     if frame.line:
-          ${frame.line.lstrip()}
+          ${'\n  ' + frame.line.lstrip()}
           #     endif
           #   endfor
           #   if not frames:
