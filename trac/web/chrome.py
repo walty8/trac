@@ -56,7 +56,7 @@ from trac.resource import *
 from trac.util import as_bool, as_int, compat, get_reporter_id, html,\
                       presentation, get_pkginfo, pathjoin, translation
 from trac.util.html import (Element, Markup, escape, plaintext, tag,
-                            valid_html_bytes)
+                            to_fragment, valid_html_bytes)
 from trac.util.text import (jinja2env, pretty_size, obfuscate_email_address,
                             shorten_line, unicode_quote_plus, to_unicode,
                             javascript_quote, exception_to_unicode,
@@ -68,7 +68,6 @@ from trac.util.datefmt import (
     get_day_names_jquery_ui, get_timezone_list_jquery_ui,
     get_first_week_day_jquery_ui, get_timepicker_separator_jquery_ui,
     get_period_names_jquery_ui, localtz)
-from trac.util.html import to_fragment
 from trac.util.translation import _, get_available_locales
 from trac.web.api import IRequestHandler, ITemplateStreamFilter, HTTPNotFound
 from trac.web.href import Href
