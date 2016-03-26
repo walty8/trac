@@ -8,15 +8,13 @@
   individuals. For the exact contribution history, see the revision
   history and logs, available at http://trac.edgewall.org/.
 #}
-
 # extends ('j' + chrome.theme)
 # import "jmacros.html" as jmacros with context
-
 <!DOCTYPE html>
 <html>
   <head>
     # block head
-
+    <!-- # block head (content inherited from layout.html) -->
     <title>
     #  block title
     – ${project.name or 'Trac'}
@@ -92,12 +90,16 @@
         $(".trac-disable-on-submit").disableOnSubmit();
       });
     </script>
+    <!--   # include "site_head.html" (layout.html) -->
     #   include 'site_head.html' ignore missing
+    <!--   end of site_head.html -->
+    <!-- # endblock head (content inherited from layout.html) -->
     # endblock head
   </head>
 
   <body>
     # block content
+    <!-- # block content (content inherited from layout.html) -->
     {# ------------------------------------------------------------------
 
     Note: write the extending template like this:
@@ -114,13 +116,13 @@
     # endblock content
     ## ------------------
 
-    The end user content should typically go first, as evaluating the
-    expressions it contains could modify the chrome.late_links, which
-    are used afterwards in the default content (which follows), that
-    will get inserted via the call to super.
+    The user content should typically go first, as evaluating the
+    expressions it contains may modify the chrome.late_links, which
+    are used afterwards in the default content. This default content
+    should be output via the call to super(), placed after the user
+    content.
 
     ------------------------------------------------------------------ #}
-
     #   if chrome.late_links:
     <script type="text/javascript">
       #   for link in chrome.late_links.get('stylesheet', []):
@@ -148,14 +150,14 @@
         # for link in chrome.links.alternate:
         <li class="${first_last(loop.index0, chrome.links.alternate)}">
           <a rel="nofollow" href="${link.href}"
-             ${{'class': classes(link.class)}|htmlattr}">
+             ${{'class': classes(link.class)}|htmlattr}>
             ${link.title}</a>
         </li>
         # endfor
       </ul>
     </div>
     #   endif
-
+    <!-- # endblock content (content inherited from layout.html) -->
     # endblock content
   </body>
 </html>

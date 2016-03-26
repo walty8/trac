@@ -8,20 +8,22 @@
   individuals. For the exact contribution history, see the revision
   history and logs, available at http://trac.edgewall.org/.
 #}
-
 ## This is Trac's default theme
-
 <!DOCTYPE html>
 <html>
   <head>
+    <!-- # block head (placeholder in theme.html) -->
     # block head
     # endblock head
+    <!-- # endblock head (placeholder in theme.html) -->
   </head> {# jinjacheck: "()" OK #}
 
   <body>
     # block body
-    #   include 'site_header.html' ignore missing
-
+    <!-- # block body (content inherited from theme.html) -->
+    <!--   # include "site_header.html" (theme.html) -->
+    #   include "site_header.html" ignore missing
+    <!--   end of site_header.html -->
     {# ------------------------------------------------------------------
 
     Note: here we produce the main structure of the body element:
@@ -151,7 +153,7 @@
 
       </div>
       # endif
-
+      <!-- # block content (placeholder in theme.html) -->
       # block content
 
       {# ------------------------------------------------------------------
@@ -164,6 +166,7 @@
       ------------------------------------------------------------------ #}
 
       # endblock content
+      <!-- # endblock content (placeholder in theme.html) -->
     </div>
 
     <div id="footer"><hr/>
@@ -178,7 +181,10 @@
       </p>
       <p class="right">${chrome.footer}</p>
     </div>
-    #   include 'site_footer.html' ignore missing
+    <!--   # include "site_footer.html" (theme.html) -->
+    # include 'site_footer.html' ignore missing
+    <!--   end of site_footer.html -->
+    <!-- # endblock body (content inherited from theme.html) -->
     # endblock body
   </body>
 </html>
