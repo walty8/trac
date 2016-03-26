@@ -119,7 +119,7 @@ var babel = new function() {
       window.j_ = window._ = window.jgettext = window.gettext = function() {
         return merged.gettext.apply(merged, arguments);
       };
-      window.ngettext = function(singular, plural, n) {
+      window.jngettext = window.ngettext = function(singular, plural, n) {
         return merged.ngettext.apply(merged, arguments);
       };
       return this;

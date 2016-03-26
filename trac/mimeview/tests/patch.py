@@ -31,7 +31,7 @@ class PatchRendererTestCase(unittest.TestCase):
         self.context = web_context(req)
         self.patch = Mimeview(env).renderers[0]
         patch_html = open(os.path.join(os.path.split(__file__)[0],
-                                       'patch.html'))
+                                       'patch.data'))
         self.patch_html = {}
         testcase = []
         for line in patch_html.readlines():

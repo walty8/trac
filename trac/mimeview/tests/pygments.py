@@ -60,7 +60,7 @@ class PygmentsRendererTestCase(unittest.TestCase):
                         session={}, perm=None, authname=None, tz=None)
         self.context = web_context(self.req)
         pygments_html = open(os.path.join(os.path.split(__file__)[0],
-                                          'pygments.html'))
+                                          'pygments.data'))
         self.pygments_html = {}
         testcase = []
         for line in pygments_html.readlines():

@@ -8,9 +8,7 @@
   individuals. For the exact contribution history, see the revision
   history and logs, available at http://trac.edgewall.org/.
 #}
-
 # extends "jlayout.html"
-
 <!DOCTYPE html>
 <html>
   <head>
@@ -39,12 +37,12 @@
         });
         $("#tbtoggle").click(function() {
           if (this.value.indexOf("interactive") < 0) {
-            this.value = _("Switch to interactive view");
+            this.value = j_("Switch to interactive view");
             $("#traceback ul").fadeOut("fast", function() {
               $("#traceback pre").fadeIn("fast");
             });
           } else {
-            this.value = _("Switch to plain text view");
+            this.value = j_("Switch to plain text view");
             $("#traceback pre").fadeOut("fast", function() {
               $("#traceback ul").fadeIn("fast");
             });
@@ -147,7 +145,8 @@
         ${_("This is probably a local installation issue.")}
       </p>
       #     else:
-      <form class="newticket" method="get" action="${project.admin_href.newticket()}#">
+      <form class="newticket" method="get"
+            action="${project.admin_href.newticket()}#">
         <p>
           #   trans create_a_ticket = create_ticket()
 
@@ -228,7 +227,10 @@
           #     for frame in frames:
           <li class="frame">
             <a href="#frame${loop.index0}" id="frame${loop.index0}">
-              #   trans file = frame.filename, line = frame.lineno + 1, function = frame.function
+              #   set file = frame.filename
+              #   set line = frame.lineno + 1
+              #   set function = frame.function
+              #   trans file, line, function
               <span class="file">File "${file}", line <strong>${line}</strong>,
                 in</span>
               <var>${function}</var>
@@ -280,7 +282,10 @@
         #     endif
         <pre>
           #   for frame in frames:
-          #     trans file = frame.filename, line = frame.lineno + 1, function = frame.function
+          #     set file = frame.filename
+          #     set line = frame.lineno + 1
+          #     set function = frame.function
+          #     trans file, line, function
           File "${file}", line ${line}, in ${function}
           #     endtrans
           #     if frame.line:
@@ -291,7 +296,10 @@
           ${traceback}
           #   endif
         </pre>
-        <p style="display: none"><input type="button" id="tbtoggle" value="${_('Switch to plain text view')}" /></p>
+        <p style="display: none">
+          <input type="button" id="tbtoggle"
+                 value="${_('Switch to plain text view')}"/>
+        </p>
       </div>
       #     endif
 
@@ -309,6 +317,7 @@
         # endtrans
       </p>
     </div>
+    ${ super() }
     # endblock content
   </body>
 </html>

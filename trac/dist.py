@@ -19,20 +19,63 @@ we also modify the standard `distutils.command.build` and
 for compiling catalogs are issued upon install.
 """
 
+from HTMLParser import HTMLParser
 from StringIO import StringIO
 from itertools import izip
 import os
 import re
 from tokenize import generate_tokens, COMMENT, NAME, OP, STRING
 
-from jinja2.ext import babel_extract as extract_html_jinja2
-from genshi.filters.i18n import extract as extract_html_genshi
+from jinja2.ext import babel_extract as extract_jinja2
+try:
+    import nogenshi
+    from genshi.filters.i18n import extract as extract_html_genshi
+    genshi = True
+except ImportError:
+    genshi = extract_html_genshi = None
 
 from distutils import log
 from distutils.cmd import Command
 from distutils.command.build import build as _build
 from distutils.errors import DistutilsOptionError
 from setuptools.command.install_lib import install_lib as _install_lib
+
+class ScriptExtractor(HTMLParser):
+    def __init__(self, out):
+        HTMLParser.__init__(self)
+        self.out = out
+        self.in_javascript = False
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'script':
+            for kv in attrs:
+                if kv == ('type', 'text/javascript'):
+                    self.in_javascript = True
+                    break
+
+    def handle_startendtag(self, tag, attrs):
+        self.in_javascript = False
+
+    def handle_charref(self, name):
+        if self.in_javascript:
+            self.out.write('&#%s;' % name)
+
+    def handle_entityref(self, name):
+        if self.in_javascript:
+            self.out.write('&%s;' % name)
+
+    def handle_data(self, data):
+        if self.in_javascript:
+            self.out.write(data)
+
+    def handle_endtag(self, tag):
+        self.in_javascript = False
+
+    def no_op(*args, **kwargs):
+        pass
+
+    handle_comment = handle_decl = handle_pi = no_op
+
 
 try:
     from babel.messages.catalog import TranslationError
@@ -224,30 +267,14 @@ try:
         if fileobj.name:
             filepath = fileobj.name.replace('\\', '/').rsplit('/', 1)
             key = filepath[-1][0]
-            if key == 'k':
-                # Kajiki templates
-                return []
-            elif key == 'j':
+            if key == 'j':
                 # Jinja2 templates
-
-                # import xml.etree.ElementTree as ET
-                # tree = ET.parse(fileobj)
-                # r = tree.getroot()
-                # out = StringIO()
-                # for e in r.findall(".//{http://www.w3.org/1999/xhtml}script"):
-                #     out.write(''.join(e.itertext()))
-                # out.seek(0)
-                # ... also doesn't work for our Jinja2 templates
-
-                from genshi.core import Stream
-                from genshi.input import HTML # HTMLParser under the hood
-
                 out = StringIO()
-                stream = HTML(fileobj.read(), encoding='utf-8')
-                stream = stream.select('//script[@type="text/javascript"]')
-                stream.render(out=out, encoding='utf-8')
+                extractor = ScriptExtractor(out)
+                extractor.feed(unicode(fileobj.read(), 'utf-8'))
+                extractor.close()
                 out.seek(0)
-            else:
+            elif genshi:
                 # Genshi templates
                 from genshi.core import Stream
                 from genshi.input import XMLParser
@@ -260,6 +287,7 @@ try:
 
         if out:
             return extract_javascript(out, keywords, comment_tags, options)
+        return []
 
 
     def extract_html(fileobj, keywords, comment_tags, options):
@@ -273,13 +301,28 @@ try:
             filename = filepath[-1]
             key = filename[0]
             if key == 'j':
-                extractor = extract_html_jinja2 # Jinja2 template
-            elif key == 'k':
-                pass # we don't care about Kajiki templates
+                extractor = extract_jinja2 # Jinja2 HTML template
             else:
                 extractor = extract_html_genshi # Genshi template only
-            #elif os.path.exists(os.path.join(filepath[0], 'j' + filename)):
-            #    pass # we only consider the already converted Jinja2 template
+        if extractor:
+            for m in extractor(fileobj, keywords, comment_tags, options):
+                yield m
+
+    def extract_text(fileobj, keywords, comment_tags, options):
+        """Extract messages from Genshi or Jinja2 text templates.
+
+        This is only needed as an interim measure, as long as we have both.
+        """
+        extractor = None
+        if fileobj.name:
+            filepath = fileobj.name.replace('\\', '/').rsplit('/', 1)
+            filename = filepath[-1]
+            key = filename[0]
+            if key == 'j':
+                extractor = extract_jinja2 # Jinja2 text template
+            else:
+                extractor = extract_html_genshi # Genshi template only
+                options.update(template_class='genshi.template:NewTextTemplate')
         if extractor:
             for m in extractor(fileobj, keywords, comment_tags, options):
                 yield m
@@ -426,49 +469,13 @@ try:
 
         def _check_message(self, catalog, message):
             errors = [e for e in message.check(catalog)]
-            try:
-                check_genshi_markup(catalog, message)
-            except TranslationError as e:
-                errors.append(e)
+            if genshi:
+                try:
+                    check_genshi_markup(catalog, message)
+                except TranslationError as e:
+                    errors.append(e)
             return errors
 
-
-    def check_genshi_markup(catalog, message):
-        """Verify the genshi markups in the translation."""
-        msgids = message.id
-        if not isinstance(msgids, (list, tuple)):
-            msgids = (msgids,)
-        msgstrs = message.string
-        if not isinstance(msgstrs, (list, tuple)):
-            msgstrs = (msgstrs,)
-
-        # check using genshi-markup
-        if not _GENSHI_MARKUP_SEARCH(msgids[0]):
-            return
-
-        for msgid, msgstr in izip(msgids, msgstrs):
-            if msgstr:
-                _validate_genshi_markup(msgid, msgstr)
-
-
-    def _validate_genshi_markup(markup, alternative):
-        indices_markup = _parse_genshi_markup(markup)
-        indices_alternative = _parse_genshi_markup(alternative)
-        indices = indices_markup - indices_alternative
-        if indices:
-            raise TranslationError(
-                'genshi markups are unbalanced %s' % \
-                ' '.join(['[%d:]' % idx for idx in indices]))
-
-
-    def _parse_genshi_markup(message):
-        from genshi.filters.i18n import parse_msg
-        try:
-            return set([idx for idx, text in parse_msg(message)
-                            if idx > 0])
-        except Exception as e:
-            raise TranslationError('cannot parse message (%s: %s)' % \
-                                   (e.__class__.__name__, unicode(e)))
 
 
     def write_js(fileobj, catalog, domain, locale):
@@ -588,6 +595,45 @@ try:
             'update_catalog_tracini': update_catalog,
             'check_catalog_tracini': check_catalog,
         }
+
+    if genshi:
+        def check_genshi_markup(catalog, message):
+            """Verify the genshi markups in the translation."""
+            msgids = message.id
+            if not isinstance(msgids, (list, tuple)):
+                msgids = (msgids,)
+            msgstrs = message.string
+            if not isinstance(msgstrs, (list, tuple)):
+                msgstrs = (msgstrs,)
+
+            # check using genshi-markup
+            if not _GENSHI_MARKUP_SEARCH(msgids[0]):
+                return
+
+            for msgid, msgstr in izip(msgids, msgstrs):
+                if msgstr:
+                    _validate_genshi_markup(msgid, msgstr)
+
+
+        def _validate_genshi_markup(markup, alternative):
+            indices_markup = _parse_genshi_markup(markup)
+            indices_alternative = _parse_genshi_markup(alternative)
+            indices = indices_markup - indices_alternative
+            if indices:
+                raise TranslationError(
+                    'genshi markups are unbalanced %s' % \
+                    ' '.join(['[%d:]' % idx for idx in indices]))
+
+
+        def _parse_genshi_markup(message):
+            from genshi.filters.i18n import parse_msg
+            try:
+                return set([idx for idx, text in parse_msg(message)
+                                if idx > 0])
+            except Exception as e:
+                raise TranslationError('cannot parse message (%s: %s)' % \
+                                       (e.__class__.__name__, unicode(e)))
+
 
 
 except ImportError:
