@@ -19,7 +19,6 @@
 #         Christian Boos <cboos@edgewall.org>
 
 import __builtin__
-from functools import partial
 import locale
 import os
 import re
