@@ -254,13 +254,14 @@ class RequestDispatcher(Component):
                 # Process the request and render the template
                 resp = chosen_handler.process_request(req)
                 if resp:
-                    if len(resp) == 2: # old Clearsilver template and HDF data
+                    # Check for old Clearsilver template and HDF data
+                    if len(resp) == 2:
                         self.log.error("Clearsilver template are no longer "
                                        "supported (%s)", resp[0])
                         raise TracError(
                             _("Clearsilver templates are no longer supported, "
                               "please contact your Trac administrator."))
-                    # Genshi
+                    # Jinja2 (and legacy Genshi)
                     template, data, content_type, method = \
                         self._post_process_request(req, *resp)
                     if 'hdfdump' in req.args:

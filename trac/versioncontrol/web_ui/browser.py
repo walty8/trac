@@ -75,7 +75,7 @@ class IPropertyRenderer(Interface):
         - a `RenderedProperty` instance: the property will only be displayed
           using the instance's `content` attribute, and the other attributes
           will also be used in some display contexts (like `revprop`)
-        - `Markup` or other Genshi content: the property will be displayed
+        - `Markup` or `Fragment`: the property will be displayed
           normally, using that content as a block-level markup
         """
 

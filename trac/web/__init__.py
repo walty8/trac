@@ -21,6 +21,8 @@ mimetypes.init()
 # PYTHON_EGG_CACHE variable is set from there
 #
 # TODO: Remove this once the Genshi zip_safe issue has been resolved.
+#       Before removing this code when Genshi support is removed,
+#       check whether there's no similar issue with Jinja2/markupsafe.
 
 import os
 from pkg_resources import DistributionNotFound, get_distribution
@@ -36,4 +38,4 @@ try:
     else:
         from trac.web.api import *
 except DistributionNotFound:
-    pass # wait to see if there's no similar issue with Jinja2/markupsafe
+    pass

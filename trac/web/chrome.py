@@ -100,7 +100,8 @@ class INavigationContributor(Interface):
 
 class ITemplateProvider(Interface):
     """Extension point interface for components that provide their own
-    Genshi templates and accompanying static resources.
+    Jinja2 templates and/or accompanying static resources.
+
     """
 
     def get_htdocs_dirs():
@@ -643,7 +644,7 @@ class Chrome(Component):
         else:
             info = '(not installed, some old plugins may not work as expected)'
         yield 'Genshi', info
-        # Mantadory Jinja2
+        # Mandatory Jinja2
         import jinja2
         info = get_pkginfo(jinja2).get('version')
         yield 'Jinja2', info
@@ -1545,7 +1546,7 @@ class Chrome(Component):
 
         def render_genshi_template(self, req, filename, data, content_type=None,
                                    fragment=False, iterable=False, method=None):
-            """Legacy Genshi rendering (TODO: remove)"""
+            """Legacy Genshi rendering"""
             if content_type is None:
                 content_type = 'text/html'
 

@@ -64,7 +64,7 @@ class TicketNotificationSystem(Component):
 
     ticket_subject_template = Option('notification', 'ticket_subject_template',
                                      '${prefix} #${ticket.id}: ${summary}',
-        """A Genshi text template snippet used to get the notification
+        """A Jinja2 text template snippet used to get the notification
         subject.
 
         The template variables are documented on the

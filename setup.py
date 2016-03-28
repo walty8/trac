@@ -36,10 +36,10 @@ except ImportError:
     pass
 
 try:
-    import genshi
+    import jinja2
 except ImportError:
-    print("Genshi is needed by Trac setup, pre-installing")
-    # give some context to the warnings we might get when installing Genshi
+    print("Jinja2 is needed by Trac setup, pre-installing")
+    # give some context to the warnings we might get when installing Jinja2
 
 
 setup(
@@ -85,17 +85,17 @@ facilities.
     zip_safe = True,
 
     setup_requires = [
-        'Genshi>=0.6',
+        'jinja2>=2.8',
     ],
     install_requires = [
         'setuptools>=0.6',
-        'Genshi>=0.6',
         'jinja2>=2.8',
     ],
     extras_require = {
+        'genshi': ['Genshi>=0.6'],
         'babel': ['Babel>=0.9.5'],
-        'mysql': ['MySQL-python >= 1.2.2'],
-        'postgresql': ['psycopg2 >= 2.0'],
+        'mysql': ['MySQL-python>=1.2.2'],
+        'postgresql': ['psycopg2>=2.0'],
         'pygments': ['Pygments>=0.6'],
         'rest': ['docutils>=0.3.9'],
         'textile': ['textile>=2.0'],

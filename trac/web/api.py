@@ -70,8 +70,9 @@ class IRequestHandler(Interface):
     def process_request(req):
         """Process the request.
 
-        Return a `(template_name, data, content_type)` tuple,
-        where `data` is a dictionary of substitutions for the Genshi template.
+        Return a `(template_name, data, content_type)` tuple, where
+        `data` is a dictionary of substitutions for the Jinja2
+        template (the template context, in Jinja2 terms).
 
         "text/html" is assumed if `content_type` is `None`.
 
@@ -84,6 +85,7 @@ class IRequestHandler(Interface):
            returned as a fourth parameter in the tuple, but if not specified
            it will be inferred from the `content_type` when rendering the
            template.
+
         """
 
 
@@ -107,24 +109,19 @@ class IRequestFilter(Interface):
         """
 
     def post_process_request(req, template, data, content_type, method=None):
-        """Do any post-processing the request might need; typically adding
-        values to the template `data` dictionary, or changing the Genshi
-        template or mime type.
+        """Do any post-processing the request might need
+
+        This typically means adding values to the template `data`
+        dictionary, or changing the Jinja2 template or mime type.
 
         `data` may be updated in place.
 
-        Always returns a tuple of (template, data, content_type), even if
-        unchanged.
+        Always returns a tuple of ``(template, data, content_type)``,
+        even if unchanged.
 
         Note that `template`, `data`, `content_type` will be `None` if:
          - called when processing an error page
          - the default request handler did not return any result
-
-        :Since 0.11: there's a `data` argument for supporting Genshi templates;
-           this introduced a difference in arity which made it possible to
-           distinguish between the IRequestFilter components still targeted
-           at ClearSilver templates and the newer ones targeted at Genshi
-           templates.
 
         :Since 1.0: Clearsilver templates are no longer supported.
 
@@ -132,6 +129,7 @@ class IRequestFilter(Interface):
            by the request handler, otherwise `method` will be `None`. For
            backward compatibility, the parameter is optional in the
            implementation's signature.
+
         """
 
 
@@ -141,8 +139,8 @@ class ITemplateStreamFilter(Interface):
 
     :deprecated: the Genshi template filtering concept doesn't apply
                  anymore to Jinja2 templates, please consider
-                 converting your plugins to use browser-side
-                 JavaScript modifications of the page.
+                 converting your plugins to perform browser-side
+                 modifications of the rendered page using JavaScript.
 
     See https://trac.edgewall.org/wiki/TracDev/PortingFromGenshiToJinja#ReplacingITemplateStreamFilter
     for details.

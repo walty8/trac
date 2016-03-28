@@ -77,8 +77,8 @@ class IPropertyDiffRenderer(Interface):
         - `None`: the property change will be shown the normal way
           (''changed from `old` to `new`'')
         - an `unicode` value: the change will be shown as textual content
-        - `Markup` or other Genshi content: the change will shown as block
-          markup
+        - `Markup` or `Fragment`: the change will shown as block markup
+
         """
 
 
