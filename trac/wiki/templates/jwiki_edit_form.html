@@ -89,7 +89,7 @@ ${page.text}</textarea>
     # if show_readonly_checkbox and 'WIKI_ADMIN' in perm(page.resource):
     <div id="changeinfo2" class="options">
       <label><input type="checkbox" name="readonly" id="readonly"${
-		  {'checked': page.readonly}|htmlattr}/>
+                  {'checked': page.readonly}|htmlattr}/>
         ${_("Page is read-only")}
       </label>
     </div>
@@ -101,14 +101,14 @@ ${page.text}</textarea>
     <input type="submit" name="preview" value="${_('Preview')}"
            disabled="disabled" />&nbsp;
     <input type="submit" name="merge" value="${_('Merge changes')}"
-           accesskey="r" />&nbsp;
+           ${accesskey("r")}/>&nbsp;
     <input type="submit" name="save" value="${_('Submit changes')}"
            disabled="disabled" />&nbsp;
     # else:
     <input type="submit" name="preview" value="${_('Preview Page')}"
-           accesskey="p" />&nbsp;
+           ${accesskey("p")}/>&nbsp;
     <input type="submit" name="diff" value="${_('Review Changes')}"
-           accesskey="r" />&nbsp;
+           ${accesskey("r")}/>&nbsp;
     <input type="submit" id="save" name="save" class="trac-disable-on-submit"
            value="${_('Submit changes')}" />&nbsp;
     # endif

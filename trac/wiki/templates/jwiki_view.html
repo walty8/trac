@@ -144,10 +144,10 @@
             <input type="submit" value="${_('Revert to this version')}"/>
             # elif page.exists and modify_perm:
             <input type="submit" value="${_('Edit this page')}"
-                   accesskey="e" />
+                   ${accesskey("e")}/>
             # elif not page.exists and create_perm:
             <input type="submit" value="${_('Create this page')}"
-                   accesskey="e" />
+                   ${accesskey("e")}/>
             #   if templates:
             <div id="template">
               <label for="template">${_("using the template:")}</label>

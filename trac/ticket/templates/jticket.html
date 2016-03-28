@@ -581,7 +581,7 @@
           <input type="hidden" name="replyto"${{'value': replyto}|htmlattr}/>
           # endif
           <input type="submit" name="preview" value="${_('Preview')}"
-                 accesskey="r" />&nbsp;
+                 ${accesskey("r")}/>&nbsp;
           <input type="submit" name="submit"
                  value="${_('Submit changes') if ticket.exists else
                           _('Create ticket')}"

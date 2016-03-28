@@ -91,8 +91,8 @@
         # if trac_error_rendering is undefined and 'SEARCH_VIEW' in perm:
         <div>
           <label for="proj-search">${_("Search:")}</label>
-          <input type="text" id="proj-search" name="q" size="18" accesskey="f"
-                 value="" />
+          <input type="text" id="proj-search" name="q" size="18"
+                 ${accesskey("f")} value="" />
           <input type="submit" value="${_("Search")}" />
         </div>
         # endif

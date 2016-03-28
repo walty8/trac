@@ -191,23 +191,6 @@ class GeneralPreferencePanel(Component):
         return 'prefs_general.html', {}
 
 
-class KeyBindingsPreferencePanel(Component):
-
-    implements(IPreferencePanelProvider)
-
-    _form_fields = ('accesskeys',)
-
-    # IPreferencePanelProvider methods
-
-    def get_preference_panels(self, req):
-        yield 'keybindings', _("Keyboard Shortcuts")
-
-    def render_preference_panel(self, req, panel):
-        if req.method == 'POST':
-            _do_save(req, panel, self._form_fields)
-        return 'prefs_keybindings.html', {}
-
-
 class LocalizationPreferencePanel(Component):
 
     implements(IPreferencePanelProvider)
@@ -256,7 +239,9 @@ class UserInterfacePreferencePanel(Component):
     implements(IPreferencePanelProvider)
 
     _request_handlers = ExtensionPoint(IRequestHandler)
-    _form_fields = ('default_handler', 'ui.hide_help', 'ui.use_symbols')
+
+    _form_fields = ('accesskeys', 'default_handler',
+                    'ui.hide_help', 'ui.use_symbols')
 
     # IPreferencePanelProvider methods
 

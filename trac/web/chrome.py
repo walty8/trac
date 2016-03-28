@@ -1022,6 +1022,10 @@ class Chrome(Component):
         def get_abs_url(resource, **kwargs):
             return get_resource_url(self.env, resource, abs_href, **kwargs)
 
+        def accesskey(key):
+            return Markup('accesskey="%s"') % key if \
+                int(req.session.get('accesskeys', 0)) else ''
+
         d.update({
             'context': web_context(req) if req else None,
             'Resource': Resource,
@@ -1049,6 +1053,7 @@ class Chrome(Component):
             'format_emails': self.format_emails,
             'get_systeminfo': self.env.get_systeminfo,
             'captioned_button': partial(presentation.captioned_button, req),
+            'accesskey': accesskey,
 
             # Date/time formatting
             'dateinfo': dateinfo,
