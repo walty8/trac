@@ -372,11 +372,11 @@ pylint:
 	    trac tracopt
 
 templates ?= \
-    $(shell find trac -name j*.html) \
-    $(shell find tracopt -name j*.html)
+    $(shell find trac -name "j*.*" | grep /templates/ | grep -v "~" ) \
+    $(shell find tracopt -name "j*.*" | grep /templates/ | grep -v "~" )
 
 jinja:
-	python contrib/jinjachecker.py $(jinjaopts) $(wildcard $(templates))
+	python contrib/jinjachecker.py $(jinjaopts) $(templates)
 
 # ----------------------------------------------------------------------------
 #

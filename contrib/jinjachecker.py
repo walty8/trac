@@ -113,7 +113,7 @@ def analyze(jinja_template, only=None, quiet=False):
     if only != 'html':
         issues_j = check_jinja(jinja_template, line_statements, quiet)
         report_errors('Jinja2', issues_j)
-    if only != 'jinja' and etree:
+    if only != 'jinja' and etree and jinja_template.endswith('.html'):
         issues_h = check_html(jinja_template, html, html_hints, quiet)
         report_errors('HTML', issues_h)
     return issues_j + issues_h

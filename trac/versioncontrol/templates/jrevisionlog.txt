@@ -9,7 +9,7 @@
 #   with change = changes[item.rev], extra = extra_changes[item.rev]
 ${http_date(change.date)} ${format_author(change.author)} [${display_rev(item.rev)}]
 #     for file in extra.files:
-#       if 'FILE_VIEW' in perm(repos.resource.child('source', file, version=change.rev))
+#       if 'FILE_VIEW' in perm(repos.resource.child('source', file, version=change.rev)):
 	* ${file} (${dict(edit=_('modified'), add=_('added'), delete=_('deleted'),
                           copy=_('copied'), move=_('moved'))[extra.actions[loop.index0]]})
 #       endif
