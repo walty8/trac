@@ -132,7 +132,7 @@ class TestWikiHistory(FunctionalTwillTestCaseSetup):
         self._tester.edit_wiki_page(pagename)
         tc.follow(r"\bHistory\b")
         tc.url(self._tester.url + r'/wiki/%s\?action=history' % pagename)
-        version_link = ('<td class="version">[ \n]*' 
+        version_link = ('<td class="version">[ \n]*'
                         '<a href="/wiki/%(pagename)s\?version=%%(version)s"'
                         '[ \n]*title="View this version">%%(version)s[ \n]*</a>'
                         % {'pagename': pagename})
@@ -160,7 +160,7 @@ class TestWikiReadonlyAttribute(FunctionalTwillTestCaseSetup):
         readonly_checkbox = (
             '<input type="checkbox" name="readonly" id="readonly"/>')
         attach_button = (
-            '<input type="submit" id="attachfilebutton" value="Attach.+file" />')
+            '<input type="submit" id="attachfilebutton" value="Attach.+file"/>')
         try:
             # User without WIKI_ADMIN can't set a page read-only
             tc.formvalue('modifypage', 'action', 'edit')
