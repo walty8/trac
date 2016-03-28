@@ -126,7 +126,7 @@
           <div class="buttons">
             <label for="preselected">${_("Visit:")}</label>
             <select id="preselected" name="preselected">
-              <option selected="selected" />
+              <option selected="selected"></option>
               #   for category, locations in quickjump_entries|groupby('0'):
               <optgroup label="${category}">
                 #   for _a, name, lpath, rev in locations:
@@ -324,11 +324,8 @@
         on using the repository browser.
         # endtrans
       </div>
-
     </div>
-
     ${ super() }
-
     # endblock content
   </body>
 </html>

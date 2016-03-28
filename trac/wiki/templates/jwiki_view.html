@@ -16,6 +16,8 @@
       # block title
       #   if title:
       ${title} ${ super() }
+      #   else:
+      ${project.name or 'Trac'}
       #   endif
       # endblock title
     </title>
@@ -229,11 +231,8 @@
         </ul>
       </div>
       # endif
-
     </div>
-
     ${ super() }
-
     # endblock content
   </body>
 </html>
