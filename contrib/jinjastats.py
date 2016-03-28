@@ -35,8 +35,8 @@ def main(args):
             quiet = True
     genshi = {}
     jinja2 = {}
-    for template in glob('*/**/templates/*'):
-        if template.endswith('~'):
+    for template in glob('*/templates/*') + glob('*/**/templates/*'):
+        if template.endswith('~') or '.' not in template:
             continue
         template = template.replace('\\', '/')
         lines = len(file(template).read().splitlines())
