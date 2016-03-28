@@ -267,8 +267,8 @@ def html_attribute(key, val):
     return None if val is None else escape(val)
 
 def classes(*args, **kwargs):
-    """Helper function for dynamically assembling a list of CSS class names
-    in templates.
+    """Helper function for dynamically assembling a list of CSS class
+    names in templates.
 
     Any positional arguments are added to the list of class names. All
     positional arguments must be strings:
@@ -276,19 +276,20 @@ def classes(*args, **kwargs):
     >>> classes('foo', 'bar')
     u'foo bar'
 
-    In addition, the names of any supplied keyword arguments are added if they
-    have a truth value:
+    In addition, the names of any supplied keyword arguments are added
+    if they have a truth value:
 
     >>> classes('foo', bar=True)
     u'foo bar'
     >>> classes('foo', bar=False)
     u'foo'
 
-    If none of the arguments are added to the list, this function returns
-    `''`:
+    If none of the arguments are added to the list, this function
+    returns `''`:
 
     >>> classes(bar=False)
     u''
+
     """
     classes = list(filter(None, args)) + [k for k, v in kwargs.items() if v]
     return u' '.join(classes)
@@ -311,11 +312,12 @@ def styles(*args, **kwargs):
     >>> styles(foo='bar', bar=False)
     u'foo: bar'
 
-    If none of the arguments are added to the list, this function returns
-    `''`:
+    If none of the arguments are added to the list, this function
+    returns `''`:
 
     >>> styles(bar=False)
     u''
+
     """
     args = list(filter(None, args))
     d = {}
@@ -452,8 +454,8 @@ class Element(XMLElement):
     """An element represents an HTML element, with a tag name, attributes
     and content.
 
-    Some elements and attributes are rendered specially, according to the
-    HTML5 specification (or going there...)
+    Some elements and attributes are rendered specially, according to
+    the HTML5 specification (or going there...)
 
     """
 
@@ -498,6 +500,12 @@ class TracHTMLSanitizer(object):
 
     """Sanitize HTML constructions which are potentially vector of
     phishing or XSS attacks, in user-supplied HTML.
+
+    The usual way to use the sanitizer is to call the `sanitize`
+    method on some potentially unsafe HTML content.
+
+    Note that for backward compatibility, the TracHTMLSanitizer still
+    behaves as a Genshi filter.
 
     See also `genshi.HTMLSanitizer`_ from which the TracHTMLSanitizer
     has evolved.
@@ -623,6 +631,7 @@ class TracHTMLSanitizer(object):
         :type: basestring
         :return: the sanitized content
         :rtype: Markup
+
         """
         transform = HTMLSanitization(self, StringIO())
         transform.feed(html)
@@ -632,6 +641,9 @@ class TracHTMLSanitizer(object):
     if genshi:
         def __call__(self, stream):
             """Apply the filter to the given stream.
+
+            :deprecated: the ability to behave as a Genshi filter will be
+                         removed in Trac 1.4.
 
             :param stream: the markup event stream to filter
             """
@@ -663,6 +675,7 @@ class TracHTMLSanitizer(object):
     def is_safe_css(self, prop, value):
         """Determine whether the given css property declaration is to be
         considered safe for inclusion in the output.
+
         """
         if prop not in self.safe_css:
             return False
@@ -684,6 +697,7 @@ class TracHTMLSanitizer(object):
         :type attrs: Attrs or dict
         :return: whether the element should be considered safe
         :rtype: bool
+
         """
         if tag not in self.safe_tags:
             return False
@@ -711,6 +725,7 @@ class TracHTMLSanitizer(object):
         :param uri: the URI to check
         :return: `True` if the URI can be considered safe, `False` otherwise
         :rtype: `bool`
+
         """
         if '#' in uri:
             uri = uri.split('#', 1)[0] # Strip out the fragment identifier
@@ -720,12 +735,13 @@ class TracHTMLSanitizer(object):
         return ''.join(chars).lower() in self.safe_schemes
 
     def sanitize_attrs(self, attrs):
-        """Remove potentially dangerous attributes and sanitize
-        the style attribute .
+        """Remove potentially dangerous attributes and sanitize the style
+        attribute .
 
         :type attrs: dict corresponding to tag attributes
         :return: a dict containing only safe or sanitized attributes
         :rtype: dict
+
         """
         new_attrs = {}
         for attr, value in attrs.iteritems():
@@ -748,8 +764,8 @@ class TracHTMLSanitizer(object):
     def sanitize_css(self, text):
         """Remove potentially dangerous property declarations from CSS code.
 
-        In particular, properties using the CSS ``url()`` function with a scheme
-        that is not considered safe are removed:
+        In particular, properties using the CSS ``url()`` function
+        with a scheme that is not considered safe are removed:
 
         >>> sanitizer = TracHTMLSanitizer()
         >>> sanitizer.sanitize_css(u'''
@@ -758,8 +774,8 @@ class TracHTMLSanitizer(object):
         ... ''')
         [u'color: #000']
 
-        Also, the proprietary Internet Explorer function ``expression()`` is
-        always stripped:
+        Also, the proprietary Internet Explorer function
+        ``expression()`` is always stripped:
 
         >>> sanitizer.sanitize_css(u'''
         ...   background: #fff;
@@ -772,6 +788,7 @@ class TracHTMLSanitizer(object):
                      contain any character or numeric references
         :return: a list of declarations that are considered safe
         :rtype: `list`
+
         """
         decls = []
         text = self._strip_css_comments(self._replace_unicode_escapes(text))
@@ -841,6 +858,7 @@ class Deuglifier(object):
     group in which the name will be reused for the span's class. Two
     special group names, ``font`` and ``endfont`` are used to emit
     ``<span>`` and ``</span>``, respectively.
+
     """
     def __new__(cls):
         self = object.__new__(cls)
@@ -906,7 +924,9 @@ class HTMLTransform(HTMLParser):
 class FormTokenInjector(HTMLTransform):
     """Identify and protect forms from CSRF attacks.
 
-    This filter works by adding a input type=hidden field to POST forms.
+    This filter works by adding a input type=hidden field to POST
+    forms.
+
     """
     def __init__(self, form_token, out):
         HTMLTransform.__init__(self, out)
@@ -988,6 +1008,7 @@ def plaintext(text, keeplinebreaks=True):
 
     :param text: `unicode` or `Fragment`
     :param keeplinebreaks: optionally keep linebreaks
+
     """
     if isinstance(text, Fragment):
         text = text.as_text()
@@ -999,8 +1020,9 @@ def plaintext(text, keeplinebreaks=True):
 
 
 def find_element(frag, attr=None, cls=None, tag=None):
-    """Return the first element in the fragment having the given attribute,
-    class or tag, using a preorder depth-first search.
+    """Return the first element in the fragment having the given
+    attribute, class or tag, using a preorder depth-first search.
+
     """
     if isinstance(frag, Element):
         if attr is not None and attr in frag.attrib:
@@ -1043,6 +1065,7 @@ if genshi:
 
         Note: Expansion may not be possible if the fragment is badly
         formed, or partial.
+
         """
         for event in stream:
             if isinstance(event[1], Markup):

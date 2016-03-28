@@ -29,7 +29,7 @@ from jinja2._compat import iteritems
 
 from trac.core import TracError
 from .datefmt import to_utimestamp
-from .html import Fragment, classes, html_attribute, styles
+from .html import Fragment, classes, html_attribute, styles, tag
 from .text import javascript_quote
 
 __all__ = ['captioned_button', 'classes', 'first_last', 'group', 'istext',
@@ -67,6 +67,7 @@ def jinja2_update(jenv):
         paginate=paginate,
         separated=separated,
         styles=styles,
+        tag=tag,
         to_json=to_json,
     )
 
