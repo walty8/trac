@@ -75,18 +75,26 @@ h2 { border-bottom: 1px solid #ddd }
 
 div.body a { text-decoration: none }
 a { color: #b00 }
-a code, a tt { color: #d50 }
+a code, a tt { color: #500 }
 a:visited { color: #800 }
-a:visited code, a:visited tt { color: #b30 }
+a:visited code, a:visited tt { color: #700 }
 
+:link:hover {
+    background-color: #600;
+    color: #eee;
+}
 :link:hover, :visited:hover {
-    background-color: #eee;
-    color: #400;
+    background-color: #800;
+    color: #eee;
 }
 a code:hover, a:visited code:hover, 
-a tt:hover, a:visited tt:hover {
-    background-color: #eee;
-    color: #600;
+a tt:hover {
+    background-color: #600;
+    color: #eee;
+}
+a:visited tt:hover {
+    background-color: #700;
+    color: #eee;
 }
 
 a.headerlink, a.headerlink:hover {
@@ -111,9 +119,11 @@ dl.class {
     -webkit-box-shadow: 1px 1px 6px 0 #888;
     box-shadow:  1px 1px 6px 0 #888;
     padding: .5em;
+    margin-left: 2em;
 }
-dl.function {
+dl.data, dl.function {
     margin-bottom: 24px;
+    margin-left: 2em;
 }
 
 dl.class > dt, dl.function > dt {
