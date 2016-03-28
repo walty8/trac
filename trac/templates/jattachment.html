@@ -1,4 +1,4 @@
-<!--!  Copyright (C) 2006-2014 Edgewall Software
+{# Copyright (C) 2006-2014 Edgewall Software
 
   This software is licensed as described in the file COPYING, which
   you should have received as part of this distribution. The terms
@@ -7,133 +7,188 @@
   This software consists of voluntary contributions made by many
   individuals. For the exact contribution history, see the revision
   history and logs, available at http://trac.edgewall.org/.
--->
-<!DOCTYPE html
-    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:py="http://genshi.edgewall.org/"
-      xmlns:xi="http://www.w3.org/2001/XInclude"
-      xmlns:i18n="http://genshi.edgewall.org/i18n"
-      py:with="parent = attachments.parent if attachments else attachment.resource.parent">
-  <xi:include href="layout.html" />
+#}
+# extends "jlayout.html"
+<!DOCTYPE html>
+<html>
+  # set parent = attachments.parent if attachments else attachment.resource.parent
   <head>
-    <title py:choose="mode">
-      <py:when test="'new'">${name_of(parent)} &ndash; Attachment</py:when>
-      <py:when test="'list'">${name_of(parent)} &ndash; Attachments</py:when>
-      <py:otherwise><i18n:msg params="filename, parent">${attachment.filename} on ${name_of(parent)} &ndash; Attachment</i18n:msg></py:otherwise>
+    <title>
+      # block title
+      #   if mode == 'new':
+      ${_("%(parent)s &ndash; Attachment", parent=name_of(parent))}
+      #   elif mode == 'list':
+      ${_("%(parent)s &ndash; Attachments", parent=name_of(parent))}
+      #   else:
+      #     trans filename = attachment.filename, parent = name_of(parent)
+
+      ${filename} on ${parent} &ndash; Attachment
+
+      #     endtrans
+      #   endif
+      ${ super() }
+      # endblock title
     </title>
-    <py:if test="preview">
-      <script type="text/javascript" src="${chrome.htdocs_location}js/folding.js"></script>
-      <script type="text/javascript">
-        jQuery(document).ready(function($) {
-          $('#preview table.code').enableCollapsibleColumns($('#preview table.code thead th.content'));
-        });
-      </script>
-    </py:if>
+
+    # block head
+    ${ super() }
+    #   if preview:
+    <script type="text/javascript"
+            src="${chrome.htdocs_location}js/folding.js"></script>
+    <script type="text/javascript">
+      jQuery(document).ready(function($) {
+      $('#preview table.code').enableCollapsibleColumns(
+        $('#preview table.code thead th.content'));
+      });
+    </script>
+    #   endif
+    # endblock head
   </head>
 
   <body>
-    <div py:choose="mode" id="content" class="attachment">
-      <py:when test="'new'">
-        <h1 i18n:msg="parent">Add Attachment to <a href="${url_of(parent)}">${name_of(parent)}</a></h1>
-        <form id="attachment" class="mod" method="post" enctype="multipart/form-data" action="">
+    # block content
+    <div id="content" class="attachment">
+      # if mode == 'new':
+      <h1>${tag_("Add Attachment to %(parent)s",
+                 parent=tag.a(name_of(parent), href=url_of(parent)))}</h1>
+      <form id="attachment" class="mod" method="post"
+            enctype="multipart/form-data" action="">
+        ${jmacros.form_token_input()}
+        <div class="field">
+          <label>File{% if max_size is greaterthanorequal 0 %}
+            ${_("(size limit %(value)s)", value=pretty_size(max_size))}{%
+            endif %}:<br />
+            <input type="file" name="attachment"
+                   class="trac-disable-determinant" />
+          </label>
+        </div>
+        <fieldset id="changeinfo">
+          <legend>${_("Attachment Info")}</legend>
+          # if authname == 'anonymous':
           <div class="field">
-            <label>File<py:if test="max_size >= 0">
-              <i18n:msg params="value">(size limit ${pretty_size(max_size)})</i18n:msg></py:if>:<br />
-              <input type="file" name="attachment" class="trac-disable-determinant" /></label>
+            <label>${_("Your email or username:")}<br />
+              <input type="text" name="author" class="trac-fullwidth"
+                     value="${attachment.author or author or ''}" />
+            </label>
+            # set preferences_link
+            <a href="${href.prefs()}" class="trac-target-new">${
+              _("Preferences")}</a>
+            # endset
+            # if author == 'anonymous':
+            <p class="hint">
+              # trans preferences_link = preferences_link|safe
+
+              E-mail address and name can be saved in the
+              ${preferences_link}.
+
+              # endtrans
+            </p>
+            # endif
           </div>
-          <fieldset id="changeinfo">
-            <legend>Attachment Info</legend>
-            <py:if test="authname == 'anonymous'">
-              <div class="field">
-                <label>Your email or username:<br />
-                  <input type="text" name="author" class="trac-fullwidth" value="${attachment.author or author}" />
-                </label>
-                <p py:if="author == 'anonymous'" class="hint">
-                  <i18n:msg>E-mail address and name can be saved in the <!--!
-                    --><a href="${href.prefs()}" class="trac-target-new">Preferences</a>.</i18n:msg>
-                </p>
-              </div>
-              </py:if>
-            <div class="field">
-              <label>Description of the file (optional):<br />
-                <input type="text" class="trac-fullwidth" name="description" value="$attachment.description" />
-              </label>
-            </div>
-            <py:if test="authname and authname != 'anonymous'">
-              <div class="options">
-                <label><input type="checkbox" name="replace" checked="${is_replace or None}" />
-                  Replace existing attachment of the same name</label>
-              </div>
-            </py:if>
-          </fieldset>
-          <div class="buttons">
-            <input type="hidden" name="action" value="new" />
-            <input type="hidden" name="realm" value="$parent.realm" />
-            <input type="hidden" name="id" value="$parent.id" />
-            <input type="submit" class="trac-disable trac-disable-on-submit" value="${_('Add attachment')}" />
+          # endif
+          <div class="field">
+            <label>${_("Description of the file (optional):")}<br />
+              <input type="text" class="trac-fullwidth" name="description"
+                     value="${attachment.description or ''}" />
+            </label>
+          </div>
+          # if authname and authname != 'anonymous':
+          <div class="options">
+            <label>
+              <input type="checkbox" name="replace"${
+                     {'checked': is_replace}|htmlattr}/>
+              ${_("Replace existing attachment of the same name")}
+            </label>
+          </div>
+          # endif
+        </fieldset>
+        <div class="buttons">
+          <input type="hidden" name="action" value="new" />
+          <input type="hidden" name="realm" value="${parent.realm}" />
+          <input type="hidden" name="id" value="${parent.id}" />
+          <input type="submit" class="trac-disable trac-disable-on-submit"
+                 value="${_('Add attachment')}" />
+          <input type="submit" name="cancel" value="${_('Cancel')}" />
+        </div>
+      </form>
+
+      # elif mode == 'delete':
+      <h1><a href="${url_of(parent)}">${name_of(parent)}</a>:
+        ${attachment.filename}</h1>
+      <p>
+        <strong>
+          ${_("Are you sure you want to delete this attachment?")}
+        </strong>
+        <br />
+        ${_("This is an irreversible operation.")}
+      </p>
+      <div class="buttons">
+        <form method="post" action="">
+          <div id="delete">
+            <input type="hidden" name="action" value="delete" />
+            <input type="submit" class="trac-disable-on-submit"
+                   value="${_('Delete attachment')}" />
             <input type="submit" name="cancel" value="${_('Cancel')}" />
           </div>
         </form>
-      </py:when>
+      </div>
 
-      <py:when test="'delete'">
-        <h1><a href="${url_of(parent)}">${name_of(parent)}</a>: $attachment.filename</h1>
-        <p><strong>Are you sure you want to delete this attachment?</strong><br />
-          This is an irreversible operation.</p>
-        <div class="buttons">
-          <form method="post" action="">
-            <div id="delete">
-              <input type="hidden" name="action" value="delete" />
-              <input type="submit" class="trac-disable-on-submit" value="${_('Delete attachment')}" />
-              <input type="submit" name="cancel" value="${_('Cancel')}" />
-            </div>
-          </form>
-        </div>
-      </py:when>
 
-      <py:when test="'list'">
-        <h1><a href="${url_of(parent)}">${name_of(parent)}</a></h1>
-        <py:with vars="context = context.child(parent)">
-          <xi:include href="list_of_attachments.html" py:with="alist = attachments"/>
-        </py:with>
-      </py:when>
+      # elif mode == 'list':
+      <h1><a href="${url_of(parent)}">${name_of(parent)}</a></h1>
+      #   with
+      #     set context = context.child(parent)
+      #     set alist = attachments
+      #     include "jlist_of_attachments.html"
+      #   endwith
 
-      <py:otherwise> <!--! 'render' mode -->
-        <h1><a href="${url_of(parent)}">${name_of(parent)}</a>: $attachment.filename</h1>
-        <table id="info" summary="Description">
-          <tr>
-            <th scope="col" i18n:msg="file,size,author,date">
-              File $attachment.filename, <!--!
-              --><span title="${_('%(size)s bytes', size=attachment.size)}"><!--!
-              -->${pretty_size(attachment.size)}</span> <!--!
-              -->(added by ${authorinfo(attachment.author)}, ${pretty_dateinfo(attachment.date)})
-            </th>
-          </tr>
-          <tr>
-            <td class="message searchable" xml:space="preserve">
-              ${wiki_to_html(context.child(parent), attachment.description)}
-            </td>
-          </tr>
-        </table>
+      # else:
+      ## 'render' mode
+      <h1><a href="${url_of(parent)}">${name_of(parent)}</a>:
+        ${attachment.filename}</h1>
+      <table id="info" summary="${_("Description")}">
+        <tr>
+          <th scope="col">
+            # with
+            #   set file = attachment.filename
+            #   set size = _('%(size)s bytes', size=attachment.size)
+            #   set psize = pretty_size(attachment.size)
+            #   set author = authorinfo(attachment.author)
+            #   set pdate = pretty_dateinfo(attachment.date)
+            #   trans file, size, psize, author, pdate
 
-        <div py:if="preview" id="preview" class="searchable">
-          <xi:include href="preview_file.html" py:with="preview = preview"/>
-        </div>
+            File ${file}, <span title="${size}">${psize}</span> (added
+            by ${author}, ${pdate})
 
-        <py:if test="attachment and 'ATTACHMENT_DELETE' in perm(attachment.resource)">
-          <div class="buttons">
-            <form method="get" action="">
-              <div id="delete">
-                <input type="hidden" name="action" value="delete" />
-                <input type="submit" value="${_('Delete attachment')}" />
-              </div>
-            </form>
+            #   endtrans
+            # endwith
+          </th>
+        </tr>
+        <tr>
+          <td class="message searchable">
+            ${wiki_to_html(context.child(parent), attachment.description)}
+          </td>
+        </tr>
+      </table>
+
+      #   if preview:
+      <div id="preview" class="searchable">
+        #   include "jpreview_file.html"
+      </div>
+      #   endif
+
+      #   if attachment and 'ATTACHMENT_DELETE' in perm(attachment.resource):
+      <div class="buttons">
+        <form method="get" action="">
+          <div id="delete"> {# jinjacheck: "ID delete already defined" OK #}
+            <input type="hidden" name="action" value="delete" />
+            <input type="submit" value="${_('Delete attachment')}" />
           </div>
-        </py:if>
-      </py:otherwise>
-
+        </form>
+      </div>
+      #   endif
+      # endif
     </div>
+    # endblock content
   </body>
 </html>
