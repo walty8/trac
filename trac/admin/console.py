@@ -606,7 +606,7 @@ def _run(args):
         args = sys.argv[1:]
     warn_setuptools_issue()
     admin = TracAdmin()
-    if len(args) > 0:
+    if args > 0:
         if args[0] in ('-h', '--help', 'help'):
             return admin.onecmd(' '.join(_quote_args(['help'] + args[1:])))
         elif args[0] in ('-v','--version'):
