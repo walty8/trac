@@ -400,7 +400,6 @@ class ReportModule(Component):
         req.perm(report_resource).require('REPORT_VIEW')
         context = web_context(req, report_resource)
 
-        self.log.info("@404: %s", report_args)
         page = report_args.getint('page', 1)
         default_max = {'rss': self.items_per_page_rss,
                        'csv': 0, 'tab': 0}.get(format, self.items_per_page)
@@ -982,7 +981,6 @@ class WikiReportMacro(WikiMacroBase):
         largs, kwargs = parse_args(args)
         kwargs['page'] = '1'
         report_id = int(largs[0])
-        self.log.info("@1560: %s", type(req.args))
         template, data, content_type = report._render_view(req, report_id, kwargs)
         add_stylesheet(req, 'common/css/report.css')
 
