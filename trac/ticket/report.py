@@ -387,7 +387,7 @@ class ReportModule(Component):
         req.perm(report_resource).require('REPORT_VIEW')
         context = web_context(req, report_resource)
 
-        page = int(req.args.get('page', '1'))
+        page = report_args.getint('page', 1)
         default_max = {'rss': self.items_per_page_rss,
                        'csv': 0, 'tab': 0}.get(format, self.items_per_page)
         max = req.args.get('max')
@@ -955,3 +955,38 @@ class ReportModule(Component):
             else:
                 return tag.a(label, class_='forbidden report',
                              title=_("no permission to view report"))
+
+class WikiReportMacro(WikiMacroBase):
+    _description = cleandoc_(
+    """Wiki macro inserts the Trac report into the wiki page.
+
+        [[WikiReport(<id>,<key1>=<value1>, <keyN>=<valueN>, ...)]]
+
+    This macro accepts a comma-separated list of keyed parameters,
+    in the form "key=value" and "id".
+       - "id" -- then report id of the Trac
+       - "key" -- then report parameter
+       - "value" -- then value of report parameter
+    It supports dynamic variables. Examples:
+    {{{
+    [[WikiReport(1)]]
+    [[WikiReport(11, PARENT=0)]]
+    [[WikiReport($ID, PARENT=$PARENT)]] 
+    }}}
+    """)
+
+    def expand_macro(self, formatter, name, args):
+        req = formatter.req
+        chrome = Chrome(self.env)
+        report = ReportModule(self.env)
+
+        largs, kwargs = parse_args(args)
+        kwargs['page'] = '1'
+        report_id = int(largs[0])
+        template, data, content_type = report._render_view(req, report_id, kwargs)
+        add_stylesheet(req, 'common/css/report.css')
+
+        #conversion to string help remove dummy new lines
+        result = unicode(tag.div(chrome.render_template(req, 'report_table.html',
+                              data, None, fragment=True)))
+        return result
