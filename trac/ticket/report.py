@@ -32,13 +32,14 @@ from trac.util.html import tag
 from trac.util.presentation import Paginator
 from trac.util.text import (exception_to_unicode, quote_query_string, sub_vars,
                             sub_vars_re, to_unicode)
-from trac.util.translation import _, tag_
-from trac.web.api import IRequestHandler, RequestDone
+from trac.util.translation import _, tag_, cleandoc_
+from trac.web.api import HTTPBadRequest, IRequestHandler, RequestDone, _RequestArgs
 from trac.web.chrome import (INavigationContributor, Chrome,
                              add_ctxtnav, add_link, add_notice, add_script,
                              add_stylesheet, add_warning, auth_link,
                              web_context)
-from trac.wiki import IWikiSyntaxProvider, WikiParser
+from trac.wiki import IWikiSyntaxProvider, WikiParser, parse_args
+from trac.wiki.macros import WikiMacroBase
 
 
 SORT_COLUMN = '@SORT_COLUMN@'
@@ -337,11 +338,22 @@ class ReportModule(Component):
     _html_cols = set(['__class__', '__style__', '__color__', '__fgcolor__',
                       '__bgcolor__', '__grouplink__'])
 
-    def _render_view(self, req, id):
+    def _render_view(self, req, id, args=None):
         """Retrieve the report results and pre-process them for rendering."""
+        if not args:    #for backward compatibility
+            args = req.args
         title, description, sql = self.get_report(id)
+        report_args = _RequestArgs()
         try:
-            args = self.get_var_args(req)
+            for arg in args.keys():
+                if not arg.isupper():
+                    continue
+                report_args[arg] = to_unicode(args.get(arg))
+
+            # Set some default dynamic variables
+            if 'USER' not in report_args:
+                report_args['USER'] = req.authname
+
         except ValueError as e:
             raise TracError(_("Report failed: %(error)s", error=e))
 
@@ -375,7 +387,7 @@ class ReportModule(Component):
                 req.redirect(req.href.report(id, action='edit',
                                              error=to_unicode(e)))
 
-        format = req.args.get('format')
+        format = report_args.get('format')
         if format == 'sql':
             self._send_sql(req, id, title, description, sql)
 
@@ -385,16 +397,15 @@ class ReportModule(Component):
         req.perm(report_resource).require('REPORT_VIEW')
         context = web_context(req, report_resource)
 
-        page = int(req.args.get('page', '1'))
+        page = report_args.getint('page', 1)
         default_max = {'rss': self.items_per_page_rss,
                        'csv': 0, 'tab': 0}.get(format, self.items_per_page)
-        max = req.args.get('max')
+        max = report_args.get('max')
         limit = as_int(max, default_max, min=0) # explict max takes precedence
         offset = (page - 1) * limit
 
-        sort_col = req.args.get('sort', '')
-        asc = req.args.get('asc', 1)
-        asc = bool(int(asc)) # string '0' or '1' to int/boolean
+        sort_col = report_args.get('sort', '')
+        asc = report_args.getbool('asc', True)
 
         def report_href(**kwargs):
             """Generate links to this report preserving user variables,
@@ -786,20 +797,6 @@ class ReportModule(Component):
         raise ResourceNotFound(_("Report {%(num)s} does not exist.", num=id),
                                _("Invalid Report Number"))
 
-    def get_var_args(self, req):
-        # reuse somehow for #9574 (wiki vars)
-        report_args = {}
-        for arg in req.args.keys():
-            if not arg.isupper():
-                continue
-            report_args[arg] = to_unicode(req.args.get(arg))
-
-        # Set some default dynamic variables
-        if 'USER' not in report_args:
-            report_args['USER'] = req.authname
-
-        return report_args
-
     def sql_sub_vars(self, sql, args):
         """Extract $XYZ-style variables from the `sql` query.
         """
@@ -953,3 +950,37 @@ class ReportModule(Component):
             else:
                 return tag.a(label, class_='forbidden report',
                              title=_("no permission to view report"))
+
+class WikiReportMacro(WikiMacroBase):
+    _description = cleandoc_(
+    """Wiki macro inserts the Trac report into the wiki page.
+
+        [[WikiReport(<id>,<key1>=<value1>, <keyN>=<valueN>, ...)]]
+
+    This macro accepts a comma-separated list of keyed parameters,
+    in the form "key=value" and "id".
+       - "id" -- then report id of the Trac
+       - "key" -- then report parameter
+       - "value" -- then value of report parameter
+    It supports dynamic variables. Examples:
+    {{{
+    [[WikiReport(1)]]
+    [[WikiReport(11, PARENT=0)]]
+    [[WikiReport($ID, PARENT=$PARENT)]] 
+    }}}
+    """)
+
+    def expand_macro(self, formatter, name, args):
+        req = formatter.req
+        chrome = Chrome(self.env)
+        report = ReportModule(self.env)
+
+        largs, kwargs = parse_args(args)
+        kwargs['page'] = '1'
+        report_id = int(largs[0])
+        template, data, content_type = report._render_view(req, report_id, kwargs)
+        add_stylesheet(req, 'common/css/report.css')
+
+        #conversion to string help remove dummy new lines
+        result = chrome.generate_template_fragment(req, 'report_table.html', data)
+        return result
