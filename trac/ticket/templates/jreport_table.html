@@ -1,0 +1,158 @@
+<div>
+      # macro group_heading(value_for_group, row_group)
+      #   if value_for_group:
+      <h2 class="report-result">
+        #   if row_group and '__grouplink__' in row_group[0]:
+        <a href="${row_group[0]['__grouplink__']}">${value_for_group}</a>
+        #   else:
+        ${value_for_group}
+        #   endif
+        #   set cnt = row_group|length
+        <span class="numrows">
+          (${ngettext('%(num)s match', '%(num)s matches', cnt) if cnt
+          else _("No matches found.")})
+        </span>
+      </h2>
+      #   endif
+      # endmacro
+
+      ${group_heading(*row_groups[0]) if row_groups}
+
+      # if row_groups:
+      <table class="listing tickets">
+
+        # for value_for_group, row_group in row_groups:
+        #   if loop.first:
+        <thead>
+          #   set column_headers
+          #     for header_group in header_groups:
+          <tr class="trac-columns">
+            #     for header in header_group if not header.hidden:
+            <th${{'colspan': '100' if loop.last,
+                  'class': 'asc' if header.asc else
+                           'desc' if header.asc is not none
+                 }|htmlattr}>
+              <a href="${report_href(sort=header.col, asc=not header.asc)}">
+                ${header.title}
+              </a>
+            </th>
+            #     endfor
+          </tr>
+          #     endfor
+          #   endset
+
+          ${column_headers | safe} ## Note: see also Jinja2 issue #490
+          ## jinjacheck: "(tr CDATA)" OK
+        </thead>
+        #   else:
+        <tbody>
+          <tr class="trac-group">
+            <th colspan="100">
+              ${group_heading(value_for_group or _("(empty)"), row_group)}
+            </th>
+          </tr>
+          ${column_headers | safe} ## Note: see also Jinja2 issue #490
+          ## jinjacheck: "(tr CDATA)" OK
+        </tbody>
+        #   endif
+        <tbody>
+          # for row in row_group:
+          #   for cell_group in row.cell_groups:
+          #     set fullrow = len(cell_group) == 1
+          #     set td_attrs = {'class': 'fullrow', 'colspan': 100} if fullrow else {}
+          <tr${{'class': [
+                ('color' + row.__color__ + '-' if '__color__' in row else '') +
+                 ('odd' if row.__idx__ % 2 else 'even'),
+                row.__class__ if '__class__' in row
+                ],
+                'style':
+                   styles(row.__style__ if '__style__' in row,
+                          'border: none; padding: 0' if fullrow,
+                          background=row.__bgcolor__ if '__bgcolor__' in row,
+                          color=row.__fgcolor__ if '__fgcolor__' in row)
+               }|htmlattr}>
+
+            #   for cell in cell_group:
+            #     if not cell.header.hidden:
+            #       set col = cell.header.col.strip('_')
+            #       if col == 'report':
+            <td class="${col}"${td_attrs|htmlattr}>
+              <a title="${_("View report")}"
+                 href="${href.report(cell.value)}">{${cell.value}}</a>
+              {% if fullrow %}<hr />{% endif %}
+            </td>
+            #       elif col in ('ticket', 'id'):
+            <td class="ticket" ${td_attrs|htmlattr}>
+              <a title="${_("View %(realm)s", realm=row.resource.realm)}"
+                 href="${url_of(row.resource)}">${
+                shortname_of(row.resource)}</a>
+              {% if fullrow %}<hr />{% endif %}
+            </td>
+            #       elif col == 'summary' and row.id:
+            <td class="${col}" ${td_attrs|htmlattr}>
+              <a title="${_("View %(realm)s", realm=row.resource.realm)}"
+                 href="${url_of(row.resource)}">${cell.value}</a>
+              {% if fullrow %}<hr />{% endif %}
+            </td>
+
+            <!--! generic fields -->
+            #       elif col == 'time':
+            <td class="date" ${td_attrs|htmlattr}>${
+              format_time(from_utimestamp(long(cell.value))) if cell.value != ''
+              else '--'}
+              {% if fullrow %}<hr />{% endif %}
+            </td>
+
+            #       elif col in ('date', 'created', 'modified'):
+            <td class="date" ${td_attrs|htmlattr}>${
+              format_date(from_utimestamp(cell.value|int)) if cell.value != ''
+              else '--'}
+              {% if fullrow %}<hr />{% endif %}
+            </td>
+
+            #       elif col == 'datetime':
+            <td class="date" ${td_attrs|htmlattr}>${
+              format_datetime(from_utimestamp(long(cell.value)))
+                if cell.value != ''
+                else '--'}
+              {% if fullrow %}<hr />{% endif %}
+            </td>
+
+            #       elif col == 'description':
+            <td class="${col}" ${td_attrs|htmlattr}>
+              ${wiki_to_html(context.child(row.resource), cell.value)}
+              {% if fullrow %}<hr />{% endif %}
+            </td>
+
+            #       elif col == 'milestone':
+            <td class="${col}" ${td_attrs|htmlattr}>
+              #       if cell.value:
+              <a title="View milestone" href="${href.milestone(cell.value)}">${
+                cell.value}</a>
+              #       endif
+              {% if fullrow %}<hr />{% endif %}
+            </td>
+
+            #       else:
+            <td class="${col}" ${td_attrs|htmlattr}>${cell.value}
+              {% if fullrow %}<hr />{% endif %}
+            </td>
+            #       endif
+            #     endif
+            #   endfor
+            # endfor
+          </tr>
+          # endfor
+        </tbody>
+        # endfor
+      </table>
+      #   include 'jpage_index.html'
+      # endif
+
+      # if message:
+      <div class="system-message">${message}</div>
+      # endif
+      # if numrows == 0:
+      <div id="report-notfound">${_("No matches found.")}</div>
+      # endif
+</div>
