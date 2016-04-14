@@ -16,13 +16,14 @@ from datetime import timedelta
 
 from trac.perm import DefaultPermissionPolicy, DefaultPermissionStore,\
                       PermissionCache, PermissionSystem
-from trac.test import Mock, EnvironmentStub
+from trac.test import EnvironmentStub, MockRequest
 from trac.ticket import default_workflow, api, web_ui
 from trac.ticket.batch import BatchModifyModule
 from trac.ticket.model import Ticket
 from trac.util.datefmt import datetime_now, utc
 from trac.web.api import RequestDone
 from trac.web.chrome import web_context
+from trac.web.session import DetachedSession
 
 
 class BatchModifyTestCase(unittest.TestCase):
@@ -34,7 +35,7 @@ class BatchModifyTestCase(unittest.TestCase):
                     web_ui.TicketModule])
         self.env.config.set('trac', 'permission_policies',
                             'DefaultPermissionPolicy')
-        self.req = Mock(href=self.env.href, authname='anonymous', tz=utc)
+        self.req = MockRequest(self.env)
         self.req.session = {}
         self.req.perm = PermissionCache(self.env)
 
@@ -271,16 +272,20 @@ class BatchModifyTestCase(unittest.TestCase):
                                             ['ticket_details'])
         self.assertEqual(True, all(ev[0] != 'batchmodify' for ev in events))
 
-        ids = []
+        prio_ids = {}
         for i in xrange(20):
-            ticket = Ticket(self.env)
-            ticket['summary'] = 'Ticket %d' % i
-            ids.append(ticket.insert())
-        ids.sort()
+            t = Ticket(self.env)
+            t['summary'] = 'Ticket %d' % i
+            t['priority'] = ('', 'minor', 'major', 'critical')[i % 4]
+            tktid = t.insert()
+            prio_ids.setdefault(t['priority'], []).append(tktid)
+        tktids = prio_ids['critical'] + prio_ids['major'] + \
+                 prio_ids['minor'] + prio_ids['']
+
         new_values = {'summary': 'batch updated ticket',
                       'owner': 'ticket11288', 'reporter': 'ticket11288'}
         batch = BatchModifyModule(self.env)
-        batch._save_ticket_changes(self.req, ids, new_values, '', 'leave')
+        batch._save_ticket_changes(self.req, tktids, new_values, '', 'leave')
         # shuffle ticket_change records
         with self.env.db_transaction as db:
             rows = db('SELECT * FROM ticket_change')
@@ -296,12 +301,12 @@ class BatchModifyTestCase(unittest.TestCase):
         self.assertEqual(1, len(events))
         batch_ev = events[0]
         self.assertEqual('anonymous', batch_ev[2])
-        self.assertEqual(ids, sorted(batch_ev[3][0]))
+        self.assertEqual(tktids, batch_ev[3][0])
         self.assertEqual('updated', batch_ev[3][1])
 
         context = web_context(self.req)
         self.assertEqual(
-            self.req.href.query(id=','.join(str(t) for t in ids)),
+            self.req.href.query(id=','.join(str(t) for t in tktids)),
             tktmod.render_timeline_event(context, 'url', batch_ev))
 
 
@@ -319,6 +324,12 @@ class ProcessRequestTestCase(unittest.TestCase):
         ps.grant_permission('has_ta_&_bm', 'TICKET_ADMIN')
         ps.grant_permission('has_bm', 'TICKET_BATCH_MODIFY')
         ps.grant_permission('has_ta_&_bm', 'TICKET_BATCH_MODIFY')
+        session = DetachedSession(self.env, 'has_ta_&_bm')
+        session.set('query_href', '')
+        session.save()
+        session = DetachedSession(self.env, 'has_bm')
+        session.set('query_href', '')
+        session.save()
 
     def tearDown(self):
         self.env.reset_db()
@@ -335,25 +346,12 @@ class ProcessRequestTestCase(unittest.TestCase):
             ticket[k] = v
         return ticket.insert()
 
-    def _create_request(self, authname, **kw):
-        def redirect(url, permanent=False):
-            raise RequestDone
-        default_args = {
-            'authname': authname,
-            'href': self.env.href,
-            'perm': PermissionCache(self.env, authname),
-            'redirect': redirect,
-            'session': {'query_href': ''},
-            'tz': utc,
-        }
-        default_args.update(kw)
-        return Mock(**default_args)
-
     def test_modify_reporter_with_ticket_admin(self):
         """User with TICKET_ADMIN can batch modify the reporter."""
         self._insert_ticket('Ticket 1', reporter='user1')
         self._insert_ticket('Ticket 2', reporter='user1')
-        req = self._create_request('has_ta_&_bm', args={
+
+        req = MockRequest(self.env, authname='has_ta_&_bm', args={
             'batchmod_value_reporter': 'user2',
             'batchmod_value_comment': '',
             'action': 'leave',
@@ -369,7 +367,7 @@ class ProcessRequestTestCase(unittest.TestCase):
         """User without TICKET_ADMIN cannot batch modify the reporter."""
         self._insert_ticket('Ticket 1', reporter='user1')
         self._insert_ticket('Ticket 2', reporter='user1')
-        req = self._create_request('has_bm', args={
+        req = MockRequest(self.env, authname='has_bm', args={
             'batchmod_value_reporter': 'user2',
             'batchmod_value_comment': '',
             'action': 'leave',

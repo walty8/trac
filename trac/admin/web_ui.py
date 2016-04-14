@@ -24,7 +24,7 @@ from genshi.builder import tag
 
 from trac.admin.api import IAdminPanelProvider
 from trac.core import *
-from trac.loader import get_plugin_info, get_plugins_dir
+from trac.loader import get_plugin_info
 from trac.log import LOG_LEVELS
 from trac.perm import PermissionSystem, IPermissionRequestor
 from trac.util.datefmt import all_timezones, pytz
@@ -100,7 +100,7 @@ class AdminModule(Component):
             except IndexError:
                 raise HTTPNotFound(_("Unknown administration panel"))
 
-        provider = providers.get((cat_id, panel_id), None)
+        provider = providers.get((cat_id, panel_id))
         if not provider:
             raise HTTPNotFound(_("Unknown administration panel"))
 
@@ -254,7 +254,7 @@ class LoggingAdminPanel(Component):
         log_type = self.env.log_type
         log_level = self.env.log_level
         log_file = self.env.log_file
-        log_dir = self.env.get_log_dir()
+        log_dir = self.env.log_dir
 
         log_types = [
             dict(name='none', label=_("None"),
@@ -501,7 +501,7 @@ class PluginAdminPanel(Component):
             raise TracError(_("Uploaded file is not a Python source file or "
                               "egg"))
 
-        target_path = os.path.join(self.env.path, 'plugins', plugin_filename)
+        target_path = os.path.join(self.env.plugins_dir, plugin_filename)
         if os.path.isfile(target_path):
             raise TracError(_("Plugin %(name)s already installed",
                               name=plugin_filename))
@@ -527,7 +527,7 @@ class PluginAdminPanel(Component):
         plugin_filename = req.args.get('plugin_filename')
         if not plugin_filename:
             return
-        plugin_path = os.path.join(self.env.path, 'plugins', plugin_filename)
+        plugin_path = os.path.join(self.env.plugins_dir, plugin_filename)
         if not os.path.isfile(plugin_path):
             return
         self.log.info("Uninstalling plugin %s", plugin_filename)
@@ -598,7 +598,7 @@ class PluginAdminPanel(Component):
 
         data = {
             'plugins': plugins, 'show': req.args.get('show'),
-            'readonly': not os.access(get_plugins_dir(self.env),
+            'readonly': not os.access(self.env.plugins_dir,
                                       os.F_OK + os.W_OK),
             'safe_wiki_to_html': safe_wiki_to_html,
         }

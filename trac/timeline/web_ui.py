@@ -27,7 +27,6 @@ from trac.config import IntOption, BoolOption
 from trac.core import *
 from trac.perm import IPermissionRequestor
 from trac.timeline.api import ITimelineEventProvider
-from trac.util import as_int
 from trac.util.datefmt import (datetime_now, format_date, format_datetime,
                                format_time, localtz, parse_date,
                                pretty_timedelta, utc, to_datetime,
@@ -92,16 +91,16 @@ class TimelineModule(Component):
     def process_request(self, req):
         req.perm('timeline').require('TIMELINE_VIEW')
 
-        format = req.args.get('format')
-        maxrows = int(req.args.get('max', 50 if format == 'rss' else 0))
-        lastvisit = int(req.session.get('timeline.lastvisit', '0'))
+        format = req.args.getfirst('format')
+        maxrows = req.args.getint('max', 50 if format == 'rss' else 0)
+        lastvisit = req.session.as_int('timeline.lastvisit', 0)
 
         # indication of new events is unchanged when form is updated by user
         revisit = any(a in req.args
                       for a in ['update', 'from', 'daysback', 'author'])
         if revisit:
-            lastvisit = int(req.session.get('timeline.nextlastvisit',
-                                            lastvisit))
+            lastvisit = req.session.as_int('timeline.nextlastvisit',
+                                           lastvisit)
 
         # Parse the from date and adjust the timestamp to the last second of
         # the day
@@ -111,7 +110,7 @@ class TimelineModule(Component):
         precisedate = precision = None
         if 'from' in req.args:
             # Acquire from date only from non-blank input
-            reqfromdate = req.args['from'].strip()
+            reqfromdate = req.args.getfirst('from').strip()
             if reqfromdate:
                 try:
                     precisedate = user_time(req, parse_date, reqfromdate)
@@ -119,7 +118,7 @@ class TimelineModule(Component):
                     add_warning(req, e)
                 else:
                     fromdate = precisedate.astimezone(req.tz)
-            precision = req.args.get('precision', '')
+            precision = req.args.getfirst('precision', '')
             if precision.startswith('second'):
                 precision = timedelta(seconds=1)
             elif precision.startswith('minute'):
@@ -132,17 +131,12 @@ class TimelineModule(Component):
                                         fromdate.day, 23, 59, 59, 999999),
                                req.tz)
 
-        daysback = as_int(req.args.get('daysback'),
-                          90 if format == 'rss' else None)
-        if daysback is None:
-            daysback = as_int(req.session.get('timeline.daysback'), None)
-        if daysback is None:
-            daysback = self.default_daysback
-        daysback = max(0, daysback)
-        if self.max_daysback >= 0:
-            daysback = min(self.max_daysback, daysback)
+        pref = req.session.as_int('timeline.daysback', self.default_daysback)
+        default = 90 if format == 'rss' else pref
+        daysback = req.args.as_int('daysback', default,
+                                   min=1, max=self.max_daysback)
 
-        authors = req.args.get('authors')
+        authors = req.args.getfirst('authors')
         if authors is None and format != 'rss':
             authors = req.session.get('timeline.authors')
         authors = (authors or '').strip()

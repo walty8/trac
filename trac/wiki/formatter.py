@@ -33,7 +33,7 @@ from trac.mimeview import *
 from trac.resource import get_relative_resource, get_resource_url
 from trac.util import arity, as_int
 from trac.util.text import exception_to_unicode, shorten_line, to_unicode, \
-                           unicode_quote, unicode_quote_plus, unquote_label
+                           unicode_quote, unquote_label
 from trac.util.html import TracHTMLSanitizer
 from trac.util.translation import _, tag_
 from trac.wiki.api import WikiSystem, parse_args
@@ -108,6 +108,10 @@ def _markup_to_unicode(markup):
     if stream:
         markup = stream.render('xhtml', encoding=None, strip_whitespace=False)
     return to_unicode(markup)
+
+
+class MacroError(TracError):
+    pass
 
 
 class ProcessorError(TracError):
@@ -796,6 +800,8 @@ class Formatter(object):
             args = fullmatch.group('macroargs')
         try:
             return macro.ensure_inline(macro.process(args))
+        except MacroError as e:
+            return system_message(e)
         except Exception as e:
             self.env.log.error('Macro %s(%s) failed:%s', name, args,
                                exception_to_unicode(e, traceback=True))

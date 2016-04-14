@@ -39,7 +39,7 @@ from trac.ticket.model import Milestone, Ticket
 from trac.ticket.notification import TicketChangeEvent
 from trac.ticket.roadmap import group_milestones
 from trac.timeline.api import ITimelineEventProvider
-from trac.util import as_bool, as_int, get_reporter_id, lazy
+from trac.util import as_bool, get_reporter_id, lazy
 from trac.util.datefmt import (
     datetime_now, format_date_or_datetime, from_utimestamp,
     get_date_format_hint, get_datetime_format_hint, parse_date, to_utimestamp,
@@ -47,8 +47,7 @@ from trac.util.datefmt import (
 )
 from trac.util.html import to_fragment
 from trac.util.text import (
-    exception_to_unicode, empty, is_obfuscated, obfuscate_email_address,
-    shorten_line
+    exception_to_unicode, empty, is_obfuscated, shorten_line
 )
 from trac.util.presentation import separated
 from trac.util.translation import _, tag_, tagn_, N_, ngettext
@@ -265,7 +264,7 @@ class TicketModule(Component):
             info = ''
             if status == 'edit':
                 if 'ticket_details' in filters:
-                    if len(fields) > 0:
+                    if fields:
                         labels = [tag.i(field_labels.get(k, k.capitalize()))
                                   for k in fields.keys()]
                         info = tagn_("%(labels)s changed",
@@ -294,10 +293,12 @@ class TicketModule(Component):
                     SELECT t.id, tc.time, tc.author, t.type, t.summary,
                            t.component, tc.field, tc.oldvalue, tc.newvalue
                     FROM ticket_change tc
-                        INNER JOIN ticket t ON t.id = tc.ticket
-                            AND tc.time>=%s AND tc.time<=%s
-                    ORDER BY tc.time, tc.ticket
-                    """ % (ts_start, ts_stop)):
+                    INNER JOIN ticket t ON
+                        t.id = tc.ticket AND tc.time>=%%s AND tc.time<=%%s
+                    LEFT OUTER JOIN enum p ON
+                        p.type='priority' AND p.name=t.priority
+                    ORDER BY tc.time, COALESCE(p.value,'')='', %s, tc.ticket
+                    """ % db.cast('p.value', 'int'), (ts_start, ts_stop)):
                 if not (oldvalue or newvalue):
                     # ignore empty change corresponding to custom field
                     # created (None -> '') or deleted ('' -> None)
@@ -421,7 +422,6 @@ class TicketModule(Component):
     def _render_batched_timeline_event(self, context, field, event):
         tickets, verb, info, summary, status, resolution, type, \
                 description, component, comment, cid = event[3]
-        tickets = sorted(tickets)
         if field == 'url':
             return context.href.query(id=','.join(str(t) for t in tickets))
         elif field == 'title':
@@ -562,7 +562,7 @@ class TicketModule(Component):
 
     def _process_ticket_request(self, req):
         id = int(req.args.get('id'))
-        version = as_int(req.args.get('version'), None)
+        version = req.args.getint('version', None)
 
         if req.is_xhr and 'preview_comment' in req.args:
             context = web_context(req, self.realm, id, version)
@@ -592,16 +592,12 @@ class TicketModule(Component):
             elif action == 'diff':
                 return self._render_diff(req, ticket, data, text_fields)
         elif action == 'comment-history':
-            try:
-                cnum = int(req.args.get('cnum'))
-            except (TypeError, ValueError):
-                raise TracError(_("Invalid request arguments."))
+            req.args.require('cnum')
+            cnum = req.args.getint('cnum')
             return self._render_comment_history(req, ticket, data, cnum)
         elif action == 'comment-diff':
-            try:
-                cnum = int(req.args.get('cnum'))
-            except (TypeError, ValueError):
-                raise TracError(_("Invalid request arguments."))
+            req.args.require('cnum')
+            cnum = req.args.getint('cnum')
             return self._render_comment_diff(req, ticket, data, cnum)
         elif 'preview_comment' in req.args:
             field_changes = {}
@@ -894,8 +890,8 @@ class TicketModule(Component):
         `text_fields` is optionally a list of fields of interest, that are
         considered for jumping to the next change.
         """
-        new_version = int(req.args.get('version', 1))
-        old_version = int(req.args.get('old_version', new_version))
+        new_version = req.args.getint('version', 1)
+        old_version = req.args.getint('old_version', new_version)
         if old_version > new_version:
             old_version, new_version = new_version, old_version
 
@@ -1091,8 +1087,8 @@ class TicketModule(Component):
     def _render_comment_diff(self, req, ticket, data, cnum):
         """Show differences between two versions of a ticket comment."""
         req.perm(ticket.resource).require('TICKET_VIEW')
-        new_version = int(req.args.get('version', 1))
-        old_version = int(req.args.get('old_version', new_version))
+        new_version = req.args.getint('version', 1)
+        old_version = req.args.getint('old_version', new_version)
         if old_version > new_version:
             old_version, new_version = new_version, old_version
         elif old_version == new_version:
@@ -1577,7 +1573,7 @@ class TicketModule(Component):
             if name in ('summary', 'reporter', 'description', 'owner',
                         'status', 'resolution', 'time', 'changetime'):
                 field['skip'] = True
-            elif name == 'milestone':
+            elif name == 'milestone' and not field.get('custom'):
                 milestones = [Milestone(self.env, opt)
                               for opt in field['options']]
                 milestones = [m for m in milestones
@@ -1650,12 +1646,11 @@ class TicketModule(Component):
                 value = ticket[name]
                 field['timevalue'] = value
                 format = field.get('format', 'datetime')
-                if value and isinstance(value, datetime):
-                    field['rendered'] = user_time(req, format_date_or_datetime,
-                                                  format, value)
-                    field['dateinfo'] = value
+                if isinstance(value, datetime):
                     field['edit'] = user_time(req, format_date_or_datetime,
                                               format, value)
+                else:
+                    field['edit'] = value or ''
                 locale = getattr(req, 'lc_time', None)
                 if format == 'date':
                     field['format_hint'] = get_date_format_hint(locale)
@@ -1809,10 +1804,10 @@ class TicketModule(Component):
                 format = ticket.fields.by_name(field).get('format')
                 changes['old'] = user_time(req, format_date_or_datetime,
                                            format, old) \
-                                 if old and isinstance(old, datetime) else ''
+                                 if isinstance(old, datetime) else old or ''
                 changes['new'] = user_time(req, format_date_or_datetime,
                                            format, new) \
-                                 if new and isinstance(new, datetime) else ''
+                                 if isinstance(new, datetime) else new or ''
 
     def _render_property_diff(self, req, ticket, field, old, new,
                               resource_new=None):

@@ -19,7 +19,6 @@ from BaseHTTPServer import BaseHTTPRequestHandler
 from Cookie import CookieError, BaseCookie, SimpleCookie
 import cgi
 from datetime import datetime
-import errno
 from hashlib import md5
 import new
 import mimetypes
@@ -31,13 +30,14 @@ import sys
 import urlparse
 
 from genshi.builder import Fragment
-from trac.core import Interface, TracBaseError
-from trac.util import get_last_traceback, lazy, unquote
+from trac.core import Interface, TracBaseError, TracError
+from trac.util import as_bool, as_int, get_last_traceback, lazy, unquote
 from trac.util.datefmt import http_date, localtz
+from trac.util.html import tag
 from trac.util.text import empty, exception_to_unicode, to_unicode
-from trac.util.translation import _
+from trac.util.translation import _, N_, tag_
 from trac.web.href import Href
-from trac.web.wsgi import _FileWrapper
+from trac.web.wsgi import _FileWrapper, is_client_disconnect_exception
 
 
 class IAuthenticator(Interface):
@@ -155,6 +155,18 @@ class ITemplateStreamFilter(Interface):
         """
 
 
+class TracNotImplementedError(TracError, NotImplementedError):
+    """Raised when a `NotImplementedError` is trapped.
+
+    This exception is for internal use and should not be raised by
+    plugins. Plugins should raise `NotImplementedError`.
+
+    :since: 1.0.11
+    """
+
+    title = N_("Not Implemented Error")
+
+
 HTTP_STATUS = dict([(code, reason.title()) for code, (reason, description)
                     in BaseHTTPRequestHandler.responses.items()])
 
@@ -247,6 +259,84 @@ class _RequestArgs(dict):
     """Dictionary subclass that provides convenient access to request
     parameters that may contain multiple values."""
 
+    def as_int(self, name, default=None, min=None, max=None):
+        """Return the value as an integer. Return `default` if
+        if an exception is raised while converting the value to an
+        integer.
+
+        :param name: the name of the request parameter
+        :keyword default: the value to return if the parameter is not
+                          specified or an exception occurs converting
+                          the value to an integer.
+        :keyword min: lower bound to which the value is limited
+        :keyword max: upper bound to which the value is limited
+
+        :since: 1.2
+        """
+        if name not in self:
+            return default
+        return as_int(self.getfirst(name), default, min, max)
+
+    def as_bool(self, name, default=None):
+        """Return the value as a boolean. Return `default` if
+        if an exception is raised while converting the value to a
+        boolean.
+
+        :param name: the name of the request parameter
+        :keyword default: the value to return if the parameter is not
+                          specified or an exception occurs converting
+                          the value to a boolean.
+
+        :since: 1.2
+        """
+        if name not in self:
+            return default
+        return as_bool(self.getfirst(name), default)
+
+    def getbool(self, name, default=None):
+        """Return the value as a boolean. Raise an `HTTPBadRequest`
+        exception if an exception occurs while converting the value to
+        a boolean.
+
+        :param name: the name of the request parameter
+        :keyword default: the value to return if the parameter is not
+                          specified.
+
+        :since: 1.2
+        """
+        if name not in self:
+            return default
+        value = self[name]
+        if isinstance(value, list):
+            raise HTTPBadRequest(tag_("Invalid value for request argument "
+                                      "%(name)s.", name=tag.em(name)))
+        value = as_bool(value, None)
+        if value is None:
+            raise HTTPBadRequest(tag_("Invalid value for request argument "
+                                      "%(name)s.", name=tag.em(name)))
+        return value
+
+    def getint(self, name, default=None, min=None, max=None):
+        """Return the value as an integer. Raise an `HTTPBadRequest`
+        exception if an exception occurs while converting the value
+        to an integer.
+
+        :param name: the name of the request parameter
+        :keyword default: the value to return if the parameter is not
+                          specified
+        :keyword min: lower bound to which the value is limited
+        :keyword max: upper bound to which the value is limited
+
+        :since: 1.2
+        """
+        if name not in self:
+            return default
+        value = as_int(self[name], None, min, max)
+        if value is None:
+            raise HTTPBadRequest(tag_("Invalid value for request argument "
+                                      "%(name)s.", name=tag.em(name)))
+        return value
+
     def getfirst(self, name, default=None):
         """Return the first value for the specified parameter, or `default` if
         the parameter was not provided.
@@ -268,6 +358,19 @@ class _RequestArgs(dict):
         if not isinstance(val, list):
             val = [val]
         return val
+
+    def require(self, name):
+        """Raise an `HTTPBadRequest` exception if the parameter is
+        not in the request.
+
+        :param name: the name of the request parameter
+
+        :since: 1.2
+        """
+        if name not in self:
+            raise HTTPBadRequest(
+                tag_("Missing request argument. The %(name)s argument "
+                     "must be included in the request.", name=tag.em(name)))
 
 
 def parse_arg_list(query_string):
@@ -733,13 +836,7 @@ class Request(object):
             if bufsize > 0:
                 self._write(''.join(buf))
         except (IOError, socket.error) as e:
-            if e.args[0] in (errno.EPIPE, errno.ECONNRESET, 10053, 10054):
-                raise RequestDone
-            # Note that mod_wsgi raises an IOError with only a message
-            # if the client disconnects
-            if 'mod_wsgi.version' in self.environ and \
-               e.args[0] in ('failed to write data',
-                             'client connection closed'):
+            if self._is_client_disconnected(e):
                 raise RequestDone
             raise
 
@@ -765,16 +862,35 @@ class Request(object):
         # requests. We'll keep the pre 2.6 behaviour for now...
         if self.method == 'POST':
             qs_on_post = self.environ.pop('QUERY_STRING', '')
-        fs = _FieldStorage(fp, environ=self.environ, keep_blank_values=True)
+        try:
+            fs = _FieldStorage(fp, environ=self.environ,
+                               keep_blank_values=True)
+        except (IOError, socket.error), e:
+            if self._is_client_disconnected(e):
+                raise HTTPBadRequest(
+                    _("Exception caught while reading request: %(msg)s",
+                      msg=exception_to_unicode(e)))
+            raise
         if self.method == 'POST':
             self.environ['QUERY_STRING'] = qs_on_post
 
+        def raise_if_null_bytes(value):
+            if value and '\x00' in value:
+                raise HTTPBadRequest(_("Invalid request arguments."))
+
         args = []
         for value in fs.list or ():
+            name = value.name
+            raise_if_null_bytes(name)
             try:
-                name = unicode(value.name, 'utf-8')
-                if not value.filename:
-                    value = unicode(value.value, 'utf-8')
+                if name is not None:
+                    name = unicode(name, 'utf-8')
+                if value.filename:
+                    raise_if_null_bytes(value.filename)
+                else:
+                    value = value.value
+                    raise_if_null_bytes(value)
+                    value = unicode(value, 'utf-8')
             except UnicodeDecodeError as e:
                 raise HTTPBadRequest(
                     _("Invalid encoding in form data: %(msg)s",
@@ -844,5 +960,16 @@ class Request(object):
         cookies = to_unicode(self.outcookie.output(header='')).encode('utf-8')
         for cookie in cookies.splitlines():
             self._outheaders.append(('Set-Cookie', cookie.strip()))
+
+    def _is_client_disconnected(self, e):
+        if is_client_disconnect_exception(e):
+            return True
+        # Note that mod_wsgi raises an IOError with only a message
+        # if the client disconnects
+        if 'mod_wsgi.version' in self.environ:
+           return e.args[0] in ('failed to write data',
+                                'client connection closed',
+                                'request data read error')
+        return False
 
 __no_apidoc__ = _HTTPException_subclass_names

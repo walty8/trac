@@ -649,7 +649,7 @@ class Mimeview(Component):
         """)
 
     mime_map_patterns = ListOption('mimeviewer', 'mime_map_patterns',
-        'text/plain:README|INSTALL(?!\.rst)|COPYING.*',
+        'text/plain:README(?!\.rst)|INSTALL(?!\.rst)|COPYING.*',
         doc="""List of additional MIME types associated to filename patterns.
         Mappings are comma-separated, and each mapping consists of a MIME type
         and a Python regexp used for matching filenames, separated by a colon
@@ -658,7 +658,7 @@ class Mimeview(Component):
 
     treat_as_binary = ListOption('mimeviewer', 'treat_as_binary',
         'application/octet-stream, application/pdf, application/postscript, '
-        'application/msword,application/rtf,',
+        'application/msword, application/rtf',
         doc="""Comma-separated list of MIME types that should be treated as
         binary data.
         """)

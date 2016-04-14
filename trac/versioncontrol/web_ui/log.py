@@ -33,9 +33,9 @@ from trac.versioncontrol.api import (Changeset, NoSuchChangeset,
 from trac.versioncontrol.web_ui.changeset import ChangesetModule
 from trac.versioncontrol.web_ui.util import *
 from trac.web.api import IRequestHandler
-from trac.web.chrome import (Chrome, INavigationContributor, add_ctxtnav,
-                             add_link, add_script, add_script_data,
-                             add_stylesheet, auth_link, web_context)
+from trac.web.chrome import (INavigationContributor, add_ctxtnav, add_link,
+                             add_script, add_script_data, add_stylesheet,
+                             auth_link, web_context)
 from trac.wiki import IWikiSyntaxProvider, WikiParser
 
 
@@ -86,7 +86,7 @@ class LogModule(Component):
         revs = req.args.get('revs')
         format = req.args.get('format')
         verbose = req.args.get('verbose')
-        limit = int(req.args.get('limit') or self.default_log_limit)
+        limit = req.args.getint('limit', self.default_log_limit)
 
         rm = RepositoryManager(self.env)
         reponame, repos, path = rm.get_repository_by_path(path)

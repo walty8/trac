@@ -47,7 +47,7 @@ class StatusFixerActionController(Component):
 
     def get_ticket_actions(self, req, ticket):
         actions = []
-        if 'TICKET_STATUSFIX' in req.perm(ticket.resource):
+        if ticket.exists and 'TICKET_STATUSFIX' in req.perm(ticket.resource):
             actions.append((0, 'force_status'))
         return actions
 
@@ -67,7 +67,7 @@ class StatusFixerActionController(Component):
             [tag.option(x, selected=(x == selected_value and 'selected' or
                                      None)) for x in all_status],
             id='force_status_value', name='force_status_value')
-        return ("force status to:", render_control,
+        return ("force status to", render_control,
                 "The next status will be the selected one")
 
     def get_ticket_changes(self, req, ticket, action):

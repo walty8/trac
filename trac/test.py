@@ -25,6 +25,7 @@ import shutil
 import sys
 import types
 import unittest
+import StringIO
 
 try:
     from babel import Locale
@@ -37,12 +38,15 @@ import trac.db.mysql_backend
 import trac.db.postgres_backend
 import trac.db.sqlite_backend
 from trac.config import Configuration
-from trac.core import ComponentManager, TracError
+from trac.core import ComponentManager, ComponentMeta, TracError
 from trac.db.api import DatabaseManager, parse_connection_uri
 from trac.env import Environment
+from trac.perm import PermissionCache
 from trac.ticket.default_workflow import load_workflow_config_snippet
 from trac.util import translation
-from trac.util.datefmt import time_now
+from trac.util.datefmt import time_now, utc
+from trac.web.api import _RequestArgs, Request
+from trac.web.session import DetachedSession
 
 
 def Mock(bases=(), *initargs, **kw):
@@ -138,6 +142,87 @@ class MockPerm(object):
                 message=None):
         pass
     assert_permission = require
+
+
+def MockRequest(env, **kwargs):
+    """Request object for testing. Keyword arguments populate an
+    `environ` dictionary and the callbacks.
+
+    If `authname` is specified in a keyword arguments a `PermissionCache`
+    object is created, otherwise if `authname` is not specified or is
+    `None` a `MockPerm` object is used and the `authname` is set to
+    'anonymous'.
+
+    The following keyword arguments are commonly used:
+    :keyword args: dictionary of request arguments
+    :keyword authname: the name of the authenticated user, or 'anonymous'
+    :keyword method: the HTTP request method
+    :keyword path_info: the request path inside the application
+
+    Additionally `format`, `locale`, `lc_time`, `remote_addr`,
+    `remote_user`, `script_name`, `server_name`, `server_port`
+    and `tz` can be specified as keyword arguments.
+
+    :since: 1.0.11
+    """
+
+    authname = kwargs.get('authname')
+    if authname is None:
+        authname = 'anonymous'
+        perm = MockPerm()
+    else:
+        perm = PermissionCache(env, authname)
+
+    args = _RequestArgs()
+    args.update(kwargs.get('args', {}))
+
+    environ = {
+        'trac.base_url': env.abs_href(),
+        'wsgi.url_scheme': 'http',
+        'HTTP_ACCEPT_LANGUAGE': 'en-US',
+        'PATH_INFO': kwargs.get('path_info', '/'),
+        'REQUEST_METHOD': kwargs.get('method', 'GET'),
+        'REMOTE_ADDR': kwargs.get('remote_addr', '127.0.0.1'),
+        'REMOTE_USER': kwargs.get('remote_user', authname),
+        'SCRIPT_NAME': kwargs.get('script_name', '/trac.cgi'),
+        'SERVER_NAME': kwargs.get('server_name', 'localhost'),
+        'SERVER_PORT': kwargs.get('server_port', '80'),
+    }
+
+    status_sent = []
+    headers_sent = {}
+    response_sent = StringIO.StringIO()
+
+    def start_response(status, headers, exc_info=None):
+        status_sent.append(status)
+        headers_sent.update(dict(headers))
+        return response_sent.write
+
+    req = Mock(Request, environ, start_response)
+    req.status_sent = status_sent
+    req.headers_sent = headers_sent
+    req.response_sent = response_sent
+
+    from trac.web.chrome import Chrome
+    req.callbacks.update({
+        'arg_list': None,
+        'args': lambda req: args,
+        'authname': lambda req: authname,
+        'chrome': Chrome(env).prepare_request,
+        'form_token': lambda req: kwargs.get('form_token'),
+        'languages': Request._parse_languages,
+        'lc_time': lambda req: kwargs.get('lc_time', locale_en),
+        'locale': lambda req: kwargs.get('locale'),
+        'incookie': Request._parse_cookies,
+        'perm': lambda req: perm,
+        'session': lambda req: DetachedSession(env, authname),
+        'tz': lambda req: kwargs.get('tz', utc),
+        'use_xsendfile': False,
+        'xsendfile_header': None,
+        '_inheaders': Request._parse_headers
+    })
+
+    return req
 
 
 class TestSetup(unittest.TestSuite):
@@ -259,6 +344,8 @@ class EnvironmentStub(Environment):
         ComponentManager.__init__(self)
 
         self.systeminfo = []
+        self._old_registry = None
+        self._old_components = None
 
         import trac
         self.path = path
@@ -359,6 +446,32 @@ class EnvironmentStub(Environment):
             pass
         return False
 
+    def clear_component_registry(self):
+        """Clear the component registry.
+
+        The registry entries are saved entries so they can be restored
+        later using the `restore_component_registry` method.
+
+        :since: 1.0.11
+        """
+        self._old_registry = ComponentMeta._registry
+        self._old_components = ComponentMeta._components
+        ComponentMeta._registry = {}
+
+    def restore_component_registry(self):
+        """Restore the component registry.
+
+        The component registry must have been cleared and saved using
+        the `clear_component_registry` method.
+
+        :since: 1.0.11
+        """
+        if self._old_registry is None:
+            raise TracError("The clear_component_registry method must be "
+                            "called first.")
+        ComponentMeta._registry = self._old_registry
+        ComponentMeta._components = self._old_components
+
     # tearDown helper
 
     def reset_db_and_disk(self):
@@ -370,18 +483,34 @@ class EnvironmentStub(Environment):
         self.env.reset_db()
         self.env.shutdown() # really closes the db connections
         shutil.rmtree(self.env.path)
+        if self._old_registry is not None:
+            self.restore_component_registry()
 
     # other utilities
 
-    def insert_known_users(self, users):
+    def insert_users(self, users):
+        """Insert a tuple representing a user session to the
+        `session` and `session_attributes` tables.
+
+        The tuple can be length 3 with entries username, name and
+        email, in which case an authenticated user is assumed. The
+        tuple can also be length 4, with the last entry specifying
+        `1` for an authenticated user or `0` for an unauthenticated
+        user.
+        """
         with self.env.db_transaction as db:
-            for username, name, email in users:
+            for row in users:
+                if len(row) == 3:
+                    username, name, email = row
+                    authenticated = 1
+                else:  # len(row) == 4
+                    username, name, email, authenticated = row
                 db("INSERT INTO session VALUES (%s, %s, %s)",
-                   (username, 1, int(time_now())))
+                   (username, authenticated, int(time_now())))
                 db("INSERT INTO session_attribute VALUES (%s,%s,'name',%s)",
-                   (username, 1, name))
+                   (username, authenticated, name))
                 db("INSERT INTO session_attribute VALUES (%s,%s,'email',%s)",
-                   (username, 1, email))
+                   (username, authenticated, email))
 
     # overridden
 

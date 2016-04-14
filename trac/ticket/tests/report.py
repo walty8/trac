@@ -12,28 +12,19 @@
 # history and logs, available at http://trac.edgewall.org/log/.
 
 import doctest
+import unittest
 from datetime import datetime, timedelta
 
-import unittest
-from StringIO import StringIO
-
+import trac
 import trac.tests.compat
-from trac.db.mysql_backend import MySQLConnection
-from trac.perm import PermissionCache, PermissionSystem
+from trac.perm import PermissionSystem
 from trac.ticket.model import Ticket
 from trac.ticket.query import QueryModule
 from trac.ticket.report import ReportModule
-from trac.test import EnvironmentStub, Mock, MockPerm, locale_en
+from trac.test import EnvironmentStub, MockRequest
 from trac.util.datefmt import utc
-from trac.web.api import _RequestArgs, Request, RequestDone
+from trac.web.api import HTTPBadRequest, RequestDone
 from trac.web.chrome import Chrome
-from trac.web.href import Href
-import trac
-
-
-class MockMySQLConnection(MySQLConnection):
-    def __init__(self):
-        pass
 
 
 class ReportTestCase(unittest.TestCase):
@@ -44,15 +35,6 @@ class ReportTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.env.reset_db()
-
-    def _make_environ(self, scheme='http', server_name='example.org',
-                      server_port=80, method='GET', script_name='/trac',
-                      **kwargs):
-        environ = {'wsgi.url_scheme': scheme, 'wsgi.input': StringIO(''),
-                   'REQUEST_METHOD': method, 'SERVER_NAME': server_name,
-                   'SERVER_PORT': server_port, 'SCRIPT_NAME': script_name}
-        environ.update(kwargs)
-        return environ
 
     def test_sub_var_no_quotes(self):
         sql, values, missing_args = self.report_module.sql_sub_vars(
@@ -85,19 +67,15 @@ class ReportTestCase(unittest.TestCase):
         self.assertEqual(['PARAM', 'MISSING'], missing_args)
 
     def test_csv_escape(self):
-        buf = StringIO()
-        def start_response(status, headers):
-            return buf.write
-        environ = self._make_environ()
-        req = Request(environ, start_response)
+        req = MockRequest(self.env)
         cols = ['TEST_COL', 'TEST_ZERO']
         rows = [('value, needs escaped', 0)]
-        try:
-            self.report_module._send_csv(req, cols, rows)
-        except RequestDone:
-            pass
-        self.assertEqual('\xef\xbb\xbfTEST_COL,TEST_ZERO\r\n"value, needs escaped",0\r\n',
-                         buf.getvalue())
+
+        self.assertRaises(RequestDone,
+                          self.report_module._send_csv, req, cols, rows)
+        self.assertEqual('\xef\xbb\xbfTEST_COL,TEST_ZERO\r\n"'
+                         'value, needs escaped",0\r\n',
+                         req.response_sent.getvalue())
 
     def test_saved_custom_query_redirect(self):
         query = u'query:?type=résumé'
@@ -106,24 +84,16 @@ class ReportTestCase(unittest.TestCase):
             cursor.execute("INSERT INTO report (title,query,description) "
                            "VALUES (%s,%s,%s)", ('redirect', query, ''))
             id = db.get_last_id(cursor, 'report')
+        req = MockRequest(self.env)
 
-        headers_sent = {}
-        def start_response(status, headers):
-            headers_sent.update(dict(headers))
-        environ = self._make_environ()
-        req = Request(environ, start_response)
-        req.authname = 'anonymous'
-        req.session = Mock(save=lambda: None)
         self.assertRaises(RequestDone,
                           self.report_module._render_view, req, id)
-        self.assertEqual('http://example.org/trac/query?' + \
+        self.assertEqual('http://example.org/trac.cgi/query?' +
                          'type=r%C3%A9sum%C3%A9&report=' + str(id),
-                         headers_sent['Location'])
+                         req.headers_sent['Location'])
 
     def test_quoted_id_with_var(self):
-        req = Mock(base_path='', chrome={}, args={}, session={},
-                   abs_href=Href('/'), href=Href('/'), locale='',
-                   perm=MockPerm(), authname=None, tz=None)
+        req = MockRequest(self.env)
         name = """%s"`'%%%?"""
         with self.env.db_query as db:
             sql = 'SELECT 1 AS %s, $USER AS user' % db.quote(name)
@@ -146,22 +116,6 @@ class ExecuteReportTestCase(unittest.TestCase):
     def tearDown(self):
         self.env.reset_db()
 
-    def _create_request(self, authname='anonymous', **kwargs):
-        kw = {'path_info': '/', 'perm': MockPerm(), 'args': _RequestArgs(),
-              'href': self.env.href, 'abs_href': self.env.abs_href,
-              'tz': utc, 'locale': None, 'lc_time': locale_en,
-              'session': {}, 'authname': authname,
-              'chrome': {'notices': [], 'warnings': []},
-              'method': None, 'get_header': lambda v: None, 'is_xhr': False,
-              'form_token': None}
-        if 'args' in kwargs:
-            kw['args'].update(kwargs.pop('args'))
-        kw.update(kwargs)
-        def redirect(url, permanent=False):
-            raise RequestDone
-        return Mock(add_redirect_listener=lambda x: [].append(x),
-                    redirect=redirect, **kw)
-
     def _insert_ticket(self, when=None, **kwargs):
         ticket = Ticket(self.env)
         for name, value in kwargs.iteritems():
@@ -180,7 +134,7 @@ class ExecuteReportTestCase(unittest.TestCase):
 
     def _execute_report(self, id, args=None):
         mod = self.report_module
-        req = self._create_request()
+        req = MockRequest(self.env)
         title, description, sql = mod.get_report(id)
         return mod.execute_paginated_report(req, id, sql, args or {})
 
@@ -501,8 +455,8 @@ class ExecuteReportTestCase(unittest.TestCase):
     def test_report_8_active_tickets_mine_first(self):
         attrs = dict(component='component1', milestone='milestone1',
                      version='1.0', type='defect')
-        tickets = self._generate_tickets(('status', 'owner', 'priority'),
-                                         self.REPORT_8_DATA, attrs)
+        self._generate_tickets(('status', 'owner', 'priority'),
+                                self.REPORT_8_DATA, attrs)
 
         rv = self._execute_report(8, {'USER': 'john'})
         cols, results, num_items, missing_args, limit_offset = rv
@@ -538,7 +492,7 @@ class ExecuteReportTestCase(unittest.TestCase):
         self._generate_tickets(('status', 'priority'), self.REPORT_1_DATA,
                                attrs)
         mod = self.report_module
-        req = self._create_request()
+        req = MockRequest(self.env)
         sql = mod.get_report(id)[2]
 
         rv1 = mod.execute_paginated_report(req, id, sql, {})
@@ -548,11 +502,16 @@ class ExecuteReportTestCase(unittest.TestCase):
 
     def test_asc_argument_is_invalid(self):
         """Invalid value for `asc` argument is coerced to default."""
-        req = self._create_request(args={'asc': '--'})
+        req = MockRequest(self.env, args={'asc': '--'})
 
-        data = ReportModule(self.env).process_request(req)[1]
+        self.assertRaises(HTTPBadRequest,
+                          ReportModule(self.env).process_request, req)
 
-        self.assertFalse(data['asc'])
+    def test_invalid_post_request_raises_exception(self):
+        req = MockRequest(self.env, method='POST', action=None)
+
+        self.assertRaises(HTTPBadRequest,
+                          ReportModule(self.env).process_request, req)
 
 
 class NavigationContributorTestCase(unittest.TestCase):
@@ -603,8 +562,7 @@ class NavContribReportModuleEnabledTestCase(NavigationContributorTestCase):
         """No navigation item when user has neither REPORT_VIEW or
         TICKET_VIEW.
         """
-        req = Mock(href=Href('/'),
-                   perm=PermissionCache(self.env, 'anonymous'))
+        req = MockRequest(self.env, authname='anonymous')
 
         navigation_items = self.get_navigation_items(req, self.report_module)
         self.assertEqual(0, len(navigation_items))
@@ -617,11 +575,10 @@ class NavContribReportModuleEnabledTestCase(NavigationContributorTestCase):
         enabled
         and the user has REPORT_VIEW.
         """
-        req = Mock(href=Href('/'),
-                   perm=PermissionCache(self.env, 'has_report_view'))
+        req = MockRequest(self.env, authname='has_report_view')
 
         navigation_items = self.get_navigation_items(req, self.report_module)
-        self.assertNavItem('/report', navigation_items)
+        self.assertNavItem('/trac.cgi/report', navigation_items)
 
         navigation_items = self.get_navigation_items(req, self.query_module)
         self.assertEqual(0, len(navigation_items))
@@ -630,24 +587,22 @@ class NavContribReportModuleEnabledTestCase(NavigationContributorTestCase):
         """Navigation item directs to QueryModule when ReportModule is
         enabled and the user has TICKET_VIEW but not REPORT_VIEW.
         """
-        req = Mock(href=Href('/'),
-                   perm=PermissionCache(self.env, 'has_ticket_view'))
+        req = MockRequest(self.env, authname='has_ticket_view')
 
         navigation_items = self.get_navigation_items(req, self.report_module)
         self.assertEqual(0, len(navigation_items))
 
         navigation_items = self.get_navigation_items(req, self.query_module)
-        self.assertNavItem('/query', navigation_items)
+        self.assertNavItem('/trac.cgi/query', navigation_items)
 
     def test_user_has_report_view_and_ticket_view(self):
         """Navigation item directs to ReportModule when ReportModule is
          enabled and the user has REPORT_VIEW and TICKET_VIEW.
         """
-        req = Mock(href=Href('/'),
-                   perm=PermissionCache(self.env, 'has_both'))
+        req = MockRequest(self.env, authname='has_both')
 
         navigation_items = self.get_navigation_items(req, self.report_module)
-        self.assertNavItem('/report', navigation_items)
+        self.assertNavItem('/trac.cgi/report', navigation_items)
 
         navigation_items = self.get_navigation_items(req, self.query_module)
         self.assertEqual(0, len(navigation_items))
@@ -663,21 +618,19 @@ class NavContribReportModuleDisabledTestCase(NavigationContributorTestCase):
         """Navigation item directs to QueryModule when ReportModule is
         disabled and the user has TICKET_VIEW.
         """
-        req = Mock(href=Href('/'),
-                   perm=PermissionCache(self.env, 'has_ticket_view'))
+        req = MockRequest(self.env, authname='has_ticket_view')
 
         navigation_items = self.get_navigation_items(req, self.report_module)
         self.assertEqual(0, len(navigation_items))
 
         navigation_items = self.get_navigation_items(req, self.query_module)
-        self.assertNavItem('/query', navigation_items)
+        self.assertNavItem('/trac.cgi/query', navigation_items)
 
     def test_user_no_ticket_view(self):
         """No Navigation item when ReportModule is disabled and the user
         has only REPORT_VIEW.
         """
-        req = Mock(href=Href('/'),
-                   perm=PermissionCache(self.env, 'has_report_view'))
+        req = MockRequest(self.env, authname='has_report_view')
 
         navigation_items = self.get_navigation_items(req, self.report_module)
         self.assertEqual(0, len(navigation_items))

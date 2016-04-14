@@ -22,8 +22,8 @@ import trac.tests.compat
 from genshi.builder import tag
 from trac import perm
 from trac.core import TracError
-from trac.test import EnvironmentStub, Mock, MockPerm, locale_en
-from trac.util import create_file
+from trac.test import EnvironmentStub, Mock, MockPerm
+from trac.util import as_int, create_file
 from trac.util.datefmt import utc
 from trac.util.text import shorten_line
 from trac.web.api import HTTPBadRequest, HTTPInternalError, Request, \
@@ -52,17 +52,6 @@ class RequestHandlerPermissionsTestCaseBase(unittest.TestCase):
     def tearDown(self):
         self.env.reset_db_and_disk()
 
-    def create_request(self, authname='anonymous', **kwargs):
-        kw = {'perm': perm.PermissionCache(self.env, authname), 'args': {},
-              'href': self.env.href, 'abs_href': self.env.abs_href,
-              'tz': utc, 'locale': None, 'lc_time': locale_en,
-              'session': Mock(get=lambda k, d=None: d,
-                              set=lambda k, v, d=None: None),
-              'authname': authname, 'chrome': {'notices': [], 'warnings': []},
-              'method': None, 'get_header': lambda v: None, 'is_xhr': False}
-        kw.update(kwargs)
-        return Mock(**kw)
-
     def get_navigation_items(self, req):
         return self.req_handler.get_navigation_items(req)
 
@@ -88,7 +77,12 @@ def _make_environ(scheme='http', server_name='example.org',
 
 def _make_req(environ, start_response, args={}, arg_list=(), authname='admin',
               form_token='A' * 40, chrome={'links': {}, 'scripts': []},
-              perm=MockPerm(), session={}, tz=utc, locale=None, **kwargs):
+              perm=MockPerm(), tz=utc, locale=None, **kwargs):
+
+    class MockSession(dict):
+        def as_int(self, key, default=None, min=None, max=None):
+            return as_int(self.get(key), default, min, max)
+
     req = Request(environ, start_response)
     req.args = args
     req.arg_list = arg_list
@@ -96,7 +90,7 @@ def _make_req(environ, start_response, args={}, arg_list=(), authname='admin',
     req.form_token = form_token
     req.chrome = chrome
     req.perm = perm
-    req.session = session
+    req.session = MockSession()
     req.tz = tz
     req.locale = locale
     for name, value in kwargs.iteritems():
@@ -108,6 +102,82 @@ class RequestTestCase(unittest.TestCase):
 
     def _make_environ(self, *args, **kwargs):
         return _make_environ(*args, **kwargs)
+
+    def test_as_bool(self):
+        qs = 'arg1=0&arg2=1&arg3=yes&arg4=a&arg5=1&arg5=0'
+        environ = self._make_environ(method='GET', **{'QUERY_STRING': qs})
+        req = Request(environ, None)
+
+        self.assertIsNone(req.args.as_bool('arg0'))
+        self.assertTrue(req.args.as_bool('arg0', True))
+        self.assertFalse(req.args.as_bool('arg1'))
+        self.assertFalse(req.args.as_bool('arg1', True))
+        self.assertTrue(req.args.as_bool('arg2'))
+        self.assertTrue(req.args.as_bool('arg3'))
+        self.assertFalse(req.args.as_bool('arg4'))
+        self.assertTrue(req.args.as_bool('arg4', True))
+        self.assertTrue(req.args.as_bool('arg5'))
+
+    def test_as_int(self):
+        qs = 'arg1=1&arg2=a&arg3=3&arg3=4'
+        environ = self._make_environ(method='GET', **{'QUERY_STRING': qs})
+        req = Request(environ, None)
+
+        self.assertIsNone(req.args.as_int('arg0'))
+        self.assertEqual(2, req.args.as_int('arg0', 2))
+        self.assertEqual(1, req.args.as_int('arg1'))
+        self.assertEqual(1, req.args.as_int('arg1', 2))
+        self.assertEqual(2, req.args.as_int('arg1', min=2))
+        self.assertEqual(2, req.args.as_int('arg1', None, 2))
+        self.assertEqual(0, req.args.as_int('arg1', max=0))
+        self.assertEqual(0, req.args.as_int('arg1', None, max=0))
+        self.assertEqual(0, req.args.as_int('arg1', None, -1, 0))
+        self.assertIsNone(req.args.as_int('arg2'))
+        self.assertEqual(2, req.args.as_int('arg2', 2))
+        self.assertEqual(3, req.args.as_int('arg3'))
+
+    def test_getbool(self):
+        qs = 'arg1=0&arg2=1&arg3=yes&arg4=a&arg5=1&arg5=0'
+        environ = self._make_environ(method='GET', **{'QUERY_STRING': qs})
+        req = Request(environ, None)
+
+        self.assertIsNone(req.args.getbool('arg0'))
+        self.assertTrue(req.args.getbool('arg0', True))
+        self.assertFalse(req.args.getbool('arg1'))
+        self.assertFalse(req.args.getbool('arg1', True))
+        self.assertTrue(req.args.getbool('arg2'))
+        self.assertTrue(req.args.getbool('arg3'))
+        self.assertRaises(HTTPBadRequest, req.args.getbool, 'arg4')
+        self.assertRaises(HTTPBadRequest, req.args.getbool, 'arg4', True)
+        self.assertRaises(HTTPBadRequest, req.args.getbool, 'arg5')
+        self.assertRaises(HTTPBadRequest, req.args.getbool, 'arg5', True)
+
+    def test_getint(self):
+        qs = 'arg1=1&arg2=a&arg3=3&arg3=4'
+        environ = self._make_environ(method='GET', **{'QUERY_STRING': qs})
+        req = Request(environ, None)
+
+        self.assertIsNone(req.args.getint('arg0'))
+        self.assertEqual(2, req.args.getint('arg0', 2))
+        self.assertEqual(1, req.args.getint('arg1'))
+        self.assertEqual(1, req.args.getint('arg1', 2))
+        self.assertEqual(2, req.args.getint('arg1', min=2))
+        self.assertEqual(2, req.args.getint('arg1', None, 2))
+        self.assertEqual(0, req.args.getint('arg1', max=0))
+        self.assertEqual(0, req.args.getint('arg1', None, max=0))
+        self.assertEqual(0, req.args.getint('arg1', None, -1, 0))
+        self.assertRaises(HTTPBadRequest, req.args.getint, 'arg2')
+        self.assertRaises(HTTPBadRequest, req.args.getint, 'arg2', 2)
+        self.assertRaises(HTTPBadRequest, req.args.getint, 'arg3')
+        self.assertRaises(HTTPBadRequest, req.args.getint, 'arg3', 2)
+
+    def test_require(self):
+        qs = 'arg1=1'
+        environ = self._make_environ(method='GET', **{'QUERY_STRING': qs})
+        req = Request(environ, None)
+
+        self.assertRaises(HTTPBadRequest, req.args.require, 'arg0')
+        self.assertIsNone(req.args.require('arg1'))
 
     def test_is_xhr_true(self):
         environ = self._make_environ(HTTP_X_REQUESTED_WITH='XMLHttpRequest')
@@ -314,6 +384,112 @@ class RequestTestCase(unittest.TestCase):
         environ = self._make_environ(**{'wsgi.input': StringIO('test input')})
         req = Request(environ, None)
         self.assertEqual('test', req.read(size=4))
+
+    def _test_qs_with_null_bytes(self, environ):
+        req = Request(environ, None)
+        try:
+            req.args['action']
+        except HTTPBadRequest as e:
+            self.assertEqual("400 Bad Request (Invalid request arguments.)",
+                             unicode(e))
+        else:
+            self.fail("HTTPBadRequest not raised.")
+
+    def test_qs_with_null_bytes_for_name(self):
+        environ = self._make_environ(method='GET',
+                                     **{'QUERY_STRING': 'acti\x00n=fOO'})
+        self._test_qs_with_null_bytes(environ)
+
+    def test_qs_with_null_bytes_for_value(self):
+        environ = self._make_environ(method='GET',
+                                     **{'QUERY_STRING': 'action=f\x00O'})
+        self._test_qs_with_null_bytes(environ)
+
+    def test_post_with_unnamed_value(self):
+        boundary = '_BOUNDARY_'
+        form_data = """\
+--%(boundary)s\r\n\
+Content-Disposition: form-data; name="foo"\r\n\
+\r\n\
+named value\r\n\
+--%(boundary)s\r\n\
+Content-Disposition: form-data; name=""\r\n\
+\r\n\
+name is empty\r\n\
+--%(boundary)s\r\n\
+Content-Disposition: form-data\r\n\
+\r\n\
+unnamed value\r\n\
+--%(boundary)s--\r\n\
+"""
+        form_data %= {'boundary': boundary}
+        content_type = 'multipart/form-data; boundary="%s"' % boundary
+        environ = self._make_environ(method='POST', **{
+            'wsgi.input': StringIO(form_data),
+            'CONTENT_LENGTH': str(len(form_data)),
+            'CONTENT_TYPE': content_type
+        })
+        req = Request(environ, None)
+
+        self.assertEqual('named value', req.args['foo'])
+        self.assertEqual([('foo', 'named value'), ('', 'name is empty'),
+                          (None, 'unnamed value')], req.arg_list)
+
+    def _test_post_with_null_bytes(self, form_data):
+        boundary = '_BOUNDARY_'
+        content_type = 'multipart/form-data; boundary="%s"' % boundary
+        form_data %= {'boundary': boundary}
+
+        environ = self._make_environ(method='POST', **{
+            'wsgi.input': StringIO(form_data),
+            'CONTENT_LENGTH': str(len(form_data)),
+            'CONTENT_TYPE': content_type
+        })
+        req = Request(environ, None)
+
+        try:
+            req.args['action']
+        except HTTPBadRequest as e:
+            self.assertEqual("400 Bad Request (Invalid request arguments.)",
+                             unicode(e))
+        else:
+            self.fail("HTTPBadRequest not raised.")
+
+    def test_post_with_null_bytes_for_filename(self):
+        form_data = """\
+--%(boundary)s\r\n\
+Content-Disposition: form-data; name="attachment"; filename="thefi\x00le.txt"\r\n\
+Content-Type: text/plain\r\n\
+\r\n\
+The file content.\r\n\
+--%(boundary)s\r\n\
+Content-Disposition: form-data; name="action"\r\n\
+\r\n\
+new\r\n\
+--%(boundary)s--\r\n\
+"""
+        self._test_post_with_null_bytes(form_data)
+
+    def test_post_with_null_bytes_for_name(self):
+        form_data = """\
+--%(boundary)s\r\n\
+Content-Disposition: form-data; name="acti\x00n"\r\n\
+\r\n\
+new\r\n\
+--%(boundary)s--\r\n\
+"""
+
+        self._test_post_with_null_bytes(form_data)
+
+    def test_post_with_null_bytes_for_value(self):
+        form_data = """\
+--%(boundary)s\r\n\
+Content-Disposition: form-data; name="action"\r\n\
+\r\n\
+ne\x00w\r\n\
+--%(boundary)s--\r\n\
+"""
+        self._test_post_with_null_bytes(form_data)
 
     def test_qs_on_post(self):
         """Make sure req.args parsing is consistent even after the backwards

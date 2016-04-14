@@ -20,9 +20,10 @@ from StringIO import StringIO
 from trac.attachment import Attachment, AttachmentModule
 from trac.core import Component, implements, TracError
 from trac.perm import IPermissionPolicy, PermissionCache
-from trac.resource import Resource, resource_exists
-from trac.test import EnvironmentStub, Mock
+from trac.resource import IResourceManager, Resource, resource_exists
+from trac.test import EnvironmentStub, MockRequest
 from trac.util.datefmt import utc, to_utimestamp
+from trac.web.api import HTTPBadRequest
 
 
 hashes = {
@@ -272,14 +273,59 @@ class AttachmentTestCase(unittest.TestCase):
 class AttachmentModuleTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.env = EnvironmentStub()
+        class GenericResourceManager(Component):
+
+            implements(IResourceManager)
+
+            def get_resource_realms(self):
+                yield 'parent_realm'
+
+            def get_resource_url(self, resource, href, **kwargs):
+                pass
+
+            def get_resource_description(self, resource, format='default',
+                                         context=None, **kwargs):
+                pass
+
+            def resource_exists(self, resource):
+                return resource.id == 'parent_id'
+
+        self.env = EnvironmentStub(enable=(GenericResourceManager,))
+        self.env.path = tempfile.mkdtemp(prefix='trac-tempenv-')
+
+    def tearDown(self):
+        self.env.reset_db_and_disk()
+
+    def test_invalid_post_request_raises_exception(self):
+
+        path_info = '/attachment/parent_realm/parent_id/attachment_id'
+        attachment = Attachment(self.env, 'parent_realm', 'parent_id')
+        attachment.insert('attachment_id', StringIO(''), 0, 1)
+        req = MockRequest(self.env, method='POST', action=None,
+                          path_info=path_info)
+        module = AttachmentModule(self.env)
+
+        self.assertTrue(module.match_request(req))
+        self.assertRaises(HTTPBadRequest, module.process_request, req)
+
+    def test_post_request_without_attachment_raises_exception(self):
+        """TracError is raised when a POST request is submitted
+        without an attachment.
+        """
+        path_info = '/attachment/parent_realm/parent_id'
+        req = MockRequest(self.env, path_info=path_info, method='POST',
+                          args={'action': 'new'})
+        module = AttachmentModule(self.env)
+
+        self.assertTrue(module.match_request(req))
+        self.assertRaises(TracError, module.process_request, req)
 
     def test_attachment_parent_realm_raises_exception(self):
         """TracError is raised when 'attachment' is the resource parent
         realm.
         """
-        req = Mock(path_info='/attachment/attachment/parent_id/attachment_id',
-                   args={})
+        path_info = '/attachment/attachment/parent_id/attachment_id'
+        req = MockRequest(self.env, path_info=path_info)
         module = AttachmentModule(self.env)
 
         self.assertTrue(module.match_request(req))

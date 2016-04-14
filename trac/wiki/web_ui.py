@@ -29,12 +29,12 @@ from trac.perm import IPermissionPolicy, IPermissionRequestor
 from trac.resource import *
 from trac.search import ISearchSource, search_to_sql, shorten_result
 from trac.timeline.api import ITimelineEventProvider
-from trac.util import get_reporter_id
+from trac.util import as_int, get_reporter_id
 from trac.util.datefmt import from_utimestamp, to_utimestamp
 from trac.util.text import shorten_line
 from trac.util.translation import _, tag_
 from trac.versioncontrol.diff import get_diff_options, diff_blocks
-from trac.web.api import IRequestHandler
+from trac.web.api import HTTPBadRequest, IRequestHandler
 from trac.web.chrome import (Chrome, INavigationContributor,
                              ITemplateProvider, add_ctxtnav, add_link,
                              add_notice, add_script, add_stylesheet,
@@ -119,12 +119,12 @@ class WikiModule(Component):
                               name=pagename))
 
         if version is not None:
-            try:
-                version = int(version)
-            except (ValueError, TypeError):
+            version_as_int = as_int(version, None)
+            if version_as_int is None:
                 raise ResourceNotFound(
                     _('No version "%(num)s" for Wiki page "%(name)s"',
                       num=version, name=pagename))
+            version = version_as_int
 
         page = WikiPage(self.env, pagename)
         versioned_page = WikiPage(self.env, pagename, version)
@@ -168,6 +168,8 @@ class WikiModule(Component):
                                            old_version=old_version,
                                            version=version,
                                            contextall=contextall or None))
+            else:
+                raise HTTPBadRequest(_("Invalid request arguments."))
         elif action == 'delete':
             return self._render_confirm_delete(req, page)
         elif action == 'rename':
@@ -382,7 +384,7 @@ class WikiModule(Component):
         version = None
         if 'delete_version' in req.args:
             version = int(req.args.get('version', 0))
-        old_version = int(req.args.get('old_version') or 0) or version
+        old_version = req.args.getint('old_version', version)
 
         what = 'multiple' if version and old_version \
                              and version - old_version > 1 \

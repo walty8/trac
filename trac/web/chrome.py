@@ -50,9 +50,10 @@ from trac.resource import *
 from trac.util import as_bool, as_int, compat, get_reporter_id, html,\
                       presentation, get_pkginfo, pathjoin, translation
 from trac.util.html import escape, plaintext
-from trac.util.text import pretty_size, obfuscate_email_address, \
-                           shorten_line, unicode_quote_plus, to_unicode, \
-                           javascript_quote, exception_to_unicode, to_js_string
+from trac.util.text import (
+    exception_to_unicode, is_obfuscated, javascript_quote,
+    obfuscate_email_address, pretty_size, shorten_line, to_js_string,
+    to_unicode, unicode_quote_plus)
 from trac.util.datefmt import (
     pretty_timedelta, datetime_now, format_datetime, format_date, format_time,
     from_utimestamp, http_date, utc, get_date_format_jquery_ui, is_24_hours,
@@ -615,6 +616,7 @@ class Chrome(Component):
         'group': presentation.group,
         'groupby': compat.py_groupby,  # http://bugs.python.org/issue2246
         'http_date': http_date,
+        'is_obfuscated': is_obfuscated,
         'istext': presentation.istext,
         'javascript_quote': javascript_quote,
         'ngettext': translation.ngettext,
@@ -736,11 +738,11 @@ class Chrome(Component):
     def get_htdocs_dirs(self):
         return [('common', pkg_resources.resource_filename('trac', 'htdocs')),
                 ('shared', self.shared_htdocs_dir),
-                ('site', self.env.get_htdocs_dir())]
+                ('site', self.env.htdocs_dir)]
 
     def get_templates_dirs(self):
         return filter(None, [
-            self.env.get_templates_dir(),
+            self.env.templates_dir,
             self.shared_templates_dir,
             pkg_resources.resource_filename('trac', 'templates'),
         ])
@@ -1132,7 +1134,7 @@ class Chrome(Component):
             doctype = self.html_doctype
             if req.form_token:
                 stream |= self._add_form_token(req.form_token)
-            if not int(req.session.get('accesskeys', 0)):
+            if not req.session.as_int('accesskeys', 0):
                 stream |= self._strip_accesskeys
 
         links = req.chrome.get('links')
@@ -1187,12 +1189,12 @@ class Chrome(Component):
 
         files = {}
         # Collect templates list
-        site_templates = list_dir(self.env.get_templates_dir(), '.html')
+        site_templates = list_dir(self.env.templates_dir, '.html')
         shared_templates = list_dir(Chrome(self.env).shared_templates_dir,
                                     '.html')
 
         # Collect static resources list
-        site_htdocs = list_dir(self.env.get_htdocs_dir())
+        site_htdocs = list_dir(self.env.htdocs_dir)
         shared_htdocs = list_dir(Chrome(self.env).shared_htdocs_dir)
 
         if any((site_templates, shared_templates, site_htdocs, shared_htdocs)):

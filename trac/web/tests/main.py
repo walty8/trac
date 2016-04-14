@@ -12,34 +12,22 @@
 # history and logs, available at http://trac.edgewall.org/log/.
 
 import os.path
+import sys
 import tempfile
 import unittest
+from subprocess import PIPE, Popen
 
 from trac.config import ConfigurationError
-from trac.core import Component, ComponentManager, ComponentMeta, TracError, \
-                      implements
-from trac.test import EnvironmentStub, Mock, MockPerm
+from trac.core import Component, ComponentManager, TracError, implements
+from trac.perm import PermissionError
+from trac.resource import ResourceNotFound
+from trac.test import EnvironmentStub, MockRequest
 from trac.util import create_file
-from trac.web.api import IRequestFilter, IRequestHandler, Request, RequestDone
+from trac.util.compat import close_fds
+from trac.web.api import (HTTPForbidden, HTTPInternalError, HTTPNotFound,
+    IRequestFilter, IRequestHandler, RequestDone)
 from trac.web.auth import IAuthenticator
 from trac.web.main import RequestDispatcher, get_environments
-
-
-def _make_environ(scheme='http', server_name='example.org',
-                  server_port=80, method='GET', script_name='/trac',
-                  **kwargs):
-    environ = {'wsgi.url_scheme': scheme, 'wsgi.input': None,
-               'REQUEST_METHOD': method, 'SERVER_NAME': server_name,
-               'SERVER_PORT': server_port, 'SCRIPT_NAME': script_name}
-    environ.update(kwargs)
-    return environ
-
-
-def _make_req(environ, start_response, **kwargs):
-    req = Request(environ, start_response)
-    for name, value in kwargs.iteritems():
-        setattr(req, name, value)
-    return req
 
 
 class AuthenticateTestCase(unittest.TestCase):
@@ -47,15 +35,11 @@ class AuthenticateTestCase(unittest.TestCase):
     def setUp(self):
         self.env = EnvironmentStub(disable=['trac.web.auth.LoginModule'])
         self.request_dispatcher = RequestDispatcher(self.env)
-        self.req = Mock(chrome={'warnings': []})
-        # Make sure we have no external components hanging around in the
-        # component registry
-        self.old_registry = ComponentMeta._registry
-        ComponentMeta._registry = {}
+        self.req = MockRequest(self.env)
+        self.env.clear_component_registry()
 
     def tearDown(self):
-        # Restore the original component registry
-        ComponentMeta._registry = self.old_registry
+        self.env.restore_component_registry()
 
     def test_authenticate_returns_first_successful(self):
         class SuccessfulAuthenticator1(Component):
@@ -122,18 +106,36 @@ class AuthenticateTestCase(unittest.TestCase):
             def process_request(self, req):
                 req.authname
                 req.send('')
-        def start_response(status, headers, exc_info=None):
-            return lambda data: None
 
         self.env.config.set('trac', 'default_handler',
                             'AuthenticateRequestHandler')
         authenticated = [0]
-        req = _make_req(_make_environ(), start_response)
+        req = MockRequest(self.env)
+
         self.assertEqual(1, len(self.request_dispatcher.authenticators))
         self.assertIsInstance(self.request_dispatcher.authenticators[0],
                               Authenticator)
         self.assertRaises(RequestDone, self.request_dispatcher.dispatch, req)
         self.assertEqual(1, authenticated[0])
+
+
+class DispatchRequestTestCase(unittest.TestCase):
+
+    def test_python_with_optimizations_raises_environment_error(self):
+        """EnvironmentError exception is raised when dispatching request
+        with optimizations enabled.
+        """
+        proc = Popen((sys.executable, '-O', '-c',
+                      'from trac.web.main import dispatch_request; '
+                      'dispatch_request({}, None)'), stdin=PIPE,
+                     stdout=PIPE, stderr=PIPE, close_fds=close_fds)
+
+        stdout, stderr = proc.communicate(input='')
+        for f in (proc.stdin, proc.stdout, proc.stderr):
+            f.close()
+        self.assertEqual(1, proc.returncode)
+        self.assertIn("EnvironmentError: Python with optimizations is not "
+                      "supported.", stderr)
 
 
 class EnvironmentsTestCase(unittest.TestCase):
@@ -191,23 +193,135 @@ class EnvironmentsTestCase(unittest.TestCase):
                          get_environments(self.environ))
 
 
+class PreProcessRequestTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.env = EnvironmentStub()
+        self.env.config.set('trac', 'default_handler', 'DefaultHandler')
+        self.env.clear_component_registry()
+        class DefaultHandler(Component):
+            implements(IRequestHandler)
+            def match_request(self, req):
+                return True
+            def process_request(self, req):
+                pass
+
+    def tearDown(self):
+        self.env.restore_component_registry()
+
+    def test_trac_error_raises_http_internal_error(self):
+        """TracError in pre_process_request is trapped and an
+        HTTPInternalError is raised.
+        """
+        class RequestFilter(Component):
+            implements(IRequestFilter)
+            def pre_process_request(self, req, handler):
+                raise TracError("Raised in pre_process_request")
+            def post_process_request(self, req, template, data, content_type):
+                return template, data, content_type
+        req = MockRequest(self.env)
+
+        try:
+            RequestDispatcher(self.env).dispatch(req)
+        except HTTPInternalError as e:
+            self.assertEqual("500 Trac Error (Raised in pre_process_request)",
+                             unicode(e))
+        else:
+            self.fail("HTTPInternalError not raised")
+
+
+class ProcessRequestTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.env = EnvironmentStub()
+        self.env.config.set('trac', 'default_handler', 'DefaultHandler')
+        self.env.clear_component_registry()
+        class DefaultHandler(Component):
+            implements(IRequestHandler)
+            def match_request(self, req):
+                return True
+            def process_request(self, req):
+                raise req.exc_class("Raised in process_request")
+
+    def tearDown(self):
+        self.env.restore_component_registry()
+
+    def test_permission_error_raises_http_forbidden(self):
+        """TracError in process_request is trapped and an HTTPForbidden
+        error is raised.
+        """
+        req = MockRequest(self.env)
+        req.exc_class = PermissionError
+
+        try:
+            RequestDispatcher(self.env).dispatch(req)
+        except HTTPForbidden as e:
+            self.assertEqual(
+                "403 Forbidden (Raised in process_request "
+                "privileges are required to perform this operation. You "
+                "don't have the required permissions.)", unicode(e))
+        else:
+            self.fail("HTTPForbidden not raised")
+
+    def test_resource_not_found_raises_http_not_found(self):
+        """ResourceNotFound error in process_request is trapped and an
+        HTTPNotFound error is raised.
+        """
+        req = MockRequest(self.env)
+        req.exc_class = ResourceNotFound
+
+        try:
+            RequestDispatcher(self.env).dispatch(req)
+        except HTTPNotFound as e:
+            self.assertEqual("404 Trac Error (Raised in process_request)",
+                             unicode(e))
+        else:
+            self.fail("HTTPNotFound not raised")
+
+    def test_trac_error_raises_http_internal_error(self):
+        """TracError in process_request is trapped and an
+        HTTPInternalError is raised.
+        """
+        req = MockRequest(self.env)
+        req.exc_class = TracError
+
+        try:
+            RequestDispatcher(self.env).dispatch(req)
+        except HTTPInternalError as e:
+            self.assertEqual("500 Trac Error (Raised in process_request)",
+                             unicode(e))
+        else:
+            self.fail("HTTPInternalError not raised")
+
+    def test_not_implemented_error_raises_http_internal_server_error(self):
+        """NotImplementedError in process_request is trapped and an
+        HTTPInternalError is raised.
+        """
+        req = MockRequest(self.env)
+        req.exc_class = NotImplementedError
+
+        try:
+            RequestDispatcher(self.env).dispatch(req)
+        except HTTPInternalError as e:
+            self.assertEqual("500 Not Implemented Error (Raised in "
+                             "process_request)", unicode(e))
+        else:
+            self.fail("HTTPInternalError not raised")
+
+
 class PostProcessRequestTestCase(unittest.TestCase):
     """Test cases for handling of the optional `method` argument in
     RequestDispatcher._post_process_request."""
 
     def setUp(self):
         self.env = EnvironmentStub()
-        self.req = Mock()
+        self.req = MockRequest(self.env)
         self.request_dispatcher = RequestDispatcher(self.env)
         self.compmgr = ComponentManager()
-        # Make sure we have no external components hanging around in the
-        # component registry
-        self.old_registry = ComponentMeta._registry
-        ComponentMeta._registry = {}
+        self.env.clear_component_registry()
 
     def tearDown(self):
-        # Restore the original component registry
-        ComponentMeta._registry = self.old_registry
+        self.env.restore_component_registry()
 
     def test_no_request_filters_request_handler_returns_method_false(self):
         """IRequestHandler doesn't return `method` and no IRequestFilters
@@ -348,22 +462,14 @@ class HdfdumpTestCase(unittest.TestCase):
 
     def setUp(self):
         self.env = EnvironmentStub()
+        self.req = MockRequest(self.env, args={'hdfdump': '1'})
+        self.env.clear_component_registry()
         self.request_dispatcher = RequestDispatcher(self.env)
-        self.req = Mock(chrome={'warnings': []}, method='GET', perm=MockPerm(),
-                        args={'hdfdump': '1'}, session={}, callbacks={},
-                        send=self._req_send)
-        self.content = None
-        self.content_type = None
-        self.old_registry = ComponentMeta._registry
-        ComponentMeta._registry = {}
+        perm = self.req.perm
+        self.request_dispatcher._get_perm = lambda req: perm
 
     def tearDown(self):
-        ComponentMeta._registry = self.old_registry
-
-    def _req_send(self, content, content_type='text/html'):
-        self.content = content
-        self.content_type = content_type
-        raise RequestDone()
+        self.env.restore_component_registry()
 
     def test_hdfdump(self):
         class HdfdumpRequestHandler(Component):
@@ -377,14 +483,19 @@ class HdfdumpTestCase(unittest.TestCase):
         self.env.config.set('trac', 'default_handler', 'HdfdumpRequestHandler')
         self.assertRaises(RequestDone, self.request_dispatcher.dispatch,
                           self.req)
-        self.assertEqual("{'name': 'value'}\n", self.content)
-        self.assertEqual('text/plain', self.content_type)
+        self.assertIn("{'name': 'value'}\n",
+                      self.req.response_sent.getvalue())
+        self.assertEqual('text/plain;charset=utf-8',
+                         self.req.headers_sent['Content-Type'])
 
 
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(AuthenticateTestCase))
+    suite.addTest(unittest.makeSuite(DispatchRequestTestCase))
     suite.addTest(unittest.makeSuite(EnvironmentsTestCase))
+    suite.addTest(unittest.makeSuite(PreProcessRequestTestCase))
+    suite.addTest(unittest.makeSuite(ProcessRequestTestCase))
     suite.addTest(unittest.makeSuite(PostProcessRequestTestCase))
     suite.addTest(unittest.makeSuite(RequestDispatcherTestCase))
     suite.addTest(unittest.makeSuite(HdfdumpTestCase))

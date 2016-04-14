@@ -312,7 +312,7 @@ def get_diff_options(req):
     data = {'options': options_data}
 
     def get_bool_option(name, default=0):
-        pref = int(req.session.get('diff_' + name, default))
+        pref = req.session.as_int('diff_' + name, default)
         arg = int(name in req.args)
         if 'update' in req.args and arg != pref:
             req.session.set('diff_' + name, arg, default)
@@ -326,16 +326,13 @@ def get_diff_options(req):
         req.session.set('diff_style', style, 'inline')
     data['style'] = style
 
-    pref = int(req.session.get('diff_contextlines', 2))
-    try:
-        context = int(req.args.get('contextlines', pref))
-    except ValueError:
-        context = -1
+    pref = req.session.as_int('diff_contextlines', 2)
+    context = req.args.as_int('contextlines', pref)
     if 'update' in req.args and context != pref:
         req.session.set('diff_contextlines', context, 2)
     options_data['contextlines'] = context
 
-    arg = int(req.args.get('contextall', 0))
+    arg = req.args.as_int('contextall', 0)
     options_data['contextall'] = arg
     options = ['-U%d' % (-1 if arg else context)]
 

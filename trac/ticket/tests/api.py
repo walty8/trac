@@ -11,11 +11,11 @@
 # individuals. For the exact contribution history, see the revision
 # history and logs, available at http://trac.edgewall.org/log/.
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from trac.perm import PermissionCache, PermissionSystem
 from trac.resource import Resource
-from trac.test import EnvironmentStub, Mock
+from trac.test import EnvironmentStub, MockRequest
 from trac.ticket.api import TicketSystem
 from trac.ticket.model import Milestone, Ticket, Version
 from trac.util.datefmt import datetime_now, utc
@@ -29,7 +29,7 @@ class TicketSystemTestCase(unittest.TestCase):
         self.env = EnvironmentStub(default_data=True)
         self.perm = PermissionSystem(self.env)
         self.ticket_system = TicketSystem(self.env)
-        self.req = Mock()
+        self.req = MockRequest(self.env)
 
     def tearDown(self):
         self.env.reset_db()
@@ -166,8 +166,8 @@ class TicketSystemTestCase(unittest.TestCase):
 
     def test_get_allowed_owners_restrict_owner_true(self):
         self.env.config.set('ticket', 'restrict_owner', True)
-        self.env.insert_known_users([('user3', None, None),
-                                     ('user1', None, None)])
+        self.env.insert_users([('user3', None, None),
+                               ('user1', None, None)])
         self.perm.grant_permission('user4', 'TICKET_MODIFY')
         self.perm.grant_permission('user3', 'TICKET_MODIFY')
         self.perm.grant_permission('user2', 'TICKET_VIEW')

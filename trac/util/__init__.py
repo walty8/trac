@@ -59,8 +59,8 @@ def get_reporter_id(req, arg_name=None):
         r = req.args.get(arg_name)
         if r:
             return r
-    name = req.session.get('name', None)
-    email = req.session.get('email', None)
+    name = req.session.get('name')
+    email = req.session.get('email')
     if name and email:
         return '%s <%s>' % (name, email)
     return name or email or req.authname # == 'anonymous'
@@ -705,21 +705,28 @@ def get_module_path(module):
             break
     return base_path
 
+
 def get_sources(path):
     """Return a dictionary mapping Python module source paths to the
     distributions that contain them.
     """
     sources = {}
     for dist in find_distributions(path, only=True):
-        try:
-            toplevels = dist.get_metadata('top_level.txt').splitlines()
-            toplevels = [each + '/' for each in toplevels]
-            files = dist.get_metadata('SOURCES.txt').splitlines()
-            sources.update((src, dist) for src in files
-                           if any(src.startswith(toplevel)
-                                  for toplevel in toplevels))
-        except (KeyError, IOError):
-            pass    # Metadata not found
+        if not dist.has_metadata('top_level.txt'):
+            continue
+        toplevels = dist.get_metadata_lines('top_level.txt')
+        toplevels = [top + '/' for top in toplevels]
+        if dist.has_metadata('SOURCES.txt'):  # *.egg-info/SOURCES.txt
+            sources.update((src, dist)
+                           for src in dist.get_metadata_lines('SOURCES.txt')
+                           if any(src.startswith(top) for top in toplevels))
+            continue
+        if dist.has_metadata('RECORD'):  # *.dist-info/RECORD
+            reader = csv.reader(StringIO(dist.get_metadata('RECORD')))
+            sources.update((row[0], dist)
+                           for row in reader if any(row[0].startswith(top)
+                                                    for top in toplevels))
+            continue
     return sources
 
 
@@ -1227,22 +1234,31 @@ def as_int(s, default, min=None, max=None):
     return value
 
 
-def as_bool(value):
+def as_bool(value, default=False):
     """Convert the given value to a `bool`.
 
-    If `value` is a string, return `True` for any of "yes", "true", "enabled",
-    "on" or non-zero numbers, ignoring case. For non-string arguments, return
-    the argument converted to a `bool`, or `False` if the conversion fails.
+    If `value` is a string, return `True` for any of "yes", "true",
+    "enabled", "on" or non-zero numbers, ignoring case. For non-string
+    arguments, return the argument converted to a `bool`, or `default`
+    if the conversion fails.
+
+    :since 1.2: the `default` argument can be specified.
     """
     if isinstance(value, basestring):
         try:
             return bool(float(value))
         except ValueError:
-            return value.strip().lower() in ('yes', 'true', 'enabled', 'on')
+            value = value.strip().lower()
+            if value in ('yes', 'true', 'enabled', 'on'):
+                return True
+            elif value in ('no', 'false', 'disabled', 'off'):
+                return False
+            else:
+                return default
     try:
         return bool(value)
     except (TypeError, ValueError):
-        return False
+        return default
 
 
 def pathjoin(*args):

@@ -27,11 +27,12 @@ from StringIO import StringIO
 import trac.tests.compat
 from trac.attachment import Attachment
 from trac.notification.api import NotificationSystem
-from trac.test import EnvironmentStub, Mock, MockPerm
+from trac.test import EnvironmentStub, MockRequest
 from trac.tests.notification import SMTP_TEST_PORT, SMTPThreadedServer, \
                                     parse_smtp_message
 from trac.ticket.model import Ticket
-from trac.ticket.notification import TicketChangeEvent, TicketNotifyEmail
+from trac.ticket.notification import BatchTicketNotifyEmail, \
+                                     TicketChangeEvent, TicketNotifyEmail
 from trac.ticket.web_ui import TicketModule
 from trac.util.datefmt import datetime_now, utc
 
@@ -68,15 +69,21 @@ def config_subscriber(env, updater=False, owner=False, reporter=False):
                        'TicketReporterSubscriber')
     del NotificationSystem(env).subscriber_defaults
 
+def config_smtp(env):
+    env.config.set('project', 'name', 'TracTest')
+    env.config.set('notification', 'smtp_enabled', 'true')
+    env.config.set('notification', 'smtp_port', str(SMTP_TEST_PORT))
+    env.config.set('notification', 'smtp_server', notifysuite.smtpd.host)
+    # Note: when specifying 'localhost', the connection may be attempted
+    #       for '::1' first, then only '127.0.0.1' after a 1s timeout
+
 
 class RecipientTestCase(unittest.TestCase):
     """Notification test cases for email recipients."""
 
     def setUp(self):
         self.env = EnvironmentStub(default_data=True)
-        self.env.config.set('project', 'name', 'TracTest')
-        self.env.config.set('notification', 'smtp_enabled', 'true')
-        self.env.config.set('notification', 'smtp_port', str(SMTP_TEST_PORT))
+        config_smtp(self.env)
 
     def tearDown(self):
         notifysuite.tear_down()
@@ -270,17 +277,14 @@ class NotificationTestCase(unittest.TestCase):
 
     def setUp(self):
         self.env = EnvironmentStub(default_data=True)
+        config_smtp(self.env)
         self.env.config.set('trac', 'base_url', 'http://localhost/trac')
-        self.env.config.set('project', 'name', 'TracTest')
         self.env.config.set('project', 'url', 'http://localhost/project.url')
         self.env.config.set('notification', 'smtp_enabled', 'true')
         self.env.config.set('notification', 'smtp_always_cc',
                             'joe.user@example.net, joe.bar@example.net')
         self.env.config.set('notification', 'use_public_cc', 'true')
-        self.env.config.set('notification', 'smtp_port', str(SMTP_TEST_PORT))
-        self.env.config.set('notification', 'smtp_server', 'localhost')
-        self.req = Mock(href=self.env.href, abs_href=self.env.abs_href, tz=utc,
-                        perm=MockPerm())
+        self.req = MockRequest(self.env)
 
     def tearDown(self):
         """Signal the notification test suite that a test is over"""
@@ -295,16 +299,6 @@ class NotificationTestCase(unittest.TestCase):
             ticket[prop] = value
         ticket.insert()
         return ticket
-
-    def _insert_user(self, user):
-        with self.env.db_transaction as db:
-            db.execute("""
-                INSERT INTO session VALUES (%s,%s,0)
-                """, (user[0], user[3]))
-            db.executemany("""
-                INSERT INTO session_attribute VALUES (%s,%s,%s,%s)
-                """, [(user[0], user[3], 'name', user[1]),
-                      (user[0], user[3], 'email', user[2])])
 
     def test_structure(self):
         """Basic SMTP message structure (headers, body)"""
@@ -472,7 +466,7 @@ class NotificationTestCase(unittest.TestCase):
         config_subscriber(self.env, reporter=True, owner=True)
         self.env.config.set('notification', 'smtp_always_cc',
                             'joe@example.com')
-        self.env.insert_known_users(
+        self.env.insert_users(
             [('joeuser', 'Joe User', 'user-joe@example.com'),
              ('jim@domain', 'Jim User', 'user-jim@example.com')])
         ticket = Ticket(self.env)
@@ -497,7 +491,7 @@ class NotificationTestCase(unittest.TestCase):
         self.env.config.set('notification', 'smtp_from', 'trac@example.com')
         self.env.config.set('notification', 'smtp_from_name', 'My Trac')
         self.env.config.set('notification', 'smtp_from_author', 'true')
-        self.env.insert_known_users(
+        self.env.insert_users(
             [('joeuser', 'Joe User', 'user-joe@example.com'),
              ('jim@domain', 'Jim User', 'user-jim@example.com'),
              ('noemail', 'No e-mail', ''),
@@ -559,7 +553,7 @@ class NotificationTestCase(unittest.TestCase):
         config_subscriber(self.env, reporter=True, owner=True)
         self.env.config.set('notification', 'ignore_domains',
                             'example.com, example.org')
-        self.env.insert_known_users(
+        self.env.insert_users(
             [('kerberos@example.com', 'No Email', ''),
              ('kerberos@example.org', 'With Email', 'kerb@example.net')])
         ticket = Ticket(self.env)
@@ -933,10 +927,10 @@ Resolution:  fixed                   |   Keywords:"""
         self._validate_props_format(formatted, ticket)
 
     def test_props_format_show_full_names(self):
-        self._insert_user(('joefoo', u'Joę Fœœ',
-                           'joe@foobar.foo.bar.example.org', 1))
-        self._insert_user(('joebar', u'Jœe Bær',
-                           'joe.bar@foobar.foo.bar.example.org', 1))
+        self.env.insert_users([
+            ('joefoo', u'Joę Fœœ', 'joe@foobar.foo.bar.example.org'),
+            ('joebar', u'Jœe Bær', 'joe.bar@foobar.foo.bar.example.org')
+        ])
         self.env.config.set('notification', 'mime_encoding', 'none')
         ticket = Ticket(self.env)
         ticket['summary'] = 'This is a summary'
@@ -1472,11 +1466,13 @@ Security sensitive:  0                           |          Blocking:
 
     def test_property_change_author_full_name(self):
         self.env.config.set('trac', 'show_email_addresses', True)
-        self._insert_user(('user0', u'Ußęr0', 'user0@d.org', 1))
-        self._insert_user(('user1', u'Ußęr1', 'user1@d.org', 1))
-        self._insert_user(('user2', u'Ußęr2', 'user2@d.org', 1))
-        self._insert_user(('user3', u'Ußęr3', 'user3@d.org', 1))
-        self._insert_user(('user4', u'Ußęr4', 'user4@d.org', 1))
+        self.env.insert_users([
+            ('user0', u'Ußęr0', 'user0@d.org'),
+            ('user1', u'Ußęr1', 'user1@d.org'),
+            ('user2', u'Ußęr2', 'user2@d.org'),
+            ('user3', u'Ußęr3', 'user3@d.org'),
+            ('user4', u'Ußęr4', 'user4@d.org'),
+        ])
         ticket = self._insert_ticket(owner='user1', reporter='user2',
                                      cc='user3, user4')
         ticket['owner'] = 'user2'
@@ -1495,7 +1491,9 @@ Security sensitive:  0                           |          Blocking:
 
     def test_comment_author_full_name(self):
         self.env.config.set('trac', 'show_email_addresses', True)
-        self._insert_user(('user', u'Thę Ußęr', 'user@domain.org', 1))
+        self.env.insert_users([
+            ('user', u'Thę Ußęr', 'user@domain.org')
+        ])
         ticket = self._insert_ticket()
         ticket.save_changes('user', "The comment")
 
@@ -1511,9 +1509,7 @@ class AttachmentNotificationTestCase(unittest.TestCase):
     def setUp(self):
         self.env = EnvironmentStub(default_data=True,
                                    path=tempfile.mkdtemp(prefix='trac-tempenv-'))
-        self.env.config.set('project', 'name', 'TracTest')
-        self.env.config.set('notification', 'smtp_enabled', 'true')
-        self.env.config.set('notification', 'smtp_port', str(SMTP_TEST_PORT))
+        config_smtp(self.env)
         config_subscriber(self.env, reporter=True)
 
     def tearDown(self):
@@ -1531,16 +1527,6 @@ class AttachmentNotificationTestCase(unittest.TestCase):
         attachment.author = author
         attachment.insert('foo.txt', StringIO(), 1)
         return attachment
-
-    def _insert_user(self, user):
-        with self.env.db_transaction as db:
-            db.execute("""
-                INSERT INTO session VALUES (%s,%s,0)
-                """, (user[0], user[3]))
-            db.executemany("""
-                INSERT INTO session_attribute VALUES (%s,%s,%s,%s)
-                """, [(user[0], user[3], 'name', user[1]),
-                      (user[0], user[3], 'email', user[2])])
 
     def test_ticket_notify_attachment_enabled_attachment_added(self):
         self._insert_attachment('user@example.com')
@@ -1585,13 +1571,89 @@ class AttachmentNotificationTestCase(unittest.TestCase):
 
     def test_author_full_name(self):
         self.env.config.set('trac', 'show_email_addresses', True)
-        self._insert_user(('user', u'Thę Ußęr', 'user@domain.org', 1))
+        self.env.insert_users([
+            ('user', u'Thę Ußęr', 'user@domain.org')
+        ])
         self._insert_attachment('user')
 
         message = notifysuite.smtpd.get_message()
         body = parse_smtp_message(message)[1]
 
         self.assertIn('Changes (by Thę Ußęr)', body)
+
+
+class BatchTicketNotificationTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.env_path = tempfile.mkdtemp(prefix='trac-tempenv-')
+        self.env = EnvironmentStub(default_data=True, path=self.env_path)
+        config_smtp(self.env)
+        self.env.config.set('notification', 'always_notify_owner', 'false')
+        self.env.config.set('notification', 'always_notify_reporter', 'true')
+        self.env.config.set('notification', 'always_notify_updater', 'true')
+
+        self.tktids = []
+        with self.env.db_transaction as db:
+            for n in xrange(2):
+                for priority in ('', 'blah', 'blocker', 'critical', 'major',
+                                 'minor', 'trivial'):
+                    idx = len(self.tktids)
+                    owner = 'owner@example.org' if idx == 0 else 'anonymous'
+                    reporter = 'reporter@example.org' \
+                               if idx == 1 else 'anonymous'
+                    cc = 'cc1@example.org, cc2@example.org' if idx == 2 else ''
+                    ticket = Ticket(self.env)
+                    ticket['summary'] = 'Summary %s:%d' % (priority, idx)
+                    ticket['priority'] = priority
+                    ticket['owner'] = owner
+                    ticket['reporter'] = reporter
+                    ticket['cc'] = cc
+                    when = datetime(2001, 7, 12, 12, 34, idx, 0, utc)
+                    self.tktids.append(ticket.insert(when=when))
+        self.tktids.reverse()
+
+    def tearDown(self):
+        notifysuite.tear_down()
+        self.env.reset_db_and_disk()
+
+    def test_batchmod_notify(self):
+        self.assertEqual(1, min(self.tktids))
+        self.assertEqual(14, max(self.tktids))
+        new_values = {'milestone': 'milestone1'}
+        author = 'author@example.org'
+        comment = 'batch-modify'
+        when = datetime.now(utc)
+
+        with self.env.db_transaction:
+            for tktid in self.tktids:
+                t = Ticket(self.env, tktid)
+                for name, value in new_values.iteritems():
+                    t[name] = value
+                t.save_changes(author, comment, when=when)
+        btn = BatchTicketNotifyEmail(self.env)
+        btn.notify(self.tktids, new_values, 'comment', 'leave', author, when)
+        recipients = sorted(notifysuite.smtpd.get_recipients())
+        sender = notifysuite.smtpd.get_sender()
+        message = notifysuite.smtpd.get_message()
+        headers, body = parse_smtp_message(message)
+        body = body.splitlines()
+
+        self.assertEqual(['author@example.org', 'cc1@example.org',
+                          'cc2@example.org', 'reporter@example.org'],
+                         recipients)
+        self.assertEqual('trac@localhost', sender)
+        self.assertIn('Date', headers)
+        self.assertEqual('[TracTest] Batch modify: #3, #10, #4, #11, #5, #12, '
+                         '#6, #13, #7, #14,...', headers['Subject'])
+        self.assertEqual('"TracTest" <trac@localhost>', headers['From'])
+        self.assertIn('Message-ID', headers)
+        self.assertIn('@localhost', headers['Message-ID'])
+        self.assertIn('Batch modification to #3, #10, #4, #11, #5, #12, #6, '
+                      '#13, #7, #14, #1, #2, #8, #9 by author@example.org:',
+                      body)
+        self.assertIn('Tickets URL: <http://example.org/trac.cgi/query?id=3'
+                      '%2C10%2C4%2C11%2C5%2C12%2C6%2C13%2C7%2C14%2C1%2C2%2C8'
+                      '%2C9>', body)
 
 
 class NotificationTestSuite(unittest.TestSuite):
@@ -1605,6 +1667,7 @@ class NotificationTestSuite(unittest.TestSuite):
         self.addTest(unittest.makeSuite(RecipientTestCase))
         self.addTest(unittest.makeSuite(NotificationTestCase))
         self.addTest(unittest.makeSuite(AttachmentNotificationTestCase))
+        self.addTest(unittest.makeSuite(BatchTicketNotificationTestCase))
         self.remaining = self.countTestCases()
 
     def tear_down(self):

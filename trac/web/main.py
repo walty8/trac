@@ -30,6 +30,8 @@ import pkg_resources
 from pprint import pformat, pprint
 import re
 import sys
+import traceback
+from urlparse import urlparse
 
 from genshi.builder import tag
 from genshi.output import DocType
@@ -55,7 +57,8 @@ from trac.util.translation import _, get_negotiated_locale, has_babel, \
 from trac.web.api import HTTPBadRequest, HTTPException, HTTPForbidden, \
                          HTTPInternalError, HTTPNotFound, IAuthenticator, \
                          IRequestFilter, IRequestHandler, Request, \
-                         RequestDone, is_valid_default_handler
+                         RequestDone, TracNotImplementedError, \
+                         is_valid_default_handler
 from trac.web.chrome import Chrome, ITemplateProvider, add_notice, add_warning
 from trac.web.href import Href
 from trac.web.session import Session
@@ -192,113 +195,113 @@ class RequestDispatcher(Component):
         req.callbacks.update({
             'authname': self.authenticate,
             'chrome': chrome.prepare_request,
+            'form_token': self._get_form_token,
+            'lc_time': self._get_lc_time,
+            'locale': self._get_locale,
             'perm': self._get_perm,
             'session': self._get_session,
-            'locale': self._get_locale,
-            'lc_time': self._get_lc_time,
             'tz': self._get_timezone,
-            'form_token': self._get_form_token,
             'use_xsendfile': self._get_use_xsendfile,
             'xsendfile_header': self._get_xsendfile_header,
         })
 
         try:
+            # Select the component that should handle the request
+            chosen_handler = None
+            for handler in self._request_handlers.values():
+                if handler.match_request(req):
+                    chosen_handler = handler
+                    break
+            if not chosen_handler and req.path_info in ('', '/'):
+                chosen_handler = self._get_valid_default_handler(req)
+            # pre-process any incoming request, whether a handler
+            # was found or not
+            self.log.debug("Chosen handler is %s", chosen_handler)
+            chosen_handler = self._pre_process_request(req, chosen_handler)
+            if not chosen_handler:
+                if req.path_info.endswith('/'):
+                    # Strip trailing / and redirect
+                    target = unicode_quote(req.path_info.rstrip('/'))
+                    if req.query_string:
+                        target += '?' + req.query_string
+                    req.redirect(req.href + target, permanent=True)
+                raise HTTPNotFound('No handler matched request to %s',
+                                   req.path_info)
+
+            req.callbacks['chrome'] = partial(chrome.prepare_request,
+                                              handler=chosen_handler)
+
+            # Protect against CSRF attacks: we validate the form token
+            # for all POST requests with a content-type corresponding
+            # to form submissions
+            if req.method == 'POST':
+                ctype = req.get_header('Content-Type')
+                if ctype:
+                    ctype, options = cgi.parse_header(ctype)
+                if ctype in ('application/x-www-form-urlencoded',
+                             'multipart/form-data') and \
+                        req.args.get('__FORM_TOKEN') != req.form_token:
+                    if self.env.secure_cookies and req.scheme == 'http':
+                        msg = _('Secure cookies are enabled, you must '
+                                'use https to submit forms.')
+                    else:
+                        msg = _('Do you have cookies enabled?')
+                    raise HTTPBadRequest(_('Missing or invalid form token.'
+                                           ' %(msg)s', msg=msg))
+
+            # Process the request and render the template
+            resp = chosen_handler.process_request(req)
+            if resp:
+                if len(resp) == 2: # old Clearsilver template and HDF data
+                    self.log.error("Clearsilver template are no longer "
+                                   "supported (%s)", resp[0])
+                    raise TracError(
+                        _("Clearsilver templates are no longer supported, "
+                          "please contact your Trac administrator."))
+                # Genshi
+                template, data, content_type, method = \
+                    self._post_process_request(req, *resp)
+                if 'hdfdump' in req.args:
+                    req.perm.require('TRAC_ADMIN')
+                    # debugging helper - no need to render first
+                    out = io.BytesIO()
+                    pprint(data, out)
+                    req.send(out.getvalue(), 'text/plain')
+                self.log.debug("Rendering response from handler")
+                output = chrome.render_template(
+                        req, template, data, content_type, method=method,
+                        iterable=chrome.use_chunked_encoding)
+                req.send(output, content_type or 'text/html')
+            else:
+                self.log.debug("Empty or no response from handler. "
+                               "Entering post_process_request.")
+                self._post_process_request(req)
+        except RequestDone:
+            raise
+        except Exception as e:
+            # post-process the request in case of errors
+            err = sys.exc_info()
             try:
-                # Select the component that should handle the request
-                chosen_handler = None
-                try:
-                    for handler in self._request_handlers.values():
-                        if handler.match_request(req):
-                            chosen_handler = handler
-                            break
-                    if not chosen_handler and \
-                            (not req.path_info or req.path_info == '/'):
-                        chosen_handler = self._get_valid_default_handler(req)
-                    # pre-process any incoming request, whether a handler
-                    # was found or not
-                    self.log.debug("Chosen handler is %s", chosen_handler)
-                    chosen_handler = \
-                        self._pre_process_request(req, chosen_handler)
-                except TracError as e:
-                    raise HTTPInternalError(e)
-                if not chosen_handler:
-                    if req.path_info.endswith('/'):
-                        # Strip trailing / and redirect
-                        target = unicode_quote(req.path_info.rstrip('/'))
-                        if req.query_string:
-                            target += '?' + req.query_string
-                        req.redirect(req.href + target, permanent=True)
-                    raise HTTPNotFound('No handler matched request to %s',
-                                       req.path_info)
-
-                req.callbacks['chrome'] = partial(chrome.prepare_request,
-                                                  handler=chosen_handler)
-
-                # Protect against CSRF attacks: we validate the form token
-                # for all POST requests with a content-type corresponding
-                # to form submissions
-                if req.method == 'POST':
-                    ctype = req.get_header('Content-Type')
-                    if ctype:
-                        ctype, options = cgi.parse_header(ctype)
-                    if ctype in ('application/x-www-form-urlencoded',
-                                 'multipart/form-data') and \
-                            req.args.get('__FORM_TOKEN') != req.form_token:
-                        if self.env.secure_cookies and req.scheme == 'http':
-                            msg = _('Secure cookies are enabled, you must '
-                                    'use https to submit forms.')
-                        else:
-                            msg = _('Do you have cookies enabled?')
-                        raise HTTPBadRequest(_('Missing or invalid form token.'
-                                               ' %(msg)s', msg=msg))
-
-                # Process the request and render the template
-                resp = chosen_handler.process_request(req)
-                if resp:
-                    if len(resp) == 2: # old Clearsilver template and HDF data
-                        self.log.error("Clearsilver template are no longer "
-                                       "supported (%s)", resp[0])
-                        raise TracError(
-                            _("Clearsilver templates are no longer supported, "
-                              "please contact your Trac administrator."))
-                    # Genshi
-                    template, data, content_type, method = \
-                        self._post_process_request(req, *resp)
-                    if 'hdfdump' in req.args:
-                        req.perm.require('TRAC_ADMIN')
-                        # debugging helper - no need to render first
-                        out = io.BytesIO()
-                        pprint(data, out)
-                        req.send(out.getvalue(), 'text/plain')
-                    self.log.debug("Rendering response from handler")
-                    output = chrome.render_template(
-                            req, template, data, content_type, method=method,
-                            iterable=chrome.use_chunked_encoding)
-                    req.send(output, content_type or 'text/html')
-                else:
-                    self.log.debug("Empty or no response from handler. "
-                                   "Entering post_process_request.")
-                    self._post_process_request(req)
+                self._post_process_request(req)
             except RequestDone:
-                raise
-            except:
-                # post-process the request in case of errors
-                err = sys.exc_info()
-                try:
-                    self._post_process_request(req)
-                except RequestDone:
-                    raise
-                except Exception as e:
-                    self.log.error("Exception caught while post-processing"
-                                   " request: %s",
-                                   exception_to_unicode(e, traceback=True))
-                raise err[0], err[1], err[2]
-        except PermissionError as e:
-            raise HTTPForbidden(e)
-        except ResourceNotFound as e:
-            raise HTTPNotFound(e)
-        except TracError as e:
-            raise HTTPInternalError(e)
+                pass
+            except Exception as e2:
+                self.log.error("Exception caught while post-processing"
+                               " request: %s",
+                               exception_to_unicode(e2, traceback=True))
+            if isinstance(e, PermissionError):
+                raise HTTPForbidden(e)
+            if isinstance(e, ResourceNotFound):
+                raise HTTPNotFound(e)
+            if isinstance(e, NotImplementedError):
+                tb = traceback.extract_tb(err[2])[-1]
+                self.log.warning("%s caught from %s:%d in %s: %s",
+                                 e.__class__.__name__, tb[0], tb[1], tb[2],
+                                 to_unicode(e) or "(no message)")
+                raise HTTPInternalError(TracNotImplementedError(e))
+            if isinstance(e, TracError):
+                raise HTTPInternalError(e)
+            raise err[0], err[1], err[2]
 
     # ITemplateProvider methods
 
@@ -459,6 +462,9 @@ def dispatch_request(environ, start_response):
     if _warn_setuptools is False:
         _warn_setuptools = True
         warn_setuptools_issue(out=environ.get('wsgi.errors'))
+
+    if sys.flags.optimize != 0:
+        raise EnvironmentError("Python with optimizations is not supported.")
 
     # SCRIPT_URL is an Apache var containing the URL before URL rewriting
     # has been applied, so we can use it to reconstruct logical SCRIPT_NAME
@@ -665,9 +671,10 @@ def send_internal_error(env, req, exc_info):
             faulty_plugins.sort(key=lambda p: p['frame_idx'])
             if faulty_plugins:
                 info = faulty_plugins[0]['info']
+                home_page = info.get('home_page', '')
                 if 'trac' in info:
                     tracker = info['trac']
-                elif info.get('home_page', '').startswith(th):
+                elif urlparse(home_page).netloc == urlparse(th).netloc:
                     tracker = th
                     plugin_name = info.get('home_page', '').rstrip('/') \
                                                            .split('/')[-1]

@@ -68,14 +68,11 @@
           var items = $(reply);
           // Update ticket box
           $("#ticket").replaceWith(items.filter('#ticket'));
-          // Unthread, unrevert and update changelog
-          if (!$('#trac-comments-oldest').prop('checked'))
-            $('#trac-comments-oldest').click().change();
-          $("#changelog").replaceWith(items.filter("#changelog"));
-          if (!$('#trac-show-property-changes-toggle').prop('checked'))
-            $('#trac-show-property-changes-toggle').click().prop('checked', false);
-          if (!$('#trac-show-comments-toggle').prop('checked'))
-            $('#trac-show-comments-toggle').click().prop('checked', false);
+          // Replaces content of #changelog, without recreating it
+          $("#changelog").empty().append(items.filter("#changelog").contents());
+          // Apply comments order and "Show" preferences
+          applyCommentsOrder(
+            $('#prefs input[name="trac-comments-order"]:checked').val());
           // Show warning
           var new_changes = $("#changelog .trac-new");
           $("#trac-edit-warning").toggle(new_changes.length != 0);
@@ -139,7 +136,7 @@
         </py:if>
 
         <div style="${'display: none' if not changes else None}">
-          <div style="position: relative">
+          <div class="trac-noscript" style="position: relative">
             <form id="prefs" method="get" action="${href.prefs()}" style="position: absolute; right: 0">
               <div id="trac-comments-order">
                 <input type="radio" id="trac-comments-oldest" name="trac-comments-order" value="oldest" checked="checked" />
@@ -272,8 +269,10 @@ ${value}</textarea>
                                  checked="${value == option or None}" />
                           ${option}
                         </label>
-                        <input py:when="'time'" type="text" id="field-${field.name}" title="${field.format_hint}"
-                               name="field_${field.name}" value="${field.edit}" class="trac-${field.format}picker" />
+                        <input py:when="'time'"
+                               type="text" id="field-${field.name}" title="${field.format_hint}"
+                               name="field_${field.name}" value="${field.edit}"
+                               class="trac-${'date' if field.format == 'date' else 'datetime'}picker" />
                         <py:otherwise><!--! Text input fields -->
                           <py:choose>
                             <!--! Special case for Cc: field -->

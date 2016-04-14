@@ -22,6 +22,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from subprocess import PIPE, Popen
 from StringIO import StringIO
 
 # IAdminCommandProvider implementations
@@ -49,16 +50,18 @@ import trac.wiki.web_ui
 
 from trac.admin.api import AdminCommandManager, IAdminCommandProvider, \
                            console_date_format, get_console_locale
-from trac.admin.console import TracAdmin, TracAdminHelpMacro
+from trac.admin.console import TracAdmin, TracAdminHelpMacro, _run
 from trac.config import ConfigSection, Option
 from trac.core import Component, ComponentMeta, implements
 from trac.env import Environment
 from trac.test import EnvironmentStub
 from trac.util import create_file
+from trac.util.compat import close_fds
 from trac.util.datefmt import format_date, get_date_format_hint, \
                               get_datetime_format_hint
 from trac.util.translation import get_available_locales, has_babel
 from trac.web.tests.session import _prep_session_table
+from trac.wiki.formatter import MacroError
 
 STRIP_TRAILING_SPACE = re.compile(r'( +)$', re.MULTILINE)
 
@@ -71,20 +74,19 @@ def load_expected_results(file, pattern):
     """
     expected = {}
     compiled_pattern = re.compile(pattern)
-    f = open(file, 'r')
-    for line in f:
-        line = line.rstrip().decode('utf-8')
-        match = compiled_pattern.search(line)
-        if match:
-            test = match.groups()[0]
-            expected[test] = ''
-        else:
-            expected[test] += line + '\n'
-    f.close()
+    with open(file, 'r') as f:
+        for line in f:
+            line = line.rstrip().decode('utf-8')
+            match = compiled_pattern.search(line)
+            if match:
+                test = match.groups()[0]
+                expected[test] = ''
+            else:
+                expected[test] += line + '\n'
     return expected
 
 
-def execute_cmd(tracadmin, cmd, strip_trailing_space=True, input=None):
+def _execute(func, strip_trailing_space=True, input=None):
     _in = sys.stdin
     _err = sys.stderr
     _out = sys.stdout
@@ -94,11 +96,7 @@ def execute_cmd(tracadmin, cmd, strip_trailing_space=True, input=None):
             sys.stdin.encoding = 'utf-8' # fake input encoding
         sys.stderr = sys.stdout = out = StringIO()
         out.encoding = 'utf-8' # fake output encoding
-        retval = None
-        try:
-            retval = tracadmin.onecmd(cmd)
-        except SystemExit:
-            pass
+        retval = func()
         value = out.getvalue()
         if isinstance(value, str): # reverse what print_listing did
             value = value.decode('utf-8')
@@ -110,6 +108,24 @@ def execute_cmd(tracadmin, cmd, strip_trailing_space=True, input=None):
         sys.stdin = _in
         sys.stderr = _err
         sys.stdout = _out
+
+
+def execute_cmd(tracadmin, cmd, strip_trailing_space=True, input=None):
+    def func():
+        try:
+            return tracadmin.onecmd(cmd)
+        except SystemExit:
+            return None
+    return _execute(func, strip_trailing_space, input)
+
+
+def execute_run(args):
+    def func():
+        try:
+            return _run(args)
+        except SystemExit:
+            return None
+    return _execute(func)
 
 
 class TracAdminTestCaseBase(unittest.TestCase):
@@ -185,6 +201,20 @@ class TracadminTestCase(TracAdminTestCaseBase):
 
     def _complete_command(self, *args):
         return AdminCommandManager(self.env).complete_command(list(args))
+
+    def test_python_with_optimizations_returns_error(self):
+        """Error is returned when a command is executed in interpreter
+        with optimizations enabled.
+        """
+        proc = Popen((sys.executable, '-O', '-m', 'trac.admin.console',
+                      'help'), stdin=PIPE, stdout=PIPE, stderr=PIPE,
+                     close_fds=close_fds)
+        stdout, stderr = proc.communicate(input='')
+        for f in (proc.stdin, proc.stdout, proc.stderr):
+            f.close()
+        self.assertEqual(2, proc.returncode)
+        self.assertEqual("Python with optimizations is not supported.",
+                         stderr.strip())
 
     # Help test
 
@@ -1502,6 +1532,20 @@ class TracadminNoEnvTestCase(unittest.TestCase):
                           "see the list of commands."],
                           output)
 
+    def test_run_help_with_arguments(self):
+        rv, output = execute_run(['help'])
+        self.assertIn('Usage: trac-admin </path/to/projenv>', output)
+        rv, output = execute_run(['help', "foo'bar"])
+        self.assertNotIn('No closing quotation', output)
+        self.assertIn("No documentation found for 'foo'bar'", output)
+
+    def test_run_cmd_with_env_path(self):
+        rv, output = execute_run(['notfound-tracenv', 'help'])
+        self.assertIn('Usage: trac-admin </path/to/projenv>', output)
+        rv, output = execute_run(['notfound-tracenv', 'help', "foo'bar"])
+        self.assertNotIn('No closing quotation', output)
+        self.assertIn("No documentation found for 'foo'bar'", output)
+
 
 class TracAdminHelpMacroTestCase(unittest.TestCase):
 
@@ -1526,6 +1570,16 @@ class TracAdminHelpMacroTestCase(unittest.TestCase):
         macro = TracAdminHelpMacro(self.env)
         help = unicode(macro.expand_macro(None, None, 'unicode-help'))
         self.assertTrue(unicode_help in help)
+
+    def test_invalid_command(self):
+        macro = TracAdminHelpMacro(self.env)
+
+        try:
+            macro.expand_macro(None, None, 'copystatic')
+            self.fail("MacroError not raised")
+        except MacroError as e:
+            self.assertEqual('Unknown trac-admin command "copystatic"',
+                             unicode(e))
 
 
 class TracAdminComponentTestCase(unittest.TestCase):

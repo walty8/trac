@@ -220,6 +220,8 @@ class AttachmentModule(Component):
                 data = self._do_save(req, attachment)
             elif action == 'delete':
                 self._do_delete(req, attachment)
+            else:
+                raise HTTPBadRequest(_("Invalid request arguments."))
         elif action == 'delete':
             data = self._render_confirm_delete(req, attachment)
         elif action == 'new':
@@ -394,7 +396,7 @@ class AttachmentModule(Component):
         if 'cancel' in req.args:
             req.redirect(get_resource_url(self.env, parent_resource, req.href))
 
-        upload = req.args['attachment']
+        upload = req.args.getfirst('attachment')
         if not hasattr(upload, 'filename') or not upload.filename:
             raise TracError(_("No file uploaded"))
         if hasattr(upload.file, 'fileno'):

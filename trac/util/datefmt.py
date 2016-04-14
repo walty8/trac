@@ -17,6 +17,7 @@
 # Author: Jonas Borgström <jonas@edgewall.com>
 #         Matthew Good <trac@matt-good.net>
 
+import inspect
 import math
 import os
 import re
@@ -38,8 +39,14 @@ else:
         format_time as babel_format_time,
         get_datetime_format, get_date_format,
         get_time_format, get_month_names,
-        get_period_names, get_day_names
+        get_period_names as babel_get_period_names,
+        get_day_names
     )
+    if 'context' in inspect.getargspec(babel_get_period_names)[0]:
+        def get_period_names(locale=None):
+            return babel_get_period_names(context='format', locale=locale)
+    else:
+        get_period_names = babel_get_period_names
 
 from trac.core import TracError
 from trac.util.text import to_unicode, getpreferredencoding
@@ -476,7 +483,7 @@ def get_first_week_day_jquery_ui(req):
                         if l.territory:
                             locale = l
                             break
-                    except UnknownLocaleError:
+                    except (UnknownLocaleError, ValueError):
                         pass
         if not locale.territory and locale.language in LOCALE_ALIASES:
             locale = Locale.parse(LOCALE_ALIASES[locale.language])
@@ -539,8 +546,11 @@ _ISO_8601_RE = re.compile(r'''
         (\d\d)(?::?(\d\d)(?::?(\d\d)        # time
         (?:[,.](\d{1,6}))?)?)?              # microseconds
     )?
-    (Z?(?:([-+])?(\d\d):?(\d\d)?)?)?$       # timezone
-    ''', re.VERBOSE)
+    (                                       # timezone
+        Z                                   #   Z
+      | ([-+])(\d\d):?(\d\d)?               #   ±hh:mm, ±hhmm, ±hh
+    )?
+    $''', re.VERBOSE)
 
 def _parse_date_iso8601(text, tzinfo):
     match = _ISO_8601_RE.match(text)
@@ -552,21 +562,25 @@ def _parse_date_iso8601(text, tzinfo):
             days = g[2] or '01'
             hours, minutes, seconds, useconds = [x or '00' for x in g[3:7]]
             useconds = (useconds + '000000')[:6]
-            z, tzsign, tzhours, tzminutes = g[7:11]
+            z = g[7]
             if z:
-                tz = timedelta(hours=int(tzhours or '0'),
-                               minutes=int(tzminutes or '0')).seconds / 60
+                tzsign = g[8]
+                tzhours = int(g[9] or 0)
+                tzminutes = int(g[10] or 0)
+                if not (0 <= tzhours < 24 and 0 <= tzminutes < 60):
+                    return None
+                tz = tzhours * 60 + tzminutes
                 if tz == 0:
                     tzinfo = utc
                 else:
                     tzinfo = FixedOffset(-tz if tzsign == '-' else tz,
-                                         '%s%s:%s' %
-                                         (tzsign, tzhours, tzminutes))
+                                         '%s%02d:%02d' % (tzsign, tzhours,
+                                                          tzminutes))
             tm = [int(x) for x in (years, months, days,
                                    hours, minutes, seconds, useconds)]
             t = tzinfo.localize(datetime(*tm))
             return tzinfo.normalize(t)
-        except ValueError:
+        except (ValueError, OverflowError):
             pass
 
     return None
@@ -578,11 +592,11 @@ def _libc_parse_date(text, tzinfo):
             tm = time.strptime(text, format)
             dt = tzinfo.localize(datetime(*tm[0:6]))
             return tzinfo.normalize(dt)
-        except ValueError:
+        except (ValueError, OverflowError):
             continue
     try:
         return _i18n_parse_date(text, tzinfo, None)
-    except ValueError:
+    except (ValueError, OverflowError):
         pass
     return
 
@@ -622,7 +636,7 @@ def parse_date(text, tzinfo=None, locale=None, hint='date'):
     # may raise ValueError if larger than platform C localtime() or gmtime()
     try:
         datetime.utcfromtimestamp(to_timestamp(dt))
-    except ValueError:
+    except (ValueError, OverflowError):
         raise TracError(_('The date "%(date)s" is outside valid range. '
                           'Try a date closer to present time.', date=text),
                           _('Invalid Date'))
@@ -726,7 +740,7 @@ def _i18n_parse_date(text, tzinfo, locale):
         try:
             return _i18n_parse_date_0(text, order, regexp, period_names,
                                       month_names, tzinfo)
-        except ValueError:
+        except (ValueError, OverflowError):
             continue
 
     return None
@@ -1071,7 +1085,7 @@ class LocalTimezone(tzinfo):
         dt = dt.replace(tzinfo=utc)
         try:
             tt = time.localtime(to_timestamp(dt))
-        except ValueError:
+        except (ValueError, OverflowError):
             return dt.replace(tzinfo=self._std_tz) + self._std_offset
         # if UTC offset from localtime() doesn't match timezone offset,
         # create a LocalTimezone instance with the UTC offset (#11563)

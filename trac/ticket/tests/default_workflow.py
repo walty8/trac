@@ -18,13 +18,13 @@ import tempfile
 import unittest
 
 import trac.tests.compat
-from trac.perm import PermissionCache, PermissionSystem
-from trac.test import EnvironmentStub, Mock, MockPerm, locale_en
+from trac.perm import PermissionSystem
+from trac.test import EnvironmentStub, MockRequest
 from trac.ticket.api import TicketSystem
 from trac.ticket.model import Component, Ticket
 from trac.ticket.web_ui import TicketModule
 from trac.util import create_file
-from trac.util.datefmt import to_utimestamp, utc
+from trac.util.datefmt import to_utimestamp
 from trac.web.api import RequestDone
 from tracopt.perm.authz_policy import AuthzPolicy
 
@@ -41,20 +41,6 @@ class ConfigurableTicketWorkflowTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.env.reset_db()
-
-    def _create_request(self, authname='anonymous', **kwargs):
-        kw = {'path_info': '/', 'perm': MockPerm(), 'args': {},
-              'href': self.env.href, 'abs_href': self.env.abs_href,
-              'tz': utc, 'locale': None, 'lc_time': locale_en,
-              'session': {}, 'authname': authname,
-              'chrome': {'notices': [], 'warnings': []},
-              'method': None, 'get_header': lambda v: None, 'is_xhr': False,
-              'form_token': None, }
-        kw.update(kwargs)
-        def redirect(url, permanent=False):
-            raise RequestDone
-        return Mock(add_redirect_listener=lambda x: [].append(x),
-                    redirect=redirect, **kw)
 
     def _add_component(self, name='test', owner='owner1'):
         component = Component(self.env)
@@ -83,7 +69,7 @@ class ConfigurableTicketWorkflowTestCase(unittest.TestCase):
         """
         self._add_component('component3', 'cowner3')
 
-        req = self._create_request(method='POST', args={
+        req = MockRequest(self.env, method='POST', args={
             'field_reporter': 'reporter1',
             'field_summary': 'the summary',
             'field_component': 'component3',
@@ -110,7 +96,7 @@ class ConfigurableTicketWorkflowTestCase(unittest.TestCase):
         })
         tkt_id = ticket.insert()
 
-        req = self._create_request(method='POST', args={
+        req = MockRequest(self.env, method='POST', args={
             'id': tkt_id,
             'field_component': 'component4',
             'submit': True,
@@ -139,7 +125,7 @@ class ConfigurableTicketWorkflowTestCase(unittest.TestCase):
         })
         tkt_id = ticket.insert()
 
-        req = self._create_request(method='POST', args={
+        req = MockRequest(self.env, method='POST', args={
             'id': tkt_id,
             'field_component': 'component4',
             'submit': True,
@@ -170,7 +156,7 @@ class ConfigurableTicketWorkflowTestCase(unittest.TestCase):
         })
         tkt_id = ticket.insert()
 
-        req = self._create_request(method='POST', args={
+        req = MockRequest(self.env, method='POST', args={
             'id': tkt_id,
             'field_component': 'component4',
             'submit': True,
@@ -200,7 +186,7 @@ class ConfigurableTicketWorkflowTestCase(unittest.TestCase):
         })
         tkt_id = ticket.insert()
 
-        req = self._create_request(method='POST', args={
+        req = MockRequest(self.env, method='POST', args={
             'id': tkt_id,
             'field_component': 'component4',
             'submit': True,
@@ -220,10 +206,8 @@ class ResetActionTestCase(unittest.TestCase):
         self.env = EnvironmentStub(default_data=True)
         self.perm_sys = PermissionSystem(self.env)
         self.ctlr = TicketSystem(self.env).action_controllers[0]
-        self.req1 = Mock(authname='user1', args={},
-                         perm=PermissionCache(self.env, 'user1'))
-        self.req2 = Mock(authname='user2', args={},
-                         perm=PermissionCache(self.env, 'user2'))
+        self.req1 = MockRequest(self.env, authname='user1')
+        self.req2 = MockRequest(self.env, authname='user2')
         self.ticket = Ticket(self.env)
         self.ticket['status'] = 'invalid'
         self.ticket.insert()
@@ -296,8 +280,7 @@ class SetOwnerAttributeTestCase(unittest.TestCase):
         ]
         for perm in permissions:
             self.perm_sys.grant_permission(*perm)
-        self.req = Mock(authname='user1', args={},
-                        perm=PermissionCache(self.env, 'user0'))
+        self.req = MockRequest(self.env, authname='user1')
         self.expected = """\
 to <select name="action_reassign_reassign_owner" \
 id="action_reassign_reassign_owner"><option selected="True" \
@@ -351,7 +334,7 @@ class RestrictOwnerTestCase(unittest.TestCase):
         self.env.config.set('ticket', 'restrict_owner', True)
 
         self.perm_sys = PermissionSystem(self.env)
-        self.env.insert_known_users([
+        self.env.insert_users([
             ('user1', '', ''), ('user2', '', ''),
             ('user3', '', ''), ('user4', '', '')
         ])
@@ -363,8 +346,7 @@ class RestrictOwnerTestCase(unittest.TestCase):
         create_file(self.authz_file)
         self.env.config.set('authz_policy', 'authz_file', self.authz_file)
         self.ctlr = TicketSystem(self.env).action_controllers[0]
-        self.req1 = Mock(authname='user1', args={},
-                         perm=PermissionCache(self.env, 'user1'))
+        self.req1 = MockRequest(self.env, authname='user1')
         self.ticket = Ticket(self.env)
         self.ticket['status'] = 'new'
         self.ticket.insert()

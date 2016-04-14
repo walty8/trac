@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2013 Edgewall Software
+# Copyright (C) 2016 Edgewall Software
 # All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
@@ -15,9 +15,10 @@ import unittest
 
 import trac.tests.compat
 from trac.perm import DefaultPermissionStore, PermissionCache
-from trac.test import EnvironmentStub
+from trac.test import EnvironmentStub, MockRequest
+from trac.web.api import HTTPBadRequest
 from trac.wiki.model import WikiPage
-from trac.wiki.web_ui import ReadonlyWikiPolicy
+from trac.wiki.web_ui import ReadonlyWikiPolicy, WikiModule
 
 
 class ReadonlyWikiPolicyTestCase(unittest.TestCase):
@@ -59,8 +60,24 @@ class ReadonlyWikiPolicyTestCase(unittest.TestCase):
                                                        perm_cache))
 
 
+class WikiModuleTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.env = EnvironmentStub()
+
+    def test_invalid_post_request_raises_exception(self):
+        req = MockRequest(self.env, method='POST', action=None)
+
+        self.assertRaises(HTTPBadRequest,
+                          WikiModule(self.env).process_request, req)
+
+
 def suite():
-    return unittest.makeSuite(ReadonlyWikiPolicyTestCase)
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(ReadonlyWikiPolicyTestCase))
+    suite.addTest(unittest.makeSuite(WikiModuleTestCase))
+    return suite
+
 
 if __name__ == '__main__':
     unittest.main(defaultTest='suite')
