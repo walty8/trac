@@ -14,6 +14,7 @@
 import unittest
 from datetime import timedelta
 
+from trac.core import Component, implements
 from trac.perm import DefaultPermissionPolicy, DefaultPermissionStore,\
                       PermissionCache, PermissionSystem
 from trac.test import EnvironmentStub, MockRequest
@@ -378,6 +379,34 @@ class ProcessRequestTestCase(unittest.TestCase):
         self.assertRaises(RequestDone, bmm.process_request, req)
         self.assertFieldChanged(1, 'reporter', 'user1')
         self.assertFieldChanged(2, 'reporter', 'user1')
+
+
+    def test_validate_tickets(self):
+        '''Validate tickets with new values'''
+        class TicketValidator(Component):
+            implements(api.ITicketManipulator)
+            def validate_ticket(self, req, ticket):
+                errors = []
+                if ticket['component'] == 'foo':
+                    errors.append(('component', 'invalid component'))
+                return errors
+
+        self._insert_ticket('Ticket 1', reporter='user1', component='comp1')
+        self._insert_ticket('Ticket 2', reporter='user1', component='comp1')
+        req = MockRequest(self.env, authname='has_bm', args={
+            'batchmod_value_component': 'foo',
+            'action': 'leave',
+            'selected_tickets': '1,2',
+        });
+
+        bmm = BatchModifyModule(self.env)
+        self.assertRaises(RequestDone, bmm.process_request, req)
+        warnings = req.chrome['warnings']
+        self.assertEqual(warnings[0].title(), 'The Field <Strong>Component</Strong> For Ticket #1 Is Invalid: Invalid Component')
+        self.assertEqual(warnings[1].title(), 'The Field <Strong>Component</Strong> For Ticket #2 Is Invalid: Invalid Component')
+        #component value is not changed
+        self.assertFieldChanged(1, 'component', 'comp1')
+        self.assertFieldChanged(2, 'component', 'comp1')
 
 
 def test_suite():
