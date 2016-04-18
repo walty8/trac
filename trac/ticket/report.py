@@ -984,6 +984,6 @@ class WikiReportMacro(WikiMacroBase):
         add_stylesheet(req, 'common/css/report.css')
 
         #conversion to string help remove dummy new lines
-        result = unicode(tag.div(chrome.render_template(req, 'report_table.html',
+        result = unicode(tag.div(chrome.render_template(req, 'jreport_table.html',
                               data, None, fragment=True)))
         return result
