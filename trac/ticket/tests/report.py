@@ -775,7 +775,7 @@ WIKI_REPORT_TEST_CASES = u"""
             </td>
             <td class="status" >new
             </td>
-            <td class="date" >04/24/16
+            <td class="date" >%(today)s
             </td>
 
           </tr>
@@ -804,7 +804,7 @@ WIKI_REPORT_TEST_CASES = u"""
             </td>
             <td class="status" >assigned
             </td>
-            <td class="date" >04/24/16
+            <td class="date" >%(today)s
             </td>
 
           </tr>
@@ -900,7 +900,7 @@ WIKI_REPORT_TEST_CASES = u"""
             </td>
             <td class="priority" >major
             </td>
-            <td class="date" >04/24/16
+            <td class="date" >%(today)s
             </td>
 
           </tr>
