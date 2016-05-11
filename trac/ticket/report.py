@@ -28,6 +28,7 @@ from trac.db import get_column_names
 from trac.perm import IPermissionRequestor
 from trac.resource import Resource, ResourceNotFound
 from trac.ticket.api import TicketSystem
+from trac.ticket.model import Report
 from trac.util import as_int, content_disposition
 from trac.util.datefmt import format_datetime, format_time, from_utimestamp
 from trac.util.presentation import Paginator
@@ -103,9 +104,9 @@ def split_sql(sql, clause_re, skel=None):
         skel = sql_skeleton(sql)
     blocks = clause_re.split(skel.upper())
     if len(blocks) == 2:
-        return sql[:len(blocks[0])], sql[-len(blocks[1]):] # (before, after)
+        return sql[:len(blocks[0])], sql[-len(blocks[1]):]  # (before, after)
     else:
-        return sql, '' # no single clause separator
+        return sql, ''  # no single clause separator
 
 
 class ReportModule(Component):
@@ -113,7 +114,7 @@ class ReportModule(Component):
     implements(INavigationContributor, IPermissionRequestor, IRequestHandler,
                IWikiSyntaxProvider)
 
-    realm = TicketSystem.realm
+    realm = Report.realm
 
     items_per_page = IntOption('report', 'items_per_page', 100,
         """Number of tickets displayed per page in ticket reports,
@@ -132,7 +133,7 @@ class ReportModule(Component):
         return 'tickets'
 
     def get_navigation_items(self, req):
-        if 'REPORT_VIEW' in req.perm('report', self.REPORT_LIST_ID):
+        if 'REPORT_VIEW' in req.perm(self.realm, self.REPORT_LIST_ID):
             yield ('mainnav', 'tickets', tag.a(_('View Tickets'),
                                                href=req.href.report()))
 
@@ -155,11 +156,12 @@ class ReportModule(Component):
 
     def process_request(self, req):
         # did the user ask for any special report?
-        id = int(req.args.get('id', self.REPORT_LIST_ID))
-        req.perm('report', id).require('REPORT_VIEW')
+        id = req.args.getint('id', self.REPORT_LIST_ID)
+        req.perm(self.realm, id).require('REPORT_VIEW')
 
         data = {}
         action = req.args.get('action', 'view')
+        template = None
         if req.method == 'POST':
             if action == 'new':
                 self._do_create(req)
@@ -178,7 +180,7 @@ class ReportModule(Component):
             data = self._render_confirm_delete(req, id)
         elif id == self.REPORT_LIST_ID:
             template, data, content_type = self._render_list(req)
-            if content_type: # i.e. alternate format
+            if content_type:  # i.e. alternate format
                 return template, data, content_type
             if action == 'clear':
                 if 'query_href' in req.session:
@@ -187,15 +189,15 @@ class ReportModule(Component):
                     del req.session['query_tickets']
         else:
             template, data, content_type = self._render_view(req, id)
-            if content_type: # i.e. alternate format
+            if content_type:  # i.e. alternate format
                 return template, data, content_type
 
         from trac.ticket.query import QueryModule
-        show_query_link = 'TICKET_VIEW' in req.perm(self.realm) and \
+        show_query_link = 'TICKET_VIEW' in req.perm(TicketSystem.realm) and \
                           self.env.is_component_enabled(QueryModule)
 
-        if  (id != self.REPORT_LIST_ID or action == 'new') and \
-                'REPORT_VIEW' in req.perm('report', self.REPORT_LIST_ID):
+        if (id != self.REPORT_LIST_ID or action == 'new') and \
+                'REPORT_VIEW' in req.perm(self.realm, self.REPORT_LIST_ID):
             add_ctxtnav(req, _('Available Reports'), href=req.href.report())
             add_link(req, 'up', req.href.report(), _('Available Reports'))
         elif show_query_link:
@@ -216,52 +218,46 @@ class ReportModule(Component):
     # Internal methods
 
     def _do_create(self, req):
-        req.perm('report').require('REPORT_CREATE')
+        req.perm(self.realm).require('REPORT_CREATE')
 
         if 'cancel' in req.args:
             req.redirect(req.href.report())
 
-        title = req.args.get('title', '')
-        query = req.args.get('query', '')
-        description = req.args.get('description', '')
-        with self.env.db_transaction as db:
-            cursor = db.cursor()
-            cursor.execute("""
-                INSERT INTO report (title,query,description) VALUES (%s,%s,%s)
-                """, (title, query, description))
-            report_id = db.get_last_id(cursor, 'report')
+        report = Report(self.env)
+        report.title = req.args.get('title', '')
+        report.query = req.args.get('query', '')
+        report.description = req.args.get('description', '')
+        report.insert()
         add_notice(req, _("The report has been created."))
-        req.redirect(req.href.report(report_id))
+        req.redirect(req.href.report(report.id))
 
     def _do_delete(self, req, id):
-        req.perm('report', id).require('REPORT_DELETE')
+        req.perm(self.realm, id).require('REPORT_DELETE')
 
         if 'cancel' in req.args:
             req.redirect(req.href.report(id))
 
-        self.env.db_transaction("DELETE FROM report WHERE id=%s", (id,))
+        Report(self.env, id).delete()
         add_notice(req, _("The report {%(id)d} has been deleted.", id=id))
         req.redirect(req.href.report())
 
     def _do_save(self, req, id):
         """Save report changes to the database"""
-        req.perm('report', id).require('REPORT_MODIFY')
+        req.perm(self.realm, id).require('REPORT_MODIFY')
 
         if 'cancel' not in req.args:
-            title = req.args.get('title', '')
-            query = req.args.get('query', '')
-            description = req.args.get('description', '')
-            self.env.db_transaction("""
-                UPDATE report SET title=%s, query=%s, description=%s
-                WHERE id=%s
-                """, (title, query, description, id))
+            report = Report(self.env, id)
+            report.title = req.args.get('title', '')
+            report.query = req.args.get('query', '')
+            report.description = req.args.get('description', '')
+            report.update()
             add_notice(req, _("Your changes have been saved."))
         req.redirect(req.href.report(id))
 
     def _render_confirm_delete(self, req, id):
-        req.perm('report', id).require('REPORT_DELETE')
+        req.perm(self.realm, id).require('REPORT_DELETE')
 
-        title = self.get_report(id)[0]
+        title = Report(self.env, id).title
         return {'title': _("Delete Report {%(num)s} %(title)s", num=id,
                            title=title),
                 'action': 'delete',
@@ -269,10 +265,11 @@ class ReportModule(Component):
 
     def _render_editor(self, req, id, copy):
         if id != self.REPORT_LIST_ID:
-            req.perm('report', id).require('REPORT_MODIFY')
-            title, description, query = self.get_report(id)
+            req.perm(self.realm, id).require('REPORT_MODIFY')
+            r = Report(self.env, id)
+            title, description, query = r.title, r.description, r.query
         else:
-            req.perm('report').require('REPORT_CREATE')
+            req.perm(self.realm).require('REPORT_CREATE')
             title = description = query = ''
 
         # an explicitly given 'query' parameter will override the saved query
@@ -298,12 +295,9 @@ class ReportModule(Component):
         asc = req.args.getbool('asc', True)
         format = req.args.get('format')
 
-        rows = self.env.db_query("""
-                SELECT id, title, description FROM report ORDER BY %s %s
-                """ % ('title' if sort == 'title' else 'id',
-                       '' if asc else 'DESC'))
-        rows = [(id, title, description) for id, title, description in rows
-                if 'REPORT_VIEW' in req.perm('report', id)]
+        rows = [(report.id, report.title, report.description)
+                for report in Report.select(self.env, sort, asc)
+                if 'REPORT_VIEW' in req.perm(self.realm, report.id)]
 
         if format == 'rss':
             data = {'rows': rows}
@@ -330,8 +324,8 @@ class ReportModule(Component):
                  _('Tab-delimited Text'), 'text/plain')
 
         reports = [(id, title, description,
-                    'REPORT_MODIFY' in req.perm('report', id),
-                    'REPORT_DELETE' in req.perm('report', id))
+                    'REPORT_MODIFY' in req.perm(self.realm, id),
+                    'REPORT_DELETE' in req.perm(self.realm, id))
                    for id, title, description in rows]
         data = {'reports': reports, 'sort': sort, 'asc': 1 if asc else 0}
 
@@ -342,7 +336,8 @@ class ReportModule(Component):
 
     def _render_view(self, req, id):
         """Retrieve the report results and pre-process them for rendering."""
-        title, description, sql = self.get_report(id)
+        r = Report(self.env, id)
+        title, description, sql = r.title, r.description, r.query
         try:
             args = self.get_var_args(req)
         except ValueError as e:
@@ -360,7 +355,7 @@ class ReportModule(Component):
             query = query if query[0] == '?' else query[6:]
             report_id = 'report=%s' % id
             if 'report=' in query:
-                if not report_id in query:
+                if report_id not in query:
                     err = _('When specified, the report number should be '
                             '"%(num)s".', num=id)
                     req.redirect(req.href.report(id, action='edit', error=err))
@@ -370,13 +365,14 @@ class ReportModule(Component):
                 query += report_id
             req.redirect(req.href.query() + quote_query_string(query))
         elif query.startswith('query:'):
+            from trac.ticket.query import Query, QuerySyntaxError
             try:
-                from trac.ticket.query import Query, QuerySyntaxError
                 query = Query.from_string(self.env, query[6:], report=id)
-                req.redirect(query.get_href(req.href))
             except QuerySyntaxError as e:
                 req.redirect(req.href.report(id, action='edit',
                                              error=to_unicode(e)))
+            else:
+                req.redirect(query.get_href(req.href))
 
         format = req.args.get('format')
         if format == 'sql':
@@ -384,7 +380,7 @@ class ReportModule(Component):
 
         title = '{%i} %s' % (id, title)
 
-        report_resource = Resource('report', id)
+        report_resource = Resource(self.realm, id)
         req.perm(report_resource).require('REPORT_VIEW')
         context = web_context(req, report_resource)
 
@@ -392,7 +388,7 @@ class ReportModule(Component):
         default_max = {'rss': self.items_per_page_rss,
                        'csv': 0, 'tab': 0}.get(format, self.items_per_page)
         max = req.args.get('max')
-        limit = as_int(max, default_max, min=0) # explict max takes precedence
+        limit = as_int(max, default_max, min=0)  # explict max takes precedence
         offset = (page - 1) * limit
 
         sort_col = req.args.get('sort', '')
@@ -511,15 +507,15 @@ class ReportModule(Component):
 
             header_group = header_groups[-1]
 
-            if col.startswith('__') and col.endswith('__'): # __col__
+            if col.startswith('__') and col.endswith('__'):  # __col__
                 header['hidden'] = True
-            elif col[0] == '_' and col[-1] == '_':          # _col_
+            elif col[0] == '_' and col[-1] == '_':           # _col_
                 header_group = []
                 header_groups.append(header_group)
                 header_groups.append([])
-            elif col[0] == '_':                             # _col
+            elif col[0] == '_':                              # _col
                 header['hidden'] = True
-            elif col[-1] == '_':                            # col_
+            elif col[-1] == '_':                             # col_
                 header_groups.append([])
             header_group.append(header)
 
@@ -534,7 +530,7 @@ class ReportModule(Component):
             col_idx = 0
             cell_groups = []
             row = {'cell_groups': cell_groups}
-            realm = self.realm
+            realm = TicketSystem.realm
             parent_realm = ''
             parent_id = ''
             email_cells = []
@@ -575,7 +571,7 @@ class ReportModule(Component):
             else:
                 resource = Resource(realm, row.get('id'))
             # FIXME: for now, we still need to hardcode the realm in the action
-            if resource.realm.upper()+'_VIEW' not in req.perm(resource):
+            if resource.realm.upper() + '_VIEW' not in req.perm(resource):
                 continue
             authorized_results.append(result)
             if email_cells:
@@ -617,7 +613,7 @@ class ReportModule(Component):
                      _('Comma-delimited Text'), 'text/plain')
             add_link(req, 'alternate', report_href(format='tab', page=p),
                      _('Tab-delimited Text'), 'text/plain')
-            if 'REPORT_SQL_VIEW' in req.perm('report', id):
+            if 'REPORT_SQL_VIEW' in req.perm(self.realm, id):
                 add_link(req, 'alternate',
                          req.href.report(id=id, format='sql'),
                          _('SQL Query'), 'text/plain')
@@ -736,7 +732,7 @@ class ReportModule(Component):
                 # is there already an ORDER BY in the original sql?
                 skel = sql_skeleton(sql)
                 before, after = split_sql(sql, _order_by_re, skel)
-                if after: # there were some other criterions, keep them
+                if after:  # there were some other criterions, keep them
                     order_by.append(after)
                 sql = ' '.join([before, 'ORDER BY', ', '.join(order_by)])
 
@@ -775,18 +771,13 @@ class ReportModule(Component):
         return cols, rows, num_items, missing_args, limit_offset
 
     def get_report(self, id):
-        try:
-            number = int(id)
-        except (ValueError, TypeError):
-            pass
-        else:
-            for title, description, sql in self.env.db_query("""
-                    SELECT title, description, query from report WHERE id=%s
-                    """, (number,)):
-                return title, description, sql
+        """Returns the `title`, `description` and `sql` for a report.
 
-        raise ResourceNotFound(_("Report {%(num)s} does not exist.", num=id),
-                               _("Invalid Report Number"))
+        :since 1.2: Deprecated and will be removed in 1.3.1. Use the
+                    `Report` model class instead.
+        """
+        report = Report(self.env, id)
+        return report.title, report.description, report.query
 
     def get_var_args(self, req):
         # reuse somehow for #9574 (wiki vars)
@@ -808,6 +799,7 @@ class ReportModule(Component):
         names = set()
         values = []
         missing_args = []
+
         def add_value(aname):
             names.add(aname)
             try:
@@ -906,7 +898,7 @@ class ReportModule(Component):
         raise RequestDone
 
     def _send_sql(self, req, id, title, description, sql):
-        req.perm('report', id).require('REPORT_SQL_VIEW')
+        req.perm(self.realm, id).require('REPORT_SQL_VIEW')
 
         out = StringIO()
         out.write('-- ## %s: %s ## --\n\n' % (id, title.encode('utf-8')))
@@ -944,12 +936,12 @@ class ReportModule(Component):
             return intertrac
         id, args, fragment = formatter.split_link(target)
         try:
-            self.get_report(id)
+            Report(self.env, id)
         except ResourceNotFound:
             return tag.a(label, class_='missing report',
                          title=_("report does not exist"))
         else:
-            if 'REPORT_VIEW' in formatter.req.perm('report', id):
+            if 'REPORT_VIEW' in formatter.req.perm(self.realm, id):
                 return tag.a(label, href=formatter.href.report(id) + args,
                              class_='report')
             else:
