@@ -49,7 +49,7 @@ from trac.util.html import to_fragment
 from trac.util.text import (
     exception_to_unicode, empty, is_obfuscated, shorten_line
 )
-from trac.util.presentation import separated
+from trac.util.presentation import separated, to_json
 from trac.util.translation import _, tag_, tagn_, N_, ngettext
 from trac.versioncontrol.diff import get_diff_options, diff_blocks
 from trac.web.api import IRequestHandler, arg_list_to_args, parse_arg_list
@@ -472,6 +472,25 @@ class TicketModule(Component):
             if action in actions:
                 yield controller
 
+    def _get_suggested_names(self, term):
+        chrome = Chrome(self.env)
+        keyword = term.lower()
+        users = self.env.get_known_users()
+
+        full_user_list = []
+        for user in users:
+            display_name = user[0]
+            if chrome.show_full_names and user[1]:
+                display_name += ", " + user[1]
+            if chrome.show_email_addresses and user[2]:
+                display_name += " (" + user[2] + ")" 
+            full_user_list.append([user[0], display_name])
+        suggestions = [{'label':display_name, 'value': username} 
+                        for username, display_name
+                            in sorted(full_user_list, key=lambda s:s[0].lower())
+                            if display_name.lower().find(keyword) >= 0]
+        return suggestions
+
     def _process_newticket_request(self, req):
         req.perm(self.realm).require('TICKET_CREATE')
         ticket = Ticket(self.env)
@@ -548,6 +567,10 @@ class TicketModule(Component):
                                   for i, field in enumerate(fields))
 
         if req.is_xhr:
+            if 'term' in req.args:
+                names = self._get_suggested_names(req.args.get('term'))
+                req.send(to_json(names), 'application/json', 200)
+            
             data['preview_mode'] = True
             data['chrome_info_script'] = chrome_info_script
             return 'ticket_box.html', data, None
@@ -564,14 +587,19 @@ class TicketModule(Component):
         id = int(req.args.get('id'))
         version = req.args.getint('version', None)
 
-        if req.is_xhr and 'preview_comment' in req.args:
-            context = web_context(req, self.realm, id, version)
-            escape_newlines = self.must_preserve_newlines
-            rendered = format_to_html(self.env, context,
-                                      req.args.get('edited_comment', ''),
-                                      escape_newlines=escape_newlines) + \
-                       chrome_info_script(req)
-            req.send(rendered.encode('utf-8'))
+        if req.is_xhr:
+            if 'term' in req.args:
+                names = self._get_suggested_names(req.args.get('term'))
+                req.send(to_json(names), 'application/json', 200)
+            
+            if 'preview_comment' in req.args:
+                context = web_context(req, self.realm, id, version)
+                escape_newlines = self.must_preserve_newlines
+                rendered = format_to_html(self.env, context,
+                                          req.args.get('edited_comment', ''),
+                                          escape_newlines=escape_newlines) + \
+                           chrome_info_script(req)
+                req.send(rendered.encode('utf-8'))
 
         req.perm(self.realm, id, version).require('TICKET_VIEW')
         ticket = Ticket(self.env, id, version=version)

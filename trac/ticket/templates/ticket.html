@@ -28,6 +28,10 @@
       jQuery(document).ready(function($) {
         $("div.description").find("h1,h2,h3,h4,h5,h6").addAnchor(_("Link to this section"));
         $(".foldable").enableFolding(false, true);
+        $("#field-reporter").autocomplete({
+          source: window.location.pathname
+        })
+
       <py:when test="ticket.exists">/*<![CDATA[*/
         $("#attachments").toggleClass("collapsed");
         $("#trac-up-attachments").click(function () {
