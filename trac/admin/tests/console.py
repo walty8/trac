@@ -160,7 +160,7 @@ class TracAdminTestCaseBase(unittest.TestCase):
             expected_lines = ['%s\n' % x for x in expected_results.split('\n')]
             return ''.join(difflib.unified_diff(expected_lines, output_lines,
                                                 'expected', 'actual'))
-        if '[...]' in expected_results:
+        if '[...]' in expected_results and 'changeset' not in expected_results:
             m = re.match(expected_results.replace('[...]', '.*'), output,
                          re.MULTILINE)
             unittest.TestCase.assertTrue(self, m,
@@ -1502,6 +1502,36 @@ class TracadminTestCase(TracAdminTestCaseBase):
     def test_help_session_purge(self):
         doc = self._get_command_help('session', 'purge')
         self.assertIn(u'"YYYY-MM-DDThh:mm:ss±hh:mm"', doc)
+
+    def test_changeset_add_no_project_revision(self):
+        rv, output = self._execute('changeset added')
+        self.assertEqual(2, rv, output)
+        self.assertExpectedResult(output)
+
+    def test_changeset_add_no_revision(self):
+        rv, output = self._execute('changeset added project')
+        self.assertEqual(2, rv, output)
+        self.assertExpectedResult(output)
+
+    def test_changeset_modify_no_project_revision(self):
+        rv, output = self._execute('changeset modified')
+        self.assertEqual(2, rv, output)
+        self.assertExpectedResult(output)
+
+    def test_changeset_modify_no_revision(self):
+        rv, output = self._execute('changeset modified project')
+        self.assertEqual(2, rv, output)
+        self.assertExpectedResult(output)
+
+    def test_changeset_add_invalid_project(self):
+        rv, output = self._execute('changeset added project 123')
+        self.assertEqual(0, rv, output)
+        self.assertExpectedResult(output)
+
+    def test_changeset_modify_invalid_project(self):
+        rv, output = self._execute('changeset modified project 123')
+        self.assertEqual(0, rv, output)
+        self.assertExpectedResult(output)
 
 
 class TracadminNoEnvTestCase(unittest.TestCase):
