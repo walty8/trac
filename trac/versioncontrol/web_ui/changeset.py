@@ -20,6 +20,7 @@
 
 from functools import partial
 from itertools import groupby
+import difflib
 import os
 import posixpath
 import re
@@ -531,9 +532,13 @@ class ChangesetModule(Component):
             return changed_properties
 
         def _estimate_changes(old_node, new_node):
-            old_size = old_node.get_content_length()
-            new_size = new_node.get_content_length()
-            return old_size + new_size
+            old_content = old_node.get_content().read()
+            new_content = new_node.get_content().read()
+            ratio = difflib.SequenceMatcher(None,
+                                            old_content,
+                                            new_content).quick_ratio()
+
+            return (len(old_content)+len(new_content)) * (1-ratio)
 
         def _content_changes(old_node, new_node):
             """Returns the list of differences.
@@ -584,6 +589,9 @@ class ChangesetModule(Component):
                         and new_node.is_viewable(req.perm):
                     diff_files += 1
                     diff_bytes += _estimate_changes(old_node, new_node)
+                    if diff_bytes > self.max_diff_bytes:
+                        break
+
         show_diffs = (not self.max_diff_files or
                       0 < diff_files <= self.max_diff_files) and \
                      (not self.max_diff_bytes or
