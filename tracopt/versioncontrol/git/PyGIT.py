@@ -379,6 +379,10 @@ class Storage(object):
         self.__commit_msg_cache = SizedDict(200)
         self.__commit_msg_lock = Lock()
 
+        # cache fetch result
+        self.__fetch_tree_cache = SizedDict(2000)
+        self.__fetch_tree_lock = Lock()
+
         self.__cat_file_pipe = None
         self.__cat_file_pipe_lock = Lock()
 
@@ -791,6 +795,16 @@ class Storage(object):
                       for name, rev_ in self.rev_cache.iter_tags()
                       if rev is None or rev == rev_)
 
+    def prefetch_tree(self, rev, path_list):
+        result = self.repo.ls_tree('-z', '-l', rev, '--', *path_list)
+        with self.__fetch_tree_lock:
+            result_list = result.split('\0')
+            for result in result_list:
+                path = result.split('\t')[-1]
+                self.__fetch_tree_cache[(rev, path)] = result
+
+        return
+
     def ls_tree(self, rev, path=''):
         rev = rev and str(rev) or 'HEAD' # paranoia
 
@@ -799,7 +813,11 @@ class Storage(object):
         if path.startswith('/'):
             path = path[1:]
 
-        tree = self.repo.ls_tree('-z', '-l', rev, '--', path).split('\0')
+        with self.__fetch_tree_lock:
+            tree = [self.__fetch_tree_cache.get((rev, path), None)]
+
+        if not tree: #missed cache
+            tree = self.repo.ls_tree('-z', '-l', rev, '--', path).split('\0')
 
         def split_ls_tree_line(l):
             """split according to '<mode> <type> <sha> <size>\t<fname>'"""

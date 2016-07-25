@@ -577,8 +577,13 @@ class GitRepository(Repository):
                                     old_path.strip('/')) as old_historian:
             with self.git.get_historian(new_rev,
                                         new_path.strip('/')) as new_historian:
-                for chg in self.git.diff_tree(old_rev, new_rev,
-                                              self.normalize_path(new_path)):
+                change_list = list(self.git.diff_tree(old_rev, new_rev, self.normalize_path(new_path)))
+
+                path_list = [chg[5] for chg in change_list]
+                self.git.prefetch_tree(old_rev, path_list)
+                self.git.prefetch_tree(new_rev, path_list)
+
+                for chg in change_list:
                     mode1, mode2, obj1, obj2, action, path, path2 = chg
 
                     kind = Node.FILE
